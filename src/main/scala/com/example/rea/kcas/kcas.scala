@@ -1,8 +1,6 @@
 package com.example.rea
 package kcas
 
-import java.util.concurrent.atomic.AtomicReference
-
 /** Common interface for k-CAS implementations */
 private[rea] trait KCAS {
   def tryPerform(ops: List[CASD[_]]): Boolean
@@ -12,11 +10,14 @@ private[rea] trait KCAS {
 /** Selects a k-CAS implementation based on a system property */
 private[rea] object KCAS {
 
-  private[rea] def impl: KCAS =
-    this.implHolder.get()
+  private[rea] val NaiveKCAS: KCAS =
+    kcas.NaiveKCAS
+  
+  private[rea] val CASN: KCAS =
+    kcas.CASN
 
-  private[this] val implHolder: AtomicReference[KCAS] = {
-    val impl = System.getProperty("com.example.rea.kcas.impl") match {
+  private[this] def defaultImpl: KCAS = {
+    System.getProperty("com.example.rea.kcas.impl") match {
       case null | "" =>
         // fall back to default:
         CASN
@@ -27,7 +28,6 @@ private[rea] object KCAS {
       case x =>
         throw new IllegalArgumentException(s"Invalid kCAS impl: '${x}'")
     }
-    new AtomicReference[KCAS](impl)
   }
 }
 

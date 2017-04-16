@@ -16,7 +16,8 @@ import org.scalactic.TypeCheckedTripleEquals
 import org.typelevel.discipline.scalatest.Discipline
 
 import fs2.{ Task, Strategy }
-import com.example.rea.kcas.Ref
+
+import com.example.rea.kcas._
 
 class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
 
@@ -25,6 +26,9 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   implicit val str: Strategy =
     Strategy.fromExecutionContext(scala.concurrent.ExecutionContext.global)
 
+  implicit val kcasImpl: KCAS =
+    KCAS.CASN
+    
   "Simple CAS" should "work as expected" in {
     val ref = Ref.mk("ert")
     val rea = lift((_: Int).toString) × (ref.cas("ert", "xyz") >>> lift(_ => "boo"))
@@ -213,6 +217,9 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
 
 class LawsSpec extends FunSuite with Discipline {
 
+  implicit val kcasImpl: KCAS =
+    KCAS.CASN
+  
   implicit def arbReact[A, B](implicit arbA: Arbitrary[A], arbB: Arbitrary[B], arbAB: Arbitrary[A => B]): Arbitrary[React[A, B]] = Arbitrary {
     Gen.oneOf(
       arbAB.arbitrary.map(ab => React.lift[A, B](ab)),

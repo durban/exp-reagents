@@ -1,6 +1,6 @@
 package com.example.rea
 
-import kcas.Ref
+import kcas._
 
 final class TreiberStack[A] {
 
@@ -15,7 +15,7 @@ final class TreiberStack[A] {
     case (Nil, ()) => (Nil, None)
   }
 
-  private[rea] def unsafeToList: List[A] = {
+  private[rea] def unsafeToList(implicit kcas: KCAS): List[A] = {
     val r = head.upd[Unit, List[A]] { (l, _) => (l, l) }
     r.run
   }

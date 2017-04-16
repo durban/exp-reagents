@@ -26,8 +26,8 @@ sealed abstract class React[-A, +B] {
   import React._
 
   @tailrec
-  final def ! (a: A): B = {
-    tryPerform(a, Nil) match {
+  final def ! (a: A)(implicit kcas: KCAS): B = {
+    tryPerform(a, Nil, kcas) match {
       case null =>
         this ! a // retry
       case x =>
@@ -35,7 +35,7 @@ sealed abstract class React[-A, +B] {
     }
   }
 
-  protected def tryPerform(a: A, ops: List[CASD[_]]): B
+  protected def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): B
 
   def + [X <: A, Y >: B](that: React[X, Y]): React[X, Y] =
     new Choice[X, Y](this, that)
@@ -128,14 +128,14 @@ object React {
   }
 
   implicit final class UnitReactSyntax[A](private val self: React[Unit, A]) extends AnyVal {
-    final def run: A = self.!(())
+    final def run(implicit kcas: KCAS): A = self.!(())
   }
 
   private final class Commit[A]
       extends React[A, A] {
 
-    protected def tryPerform(a: A, ops: List[CASD[_]]): A = {
-      if (KCAS.impl.tryPerform(ops)) a
+    protected def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): A = {
+      if (kcas.tryPerform(ops)) a
       else nullOf[A] // retry
     }
 
@@ -154,8 +154,8 @@ object React {
   private final class Lift[A, B, C](val func: A => B, val k: React[B, C])
       extends React[A, C] {
 
-    def tryPerform(a: A, ops: List[CASD[_]]): C = {
-      k.tryPerform(func(a), ops)
+    def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): C = {
+      k.tryPerform(func(a), ops, kcas)
     }
 
     def andThenImpl[D](that: React[C, D]): React[A, D] = {
@@ -178,8 +178,8 @@ object React {
   private final class Computed[A, B, C](f: A => React[Unit, B], k: React[B, C])
       extends React[A, C] {
 
-    def tryPerform(a: A, ops: List[CASD[_]]): C = {
-      (f(a) >>> k).tryPerform((), ops)
+    def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): C = {
+      (f(a) >>> k).tryPerform((), ops, kcas)
     }
 
     def andThenImpl[D](that: React[C, D]): React[A, D] = {
@@ -204,9 +204,9 @@ object React {
   private final class Choice[A, B](first: React[A, B], second: React[A, B])
       extends React[A, B] {
 
-    def tryPerform(a: A, ops: List[CASD[_]]): B = {
-      first.tryPerform(a, ops) match {
-        case null => second.tryPerform(a, ops) match {
+    def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): B = {
+      first.tryPerform(a, ops, kcas) match {
+        case null => second.tryPerform(a, ops, kcas) match {
           case null => nullOf[B]
           case b => b
         }
@@ -230,10 +230,10 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(b: B, ops: List[CASD[_]]): D = {
-      KCAS.impl.tryReadOne(ref) match {
+    protected def tryPerform(b: B, ops: List[CASD[_]], kcas: KCAS): D = {
+      kcas.tryReadOne(ref) match {
         case null => nullOf[D] // retry
-        case a if equ(a, ov) => k.tryPerform(transform(a, b), CASD(ref, ov, nv) :: ops)
+        case a if equ(a, ov) => k.tryPerform(transform(a, b), CASD(ref, ov, nv) :: ops, kcas)
         case a => nullOf[D] // retry
       }
     }
@@ -273,10 +273,10 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(b: B, ops: List[CASD[_]]): D = {
-      KCAS.impl.tryReadOne(ref) match {
+    protected def tryPerform(b: B, ops: List[CASD[_]], kcas: KCAS): D = {
+      kcas.tryReadOne(ref) match {
         case null => nullOf[D] // retry
-        case a => k.tryPerform(transform(a, b), ops)
+        case a => k.tryPerform(transform(a, b), ops, kcas)
       }
     }
 

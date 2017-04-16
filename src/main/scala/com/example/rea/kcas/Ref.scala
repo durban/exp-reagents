@@ -33,7 +33,7 @@ final class Ref[A] private (initial: A) {
 
 object Ref {
 
-  def unapply[A](ref: Ref[A]): Some[A] =
+  def unapply[A](ref: Ref[A])(implicit kcas: KCAS): Some[A] =
     Some(ref.read.run)
 
   private[rea] def mk[A](a: A): Ref[A] =
