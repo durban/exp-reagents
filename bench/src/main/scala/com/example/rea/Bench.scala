@@ -1,8 +1,8 @@
 package com.example.rea
 
-import java.util.concurrent.ThreadLocalRandom
 
 import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
+import org.openjdk.jmh.infra.Blackhole
 
 import kcas._
 
@@ -14,51 +14,39 @@ class Bench {
   import Bench._
 
   @Benchmark
-  def treiberStack(s: SharedState, c: Ctr): Unit = {
+  def treiberStack(s: SharedState, bh: Blackhole, ct: ThreadSt): Unit = {
     import s.kcas
-    if ((c.cnt < MaxSize) && c.rnd.nextBoolean()) {
-      c.cnt += 1
+    if (ct.shouldPush()) {
       s.treiberStack.push ! s.item
     } else {
-      if (s.treiberStack.tryPop.run.isDefined) {
-        c.cnt -= 1
-      }
+      bh.consume(s.treiberStack.tryPop.run)
     }
   }
 
   @Benchmark
-  def referenceStack(s: SharedState, c: Ctr): Unit = {
-    if ((c.cnt < MaxSize) && c.rnd.nextBoolean()) {
-      c.cnt += 1
+  def referenceStack(s: SharedState, bh: Blackhole, ct: ThreadSt): Unit = {
+    if (ct.shouldPush()) {
       s.referenceStack.push(s.item)
     } else {
-      if (s.referenceStack.tryPop().isDefined) {
-        c.cnt -= 1
-      }
+      bh.consume(s.referenceStack.tryPop())
     }
   }
 
   @Benchmark
-  def lockedStack(s: SharedState, c: Ctr): Unit = {
-    if ((c.cnt < MaxSize) && c.rnd.nextBoolean()) {
-      c.cnt += 1
+  def lockedStack(s: SharedState, bh: Blackhole, ct: ThreadSt): Unit = {
+    if (ct.shouldPush()) {
       s.lockedStack.push(s.item)
     } else {
-      if (s.lockedStack.tryPop().isDefined) {
-        c.cnt -= 1
-      }
+      bh.consume(s.lockedStack.tryPop())
     }
   }
   
   @Benchmark
-  def concurrentDeque(s: SharedState, c: Ctr): Unit = {
-    if ((c.cnt < MaxSize) && c.rnd.nextBoolean()) {
-      c.cnt += 1
+  def concurrentDeque(s: SharedState, bh: Blackhole, ct: ThreadSt): Unit = {
+    if (ct.shouldPush()) {
       s.concurrentDeque.push(s.item)
     } else {
-      if (s.concurrentDeque.pollFirst() ne null) {
-        c.cnt -= 1
-      }
+      bh.consume(s.concurrentDeque.pollFirst())
     }
   }
 }
@@ -69,7 +57,7 @@ object Bench {
   final val ReferenceStack = "referenceStack"
   final val LockedStack = "lockedStack"
   
-  final val MaxSize = 10000
+  final val Threshold = 0.3
   
   @State(Scope.Benchmark)
   class SharedState {
@@ -78,12 +66,17 @@ object Bench {
     val referenceStack = new ReferenceTreiberStack[String]
     val lockedStack = new LockedStack[String]
     val concurrentDeque = new java.util.concurrent.ConcurrentLinkedDeque[String]
-    val item = ThreadLocalRandom.current().nextInt().toString
+    val item = scala.util.Random.nextString(10)
   }
   
   @State(Scope.Thread)
-  class Ctr {
-    var cnt = 0
-    val rnd = java.util.concurrent.ThreadLocalRandom.current()
+  class ThreadSt {
+    
+    var count: Long = Long.MinValue
+    
+    def shouldPush(): Boolean = {
+      count += 1L
+      (count % 3L) == 0L
+    }
   }
 }
