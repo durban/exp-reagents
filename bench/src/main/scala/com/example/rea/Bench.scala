@@ -1,7 +1,8 @@
 package com.example.rea
 
+import java.util.concurrent.ThreadLocalRandom
+
 import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
-import org.openjdk.jmh.infra.Blackhole
 
 import kcas._
 
@@ -13,47 +14,76 @@ class Bench {
   import Bench._
 
   @Benchmark
-  def treiberStack(s: SharedState, bh: Blackhole): Unit = {
+  def treiberStack(s: SharedState, c: Ctr): Unit = {
     import s.kcas
-    val len = s.stack.length.run
-    if (len < 1000) {
-      s.stack.push ! (len + 1)
+    if ((c.cnt < MaxSize) && c.rnd.nextBoolean()) {
+      c.cnt += 1
+      s.treiberStack.push ! s.item
     } else {
-      val i = s.stack.tryPop.run
-      bh.consume(i)
+      if (s.treiberStack.tryPop.run.isDefined) {
+        c.cnt -= 1
+      }
     }
   }
 
   @Benchmark
-  def referenceTreiberStack(s: SharedState, bh: Blackhole): Unit = {
-    val len = s.referenceStack.length
-    if (len < 1000) {
-      s.referenceStack.push(len + 1)
+  def referenceStack(s: SharedState, c: Ctr): Unit = {
+    if ((c.cnt < MaxSize) && c.rnd.nextBoolean()) {
+      c.cnt += 1
+      s.referenceStack.push(s.item)
     } else {
-      val i = s.referenceStack.tryPop()
-      bh.consume(i)
+      if (s.referenceStack.tryPop().isDefined) {
+        c.cnt -= 1
+      }
     }
   }
 
   @Benchmark
-  def lockedStack(s: SharedState, bh: Blackhole): Unit = {
-    val len = s.lockedStack.length
-    if (len < 1000) {
-      s.lockedStack.push(len + 1)
+  def lockedStack(s: SharedState, c: Ctr): Unit = {
+    if ((c.cnt < MaxSize) && c.rnd.nextBoolean()) {
+      c.cnt += 1
+      s.lockedStack.push(s.item)
     } else {
-      val i = s.lockedStack.tryPop()
-      bh.consume(i)
+      if (s.lockedStack.tryPop().isDefined) {
+        c.cnt -= 1
+      }
+    }
+  }
+  
+  @Benchmark
+  def concurrentDeque(s: SharedState, c: Ctr): Unit = {
+    if ((c.cnt < MaxSize) && c.rnd.nextBoolean()) {
+      c.cnt += 1
+      s.concurrentDeque.push(s.item)
+    } else {
+      if (s.concurrentDeque.pollFirst() ne null) {
+        c.cnt -= 1
+      }
     }
   }
 }
 
 object Bench {
 
+  final val TreiberStack = "treiberStack"
+  final val ReferenceStack = "referenceStack"
+  final val LockedStack = "lockedStack"
+  
+  final val MaxSize = 10000
+  
   @State(Scope.Benchmark)
   class SharedState {
     implicit val kcas: KCAS = KCAS.CASN
-    val stack = new TreiberStack[Int]
-    val referenceStack = new ReferenceTreiberStack[Int]
-    val lockedStack = new LockedStack[Int]
+    val treiberStack = new TreiberStack[String]
+    val referenceStack = new ReferenceTreiberStack[String]
+    val lockedStack = new LockedStack[String]
+    val concurrentDeque = new java.util.concurrent.ConcurrentLinkedDeque[String]
+    val item = ThreadLocalRandom.current().nextInt().toString
+  }
+  
+  @State(Scope.Thread)
+  class Ctr {
+    var cnt = 0
+    val rnd = java.util.concurrent.ThreadLocalRandom.current()
   }
 }
