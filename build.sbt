@@ -19,6 +19,12 @@ lazy val choam = project.in(file("."))
   .settings(commonSettings)
   .settings(tutSettings)
 
+lazy val bench = project.in(file("bench"))
+  .settings(name := "choam-bench")
+  .settings(commonSettings)
+  .enablePlugins(JmhPlugin)
+  .dependsOn(choam)
+
 lazy val commonSettings = Seq[Setting[_]](
   scalaVersion := "2.12.1",
   crossScalaVersions := Seq(scalaVersion.value, "2.11.8"),

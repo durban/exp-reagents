@@ -15,6 +15,9 @@ final class TreiberStack[A] {
     case (Nil, ()) => (Nil, None)
   }
 
+  val length: React[Unit, Int] =
+    head.upd[Unit, Int] { (l, _) => (l, l.length) }
+
   private[rea] def unsafeToList(implicit kcas: KCAS): List[A] = {
     val r = head.upd[Unit, List[A]] { (l, _) => (l, l) }
     r.run

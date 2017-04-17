@@ -29,6 +29,7 @@ sealed abstract class React[-A, +B] {
   final def ! (a: A)(implicit kcas: KCAS): B = {
     tryPerform(a, Nil, kcas) match {
       case null =>
+        // TODO: implement backoff
         this ! a // retry
       case x =>
         x

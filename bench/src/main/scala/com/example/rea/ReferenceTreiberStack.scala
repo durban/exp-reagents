@@ -25,4 +25,7 @@ final class ReferenceTreiberStack[A] {
         else tryPop()
     }
   }
+
+  def length: Int =
+    head.get().length
 }

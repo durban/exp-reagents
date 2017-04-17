@@ -1,5 +1,5 @@
 /*
- * Copyright 2016 Daniel Urban
+ * Copyright 2016-2017 Daniel Urban
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,4 +17,5 @@
 addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-RC1")
 addSbtPlugin("org.tpolecat" % "tut-plugin" % "0.4.8")
 addSbtPlugin("org.typelevel" % "sbt-typelevel" % "0.3.2")
-addSbtPlugin("org.scalastyle" %% "scalastyle-sbt-plugin" % "0.8.0")
+addSbtPlugin("org.scalastyle" % "scalastyle-sbt-plugin" % "0.8.0")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.24")
