@@ -34,6 +34,17 @@ class Bench {
       bh.consume(i)
     }
   }
+
+  @Benchmark
+  def lockedStack(s: SharedState, bh: Blackhole): Unit = {
+    val len = s.lockedStack.length
+    if (len < 1000) {
+      s.lockedStack.push(len + 1)
+    } else {
+      val i = s.lockedStack.tryPop()
+      bh.consume(i)
+    }
+  }
 }
 
 object Bench {
@@ -43,5 +54,6 @@ object Bench {
     implicit val kcas: KCAS = KCAS.CASN
     val stack = new TreiberStack[Int]
     val referenceStack = new ReferenceTreiberStack[Int]
+    val lockedStack = new LockedStack[Int]
   }
 }
