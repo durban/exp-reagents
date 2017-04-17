@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-lazy val choam = project.in(file("."))
-  .settings(name := "choam")
+lazy val core = project.in(file("core"))
+  .settings(name := "choam-core")
   .settings(commonSettings)
   .settings(tutSettings)
 
@@ -23,7 +23,7 @@ lazy val bench = project.in(file("bench"))
   .settings(name := "choam-bench")
   .settings(commonSettings)
   .enablePlugins(JmhPlugin)
-  .dependsOn(choam)
+  .dependsOn(core)
 
 lazy val commonSettings = Seq[Setting[_]](
   scalaVersion := "2.12.1",
