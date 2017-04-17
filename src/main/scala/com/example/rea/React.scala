@@ -135,7 +135,9 @@ object React {
       extends React[A, A] {
 
     protected def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): A = {
-      if (kcas.tryPerform(ops)) a
+      // TODO: Optimize building the list of descriptors, because
+      // TODO: this way we're re-sorting it for every retry.
+      if (kcas.tryPerform(KCASD(ops))) a
       else nullOf[A] // retry
     }
 

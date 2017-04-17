@@ -3,11 +3,11 @@ package kcas
 
 /** Common interface for k-CAS implementations */
 private[rea] trait KCAS {
-  def tryPerform(ops: List[CASD[_]]): Boolean
+  def tryPerform(ops: KCASD): Boolean
   def tryReadOne[A](ref: Ref[A]): A
 }
 
-/** Selects a k-CAS implementation based on a system property */
+/** Provides various k-CAS implementations */
 private[rea] object KCAS {
 
   private[rea] val NaiveKCAS: KCAS =
@@ -34,7 +34,7 @@ private[rea] object KCAS {
 /** CAS descriptor */
 private[rea] sealed case class CASD[A](ref: Ref[A], ov: A, nv: A) {
 
-  private[kcas] def unsafeTryPerformOne(): Boolean =
+  private[kcas] final def unsafeTryPerformOne(): Boolean =
     ref.unsafeTryPerformCas(ov, nv)
 
   final override def equals(that: Any): Boolean = that match {
@@ -45,7 +45,39 @@ private[rea] sealed case class CASD[A](ref: Ref[A], ov: A, nv: A) {
   }
 
   final override def hashCode: Int =
-    System.identityHashCode(this)
+    ref.## ^ System.identityHashCode(ov) ^ System.identityHashCode(nv)
+
+  // TODO: implement total global order (to avoid deadlocks)
+  private[kcas] final def globalRank: Int =
+    ref.##
+}
+
+/** A set of CAS descriptors */
+private[rea] final class KCASD private (casds: List[CASD[_]]) {
+  val entries: List[CASD[_]] = {
+    // TODO: detect impossible CAS-es
+    val s = new scala.collection.mutable.TreeSet()(KCASD.ordering)
+    for (casd <- casds) {
+      s += casd
+    }
+    s.toList
+  }
+}
+
+private[rea] object KCASD {
+
+  def apply(casds: List[CASD[_]]): KCASD =
+    new KCASD(casds)
+
+  private val ordering: Ordering[CASD[_]] = new Ordering[CASD[_]] {
+    override def compare(cx: CASD[_], cy: CASD[_]): Int = {
+      val x = cx.globalRank
+      val y = cy.globalRank
+      if (x < y) -1
+      else if (x > y) +1
+      else 0
+    }
+  }
 }
 
 /**
@@ -55,8 +87,8 @@ private[rea] sealed case class CASD[A](ref: Ref[A], ov: A, nv: A) {
  */
 private[kcas] object CASN extends KCAS {
 
-  override def tryPerform(ops: List[CASD[_]]): Boolean =
-    CASN(CASNDesc(ops))
+  override def tryPerform(ops: KCASD): Boolean =
+    CASN(CASNDesc(ops.entries))
 
   override def tryReadOne[A](ref: Ref[A]): A =
     CASNRead(ref)
@@ -263,7 +295,7 @@ private[kcas] object NaiveKCAS extends KCAS {
   def tryReadOne[A](ref: Ref[A]): A =
     ref.unsafeTryRead()
 
-  def tryPerform(ops: List[CASD[_]]): Boolean = {
+  def tryPerform(ops: KCASD): Boolean = {
 
     // TODO: sort list
 
@@ -300,18 +332,18 @@ private[kcas] object NaiveKCAS extends KCAS {
       }
     }
 
-    ops match {
+    ops.entries match {
       case Nil =>
         true
       case h :: Nil =>
         h.unsafeTryPerformOne()
-      case _ :: _ =>
-        lock(ops) match {
+      case l @ (_ :: _) =>
+        lock(l) match {
           case Nil =>
-            commit(ops)
+            commit(l)
             true
           case to @ (_ :: _) =>
-            rollback(ops, to)
+            rollback(l, to)
             false
         }
     }

@@ -29,6 +29,12 @@ final class Ref[A] private (initial: A) {
 
   override def toString: String =
     s"Ref@${Integer.toHexString(this.##)}"
+
+  override def hashCode: Int =
+    System.identityHashCode(this)
+
+  override def equals(that: Any): Boolean =
+    equ(this, that)
 }
 
 object Ref {
