@@ -25,18 +25,27 @@ sealed abstract class React[-A, +B] {
 
   import React._
 
-  @tailrec
   final def ! (a: A)(implicit kcas: KCAS): B = {
-    tryPerform(a, Nil, kcas) match {
-      case null =>
-        // TODO: implement backoff
-        this ! a // retry
-      case x =>
-        x
+    @tailrec
+    def go(): Success[B] = {
+      tryPerform(a, Reaction.empty, kcas) match {
+        case Retry =>
+          // TODO: implement backoff
+          go()
+        case s @ Success(_, _) =>
+          s
+      }
     }
+
+    val res = go()
+    res.reaction.postCommit.foreach { pc =>
+      pc ! (())
+    }
+
+    res.value
   }
 
-  protected def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): B
+  protected def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[B]
 
   def + [X <: A, Y >: B](that: React[X, Y]): React[X, Y] =
     new Choice[X, Y](this, that)
@@ -68,11 +77,17 @@ sealed abstract class React[-A, +B] {
   final def rmap[C](f: B => C): React[A, C] =
     this >>> lift(f)
 
+  final def map[C](f: B => C): React[A, C] =
+    rmap(f)
+
   final def flatMap[X <: A, C](f: B => React[X, C]): React[X, C] = {
     val self: React[X, (X, B)] = arrowInstance.second[X, B, X](this).lmap[X](x => (x, x))
     val comp: React[(X, B), C] = computed[(X, B), C](xb => f(xb._2).lmap[Unit](_ => xb._1))
     self >>> comp
   }
+
+  private[rea] def postCommit(pc: React[B, Unit]): React[A, B] =
+    this >>> React.postCommit(pc)
 }
 
 object React {
@@ -94,6 +109,9 @@ object React {
 
   private[rea] def read[A](r: Ref[A]): React[Unit, A] =
     new Read(r, new Commit[A])
+
+  private[rea] def postCommit[A](pc: React[A, Unit]): React[A, A] =
+    new PostCommit[A, A](pc, new Commit[A])
 
   def lift[A, B](f: A => B): React[A, B] =
     new Lift(f, new Commit[B])
@@ -132,14 +150,34 @@ object React {
     final def run(implicit kcas: KCAS): A = self.!(())
   }
 
+  private final case class Reaction(
+    ops: List[CASD[_]],
+    postCommit: List[React[Unit, Unit]]
+  ) {
+
+    // TODO: insert into a sorted data structure
+
+    def :: (cas: CASD[_]): Reaction =
+      this.copy(ops = cas :: ops)
+
+    def :: (act: React[Unit, Unit]): Reaction =
+      this.copy(postCommit = act :: postCommit)
+  }
+
+  private object Reaction {
+    val empty: Reaction = Reaction(Nil, Nil)
+  }
+
+  protected[React] sealed trait TentativeResult[+A]
+  protected[React]  final case object Retry extends TentativeResult[Nothing]
+  protected[React]  final case class Success[A](value: A, reaction: Reaction) extends  TentativeResult[A]
+
   private final class Commit[A]
       extends React[A, A] {
 
-    protected def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): A = {
-      // TODO: Optimize building the list of descriptors, because
-      // TODO: this way we're re-sorting it for every retry.
-      if (kcas.tryPerform(KCASD(ops))) a
-      else nullOf[A] // retry
+    protected def tryPerform(a: A, reaction: Reaction, kcas: KCAS): TentativeResult[A] = {
+      if (kcas.tryPerform(KCASD(reaction.ops))) Success(a, reaction)
+      else Retry
     }
 
     protected def andThenImpl[C](that: React[A, C]): React[A, C] =
@@ -154,10 +192,26 @@ object React {
       new Commit[(A, C)]
   }
 
+  private final class PostCommit[A, B](postCommit: React[A, Unit], k: React[A, B])
+      extends React[A, B] {
+
+    def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[B] =
+      k.tryPerform(a, postCommit.lmap[Unit](_ => a) :: ops, kcas)
+
+    def andThenImpl[C](that: React[B, C]): React[A, C] =
+      new PostCommit[A, C](postCommit, k >>> that)
+
+    def productImpl[C, D](that: React[C, D]): React[(A, C), (B, D)] =
+      new PostCommit[(A, C), (B, D)](postCommit.lmap[(A, C)](_._1), k × that)
+
+    def firstImpl[C]: React[(A, C), (B, C)] =
+      new PostCommit[(A, C), (B, C)](postCommit.lmap[(A, C)](_._1), k.firstImpl[C])
+  }
+
   private final class Lift[A, B, C](val func: A => B, val k: React[B, C])
       extends React[A, C] {
 
-    def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): C = {
+    def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[C] = {
       k.tryPerform(func(a), ops, kcas)
     }
 
@@ -181,7 +235,7 @@ object React {
   private final class Computed[A, B, C](f: A => React[Unit, B], k: React[B, C])
       extends React[A, C] {
 
-    def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): C = {
+    def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[C] = {
       (f(a) >>> k).tryPerform((), ops, kcas)
     }
 
@@ -207,13 +261,13 @@ object React {
   private final class Choice[A, B](first: React[A, B], second: React[A, B])
       extends React[A, B] {
 
-    def tryPerform(a: A, ops: List[CASD[_]], kcas: KCAS): B = {
+    def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[B] = {
       first.tryPerform(a, ops, kcas) match {
-        case null => second.tryPerform(a, ops, kcas) match {
-          case null => nullOf[B]
-          case b => b
+        case Retry => second.tryPerform(a, ops, kcas) match {
+          case Retry => Retry
+          case ok => ok
         }
-        case b => b
+        case ok => ok
       }
     }
 
@@ -233,11 +287,11 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(b: B, ops: List[CASD[_]], kcas: KCAS): D = {
+    protected def tryPerform(b: B, ops: Reaction, kcas: KCAS): TentativeResult[D] = {
       kcas.tryReadOne(ref) match {
-        case null => nullOf[D] // retry
+        case null => Retry
         case a if equ(a, ov) => k.tryPerform(transform(a, b), CASD(ref, ov, nv) :: ops, kcas)
-        case a => nullOf[D] // retry
+        case a => Retry
       }
     }
 
@@ -276,9 +330,9 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(b: B, ops: List[CASD[_]], kcas: KCAS): D = {
+    protected def tryPerform(b: B, ops: Reaction, kcas: KCAS): TentativeResult[D] = {
       kcas.tryReadOne(ref) match {
-        case null => nullOf[D] // retry
+        case null => Retry
         case a => k.tryPerform(transform(a, b), ops, kcas)
       }
     }

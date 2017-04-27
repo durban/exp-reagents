@@ -190,6 +190,29 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     r2.read.run should === ("x")
   }
 
+  "Post-commit actions" should "be executed" in {
+    val r1 = Ref.mk("x")
+    val r2 = Ref.mk("")
+    val r3 = Ref.mk("")
+    val r = r1.upd[Unit, String] {
+      case (s, _) =>
+        val r = s + "x"
+        (r, r)
+    }
+    val pc1 = r.postCommit(r2.upd[String, Unit] { case (_, x) => (x, ()) })
+    val pc2 = pc1.postCommit(r3.upd[String, Unit] { case (_, x) => (x, ()) })
+
+    pc1.run should === ("xx")
+    r1.read.run should === ("xx")
+    r2.read.run should === ("xx")
+    r3.read.run should === ("")
+
+    pc2.run should === ("xxx")
+    r1.read.run should === ("xxx")
+    r2.read.run should === ("xxx")
+    r3.read.run should === ("xxx")
+  }
+
   "Popping then pushing back" should "work (???)" in {
     val stack = new TreiberStack[Int]
     val popPush = stack.tryPop.rmap(_.getOrElse(0)) >>> stack.push
@@ -252,6 +275,15 @@ class LawsSpec extends FunSuite with Discipline {
         val s = "x"
         val ref = Ref.mk(s)
         (React.lift[A, B](fab) × ref.cas(s, s)).lmap[A](a => (a, ())).rmap(_._1)
+      },
+      Gen.lzy {
+        for {
+          r <- arbReact[A, B].arbitrary
+          b <- arbB.arbitrary
+        } yield {
+          val ref = Ref.mk[B](b)
+          r.postCommit(ref.upd[B, Unit] { case (_, b) => (b, ()) })
+        }
       }
     )
   }
