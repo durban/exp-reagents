@@ -1,6 +1,7 @@
 package com.example.rea
 
-import java.util.concurrent.LinkedBlockingDeque
+import java.util.concurrent.{ LinkedBlockingDeque, ConcurrentLinkedQueue }
+import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.collection.JavaConverters._
 
@@ -17,7 +18,7 @@ import org.typelevel.discipline.scalatest.Discipline
 
 import fs2.{ Task, Strategy }
 
-import com.example.rea.kcas._
+import kcas._
 
 class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
 
@@ -28,7 +29,7 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
 
   implicit val kcasImpl: KCAS =
     KCAS.CASN
-    
+
   "Simple CAS" should "work as expected" in {
     val ref = Ref.mk("ert")
     val rea = lift((_: Int).toString) × (ref.cas("ert", "xyz") >>> lift(_ => "boo"))
@@ -236,13 +237,91 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     // FIXME:
     ref.read.run should === ("baz")
   }
+
+  "Michael-Scott queue" should "work correctly" in {
+    val q = new MichaelScottQueue[String]
+    q.unsafeToList should === (Nil)
+
+    q.tryDeque.run should === (None)
+    q.unsafeToList should === (Nil)
+
+    q.enqueue ! "a"
+    q.unsafeToList should === (List("a"))
+
+    q.tryDeque.run should === (Some("a"))
+    q.unsafeToList should === (Nil)
+    q.tryDeque.run should === (None)
+    q.unsafeToList should === (Nil)
+
+    q.enqueue ! "a"
+    q.unsafeToList should === (List("a"))
+    q.enqueue ! "b"
+    q.unsafeToList should === (List("a", "b"))
+    q.enqueue ! "c"
+    q.unsafeToList should === (List("a", "b", "c"))
+
+    q.tryDeque.run should === (Some("a"))
+    q.unsafeToList should === (List("b", "c"))
+
+    q.enqueue ! "x"
+    q.unsafeToList should === (List("b", "c", "x"))
+
+    q.tryDeque.run should === (Some("b"))
+    q.unsafeToList should === (List("c", "x"))
+    q.tryDeque.run should === (Some("c"))
+    q.unsafeToList should === (List("x"))
+    q.tryDeque.run should === (Some("x"))
+    q.tryDeque.run should === (None)
+    q.unsafeToList should === (Nil)
+  }
+
+  it should "allow multiple producers and consumers" in {
+    val max = 10000
+    val q = new MichaelScottQueue[String]
+    val produce = Task.delay {
+      for (i <- 0 until max) {
+        q.enqueue ! i.toString
+      }
+    }
+    val cs = new ConcurrentLinkedQueue[String]
+    val stop = new AtomicBoolean(false)
+    val consume = Task.delay {
+      def go(): Unit = {
+        q.tryDeque.run match {
+          case Some(s) =>
+            cs.offer(s)
+            go()
+          case None =>
+            if (stop.get()) () // we're done
+            else go()
+        }
+      }
+      go()
+    }
+    val tsk = for {
+      p1 <- Task.start(produce)
+      c1 <- Task.start(consume)
+      p2 <- Task.start(produce)
+      c2 <- Task.start(consume)
+      _ <- p1
+      _ <- p2
+      _ <- Task.delay { stop.set(true) }
+      _ <- c1
+      _ <- c2
+    } yield ()
+
+    tsk.unsafeRun()
+    cs.asScala.toVector.sorted should === (
+      (0 until max).toVector.flatMap(n => Vector(n.toString, n.toString)).sorted
+    )
+  }
 }
 
 class LawsSpec extends FunSuite with Discipline {
 
   implicit val kcasImpl: KCAS =
     KCAS.CASN
-  
+
   implicit def arbReact[A, B](implicit arbA: Arbitrary[A], arbB: Arbitrary[B], arbAB: Arbitrary[A => B]): Arbitrary[React[A, B]] = Arbitrary {
     Gen.oneOf(
       arbAB.arbitrary.map(ab => React.lift[A, B](ab)),

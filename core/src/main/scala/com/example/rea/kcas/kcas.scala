@@ -12,7 +12,7 @@ private[rea] object KCAS {
 
   private[rea] val NaiveKCAS: KCAS =
     kcas.NaiveKCAS
-  
+
   private[rea] val CASN: KCAS =
     kcas.CASN
 

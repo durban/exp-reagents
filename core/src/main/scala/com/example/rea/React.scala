@@ -88,6 +88,8 @@ sealed abstract class React[-A, +B] {
 
   private[rea] def postCommit(pc: React[B, Unit]): React[A, B] =
     this >>> React.postCommit(pc)
+
+  override def toString: String
 }
 
 object React {
@@ -190,25 +192,31 @@ object React {
 
     def firstImpl[C]: React[(A, C), (A, C)] =
       new Commit[(A, C)]
+
+    override def toString =
+      "Commit"
   }
 
-  private final class PostCommit[A, B](postCommit: React[A, Unit], k: React[A, B])
+  private final class PostCommit[A, B](pc: React[A, Unit], k: React[A, B])
       extends React[A, B] {
 
     def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[B] =
-      k.tryPerform(a, postCommit.lmap[Unit](_ => a) :: ops, kcas)
+      k.tryPerform(a, pc.lmap[Unit](_ => a) :: ops, kcas)
 
     def andThenImpl[C](that: React[B, C]): React[A, C] =
-      new PostCommit[A, C](postCommit, k >>> that)
+      new PostCommit[A, C](pc, k >>> that)
 
     def productImpl[C, D](that: React[C, D]): React[(A, C), (B, D)] =
-      new PostCommit[(A, C), (B, D)](postCommit.lmap[(A, C)](_._1), k × that)
+      new PostCommit[(A, C), (B, D)](pc.lmap[(A, C)](_._1), k × that)
 
     def firstImpl[C]: React[(A, C), (B, C)] =
-      new PostCommit[(A, C), (B, C)](postCommit.lmap[(A, C)](_._1), k.firstImpl[C])
+      new PostCommit[(A, C), (B, C)](pc.lmap[(A, C)](_._1), k.firstImpl[C])
+
+    override def toString =
+      s"PostCommit(${pc}, ${k})"
   }
 
-  private final class Lift[A, B, C](val func: A => B, val k: React[B, C])
+  private final class Lift[A, B, C](private val func: A => B, private val k: React[B, C])
       extends React[A, C] {
 
     def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[C] = {
@@ -230,6 +238,9 @@ object React {
 
     def firstImpl[D]: React[(A, D), (C, D)] =
       new Lift[(A, D), (B, D), (C, D)](ad => (func(ad._1), ad._2), k.firstImpl[D])
+
+    override def toString =
+      s"Lift(<function>, ${k})"
   }
 
   private final class Computed[A, B, C](f: A => React[Unit, B], k: React[B, C])
@@ -256,6 +267,9 @@ object React {
         k.firstImpl[D]
       )
     }
+
+    override def toString =
+      s"Computed(<function>, ${k})"
   }
 
   private final class Choice[A, B](first: React[A, B], second: React[A, B])
@@ -279,6 +293,9 @@ object React {
 
     def firstImpl[C]: React[(A, C), (B, C)] =
       new Choice[(A, C), (B, C)](first.firstImpl, second.firstImpl)
+
+    override def toString =
+      s"Choice(${first}, ${second})"
   }
 
   private abstract class GenCas[A, B, C, D](ref: Ref[A], ov: A, nv: A, k: React[C, D])
@@ -315,6 +332,9 @@ object React {
           (self.transform(a, be._1), be._2)
       }
     }
+
+    override def toString =
+      s"GenCas(${ref}, ${ov}, ${nv}, ${k})"
   }
 
   private final class Cas[A, B](ref: Ref[A], ov: A, nv: A, k: React[A, B])
@@ -357,6 +377,9 @@ object React {
           (self.transform(a, be._1), be._2)
       }
     }
+
+    override def toString =
+      s"GenRead(${ref}, ${k})"
   }
 
   private final class Read[A, B](ref: Ref[A], k: React[A, B])
