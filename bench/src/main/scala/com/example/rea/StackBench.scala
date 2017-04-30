@@ -7,7 +7,7 @@ import kcas._
 
 // bench/jmh:run -i 6 -wi 6 -f 1 -t max .*Bench.*
 class StackBench {
-  
+
   import StackBench._
 
   @Benchmark
@@ -57,19 +57,19 @@ object StackBench {
     val treiberStack =
       new TreiberStack[String]
   }
-  
+
   @State(Scope.Benchmark)
   class ReferenceSt {
     val referenceStack =
       new ReferenceTreiberStack[String]
   }
-  
+
   @State(Scope.Benchmark)
   class LockedSt {
     val lockedStack =
       new LockedStack[String]
   }
-  
+
   @State(Scope.Benchmark)
   class JdkSt {
     val concurrentDeque =
@@ -81,7 +81,7 @@ object StackBench {
 
     val item =
       scala.util.Random.nextString(10)
-    
+
     var count: Long =
       Long.MinValue
 
