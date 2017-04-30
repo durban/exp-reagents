@@ -38,6 +38,20 @@ class QueueBench {
     bh.consume(s.lockedQueue.tryDequeue())
     Blackhole.consumeCPU(consumerWaitTime)
   }
+
+  @Benchmark
+  @Group("JDK")
+  def concurrentQueueProducer(s: JdkSt, bh: Blackhole, t: ThreadSt): Unit = {
+    bh.consume(s.concurrentQueue.offer(t.item))
+    Blackhole.consumeCPU(producerWaitTime)
+  }
+
+  @Benchmark
+  @Group("JDK")
+  def concurrentQueueConsumer(s: JdkSt, bh: Blackhole): Unit = {
+    bh.consume(s.concurrentQueue.poll())
+    Blackhole.consumeCPU(consumerWaitTime)
+  }
 }
 
 object QueueBench {
@@ -57,6 +71,12 @@ object QueueBench {
   class LockedSt {
     val lockedQueue =
       new LockedQueue[String]
+  }
+
+  @State(Scope.Benchmark)
+  class JdkSt {
+    val concurrentQueue =
+      new java.util.concurrent.ConcurrentLinkedQueue[String]
   }
 
   @State(Scope.Thread)
