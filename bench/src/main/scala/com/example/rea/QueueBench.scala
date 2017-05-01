@@ -13,7 +13,7 @@ class QueueBench {
   @Group("MS")
   def michaelScottQueueProducer(s: MsSt, bh: Blackhole, t: ThreadSt): Unit = {
     import s.kcas
-    bh.consume(s.michaelScottQueue.enqueue ! t.item)
+    bh.consume(s.michaelScottQueue.enqueue ! t.nextItem())
     Blackhole.consumeCPU(producerWaitTime)
   }
 
@@ -28,7 +28,7 @@ class QueueBench {
   @Benchmark
   @Group("LCK")
   def lockedQueueProducer(s: LockedSt, bh: Blackhole, t: ThreadSt): Unit = {
-    bh.consume(s.lockedQueue.enqueue(t.item))
+    bh.consume(s.lockedQueue.enqueue(t.nextItem()))
     Blackhole.consumeCPU(producerWaitTime)
   }
 
@@ -42,7 +42,7 @@ class QueueBench {
   @Benchmark
   @Group("JDK")
   def concurrentQueueProducer(s: JdkSt, bh: Blackhole, t: ThreadSt): Unit = {
-    bh.consume(s.concurrentQueue.offer(t.item))
+    bh.consume(s.concurrentQueue.offer(t.nextItem()))
     Blackhole.consumeCPU(producerWaitTime)
   }
 
@@ -59,29 +59,47 @@ object QueueBench {
   final val producerWaitTime = 19L
   final val consumerWaitTime = 10L
 
+  final val prefill = (1 to 1000000)
+
+  def prefillItem(): String =
+    scala.util.Random.nextString(16)
+
   @State(Scope.Benchmark)
   class MsSt {
     implicit val kcas: KCAS =
       KCAS.CASN
-    val michaelScottQueue =
-      new MichaelScottQueue[String]
+    val michaelScottQueue = {
+      val q = new MichaelScottQueue[String]
+      for (_ <- prefill) { q.enqueue ! prefillItem() }
+      q
+    }
   }
 
   @State(Scope.Benchmark)
   class LockedSt {
-    val lockedQueue =
-      new LockedQueue[String]
+    val lockedQueue = {
+      val q = new LockedQueue[String]
+      for (_ <- prefill) { q.enqueue(prefillItem()) }
+      q
+    }
   }
 
   @State(Scope.Benchmark)
   class JdkSt {
-    val concurrentQueue =
-      new java.util.concurrent.ConcurrentLinkedQueue[String]
+    val concurrentQueue = {
+      val q = new java.util.concurrent.ConcurrentLinkedQueue[String]
+      for (_ <- prefill) { q.offer(prefillItem()) }
+      q
+    }
   }
 
   @State(Scope.Thread)
   class ThreadSt {
-    val item =
-      scala.util.Random.nextString(10)
+
+    private[this] val rnd =
+      java.util.concurrent.ThreadLocalRandom.current()
+
+    def nextItem(): String =
+      rnd.nextLong().toString
   }
 }
