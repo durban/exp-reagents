@@ -12,6 +12,12 @@ final class Ref[A] private (initial: A) {
   def upd[B, C](f: (A, B) => (A, C)): React[B, C] =
     React.upd(this)(f)
 
+  def modify(f: A => A): React[Unit, A] =
+    upd[Unit, A] { (a, _) => (f(a), a) }
+
+  val get: React[Unit, A] =
+    upd[Unit, A] { (a, _) => (a, a) }
+
   private[rea] def cas(ov: A, nv: A): React[Unit, Unit] =
     React.cas(this, ov, nv)
 

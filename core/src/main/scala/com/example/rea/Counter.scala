@@ -7,8 +7,8 @@ final class Counter {
   private[this] val ref =
     Ref.mk(0L)
 
-  val add: React[Long, Long] = ref.upd[Long, Long] {
-    case (cnt, n) => (cnt + n, cnt)
+  val add: React[Long, Long] = ref.upd[Long, Long] { (cnt, n) =>
+    (cnt + n, cnt)
   }
 
   val incr: React[Unit, Long] =

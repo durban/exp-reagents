@@ -60,9 +60,10 @@ lazy val commonSettings = Seq[Setting[_]](
     Seq(
       dependencies.cats,
       dependencies.catsFree,
+      dependencies.catsEffect,
       dependencies.shapeless
     ),
-    dependencies.fs2,
+    dependencies.fs2.map(_ % "test-internal"),
     dependencies.test.map(_ % "test-internal")
   ).flatten,
   organization := "io.sigs",
@@ -79,6 +80,7 @@ lazy val dependencies = new {
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.2"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
   val catsFree = "org.typelevel" %% "cats-free" % catsVersion
+  val catsEffect = "org.typelevel" %% "cats-effect" % "0.1-0848c9b"
 
   val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,

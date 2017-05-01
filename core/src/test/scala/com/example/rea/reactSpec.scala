@@ -8,6 +8,7 @@ import scala.collection.JavaConverters._
 import cats.Eq
 import cats.laws.discipline.ArrowTests
 import cats.implicits._
+import cats.effect.IO
 
 import org.scalacheck.{ Gen, Arbitrary }
 
@@ -314,6 +315,17 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     cs.asScala.toVector.sorted should === (
       (0 until max).toVector.flatMap(n => Vector(n.toString, n.toString)).sorted
     )
+  }
+
+  "Integration with IO" should "work" in {
+    val act: IO[String] = for {
+      ref <- React.newRef[String]("foo").run[IO]
+      _ <- ref.upd { (s, p: String) => (s + p, ()) }[IO]("bar")
+      res <- ref.get.run[IO]
+    } yield res
+
+    act.unsafeRunSync() should === ("foobar")
+    act.unsafeRunSync() should === ("foobar")
   }
 }
 

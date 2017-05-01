@@ -1,6 +1,7 @@
 package com.example.rea
 
 import cats.arrow.Arrow
+import cats.effect.Sync
 
 import kcas._
 
@@ -148,8 +149,18 @@ object React {
       fa.rmap(f)
   }
 
+  implicit final class InvariantReactSyntax[A, B](private val self: React[A, B]) extends AnyVal {
+    final def apply[F[_]](a: A)(implicit kcas: KCAS, F: Sync[F]): F[B] =
+      F.delay { self.unsafePerform(a)(kcas) }
+  }
+
   implicit final class UnitReactSyntax[A](private val self: React[Unit, A]) extends AnyVal {
-    final def unsafeRun(implicit kcas: KCAS): A = self.unsafePerform(())
+
+    final def run[F[_]](implicit kcas: KCAS, F: Sync[F]): F[A] =
+      F.delay { unsafeRun(kcas) }
+
+    final def unsafeRun(implicit kcas: KCAS): A =
+      self.unsafePerform(())
   }
 
   private final case class Reaction(
