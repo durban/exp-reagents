@@ -39,8 +39,8 @@ final class Ref[A] private (initial: A) {
 
 object Ref {
 
-  def unapply[A](ref: Ref[A])(implicit kcas: KCAS): Some[A] =
-    Some(ref.read.run)
+  def newRef[A](initial: A): React[Unit, Ref[A]] =
+    React.newRef(initial)
 
   private[rea] def mk[A](a: A): Ref[A] =
     new Ref(a)

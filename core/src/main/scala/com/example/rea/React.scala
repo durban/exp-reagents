@@ -25,7 +25,7 @@ sealed abstract class React[-A, +B] {
 
   import React._
 
-  final def ! (a: A)(implicit kcas: KCAS): B = {
+  final def unsafePerform(a: A)(implicit kcas: KCAS): B = {
     @tailrec
     def go(): Success[B] = {
       tryPerform(a, Reaction.empty, kcas) match {
@@ -39,7 +39,7 @@ sealed abstract class React[-A, +B] {
 
     val res = go()
     res.reaction.postCommit.foreach { pc =>
-      pc ! (())
+      pc.unsafePerform(())
     }
 
     res.value
@@ -149,7 +149,7 @@ object React {
   }
 
   implicit final class UnitReactSyntax[A](private val self: React[Unit, A]) extends AnyVal {
-    final def run(implicit kcas: KCAS): A = self.!(())
+    final def unsafeRun(implicit kcas: KCAS): A = self.unsafePerform(())
   }
 
   private final case class Reaction(

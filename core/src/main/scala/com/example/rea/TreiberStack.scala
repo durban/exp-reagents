@@ -20,6 +20,6 @@ final class TreiberStack[A] {
 
   private[rea] def unsafeToList(implicit kcas: KCAS): List[A] = {
     val r = head.upd[Unit, List[A]] { (l, _) => (l, l) }
-    r.run
+    r.unsafeRun
   }
 }

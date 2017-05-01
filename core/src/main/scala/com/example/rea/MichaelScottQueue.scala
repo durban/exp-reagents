@@ -47,14 +47,14 @@ final class MichaelScottQueue[A] private[this] (sentinel: Node[A]) {
     def go(e: Elem[A], acc: List[A]): List[A] = e match {
       case Node(null, next) =>
         // sentinel
-        go(next.read.run, acc)
+        go(next.read.unsafeRun, acc)
       case Node(a, next) =>
-        go(next.read.run, a :: acc)
+        go(next.read.unsafeRun, a :: acc)
       case End() =>
         acc
     }
 
-    go(head.read.run, Nil).reverse
+    go(head.read.unsafeRun, Nil).reverse
   }
 }
 

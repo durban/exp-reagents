@@ -14,9 +14,9 @@ class StackBench {
   def treiberStack(s: TreiberSt, bh: Blackhole, ct: ThreadSt): Unit = {
     import s.kcas
     if (ct.shouldPush()) {
-      bh.consume(s.treiberStack.push ! ct.item)
+      bh.consume(s.treiberStack.push.unsafePerform(ct.item))
     } else {
-      bh.consume(s.treiberStack.tryPop.run)
+      bh.consume(s.treiberStack.tryPop.unsafeRun)
     }
   }
 

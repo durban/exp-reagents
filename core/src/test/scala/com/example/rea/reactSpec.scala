@@ -33,10 +33,10 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   "Simple CAS" should "work as expected" in {
     val ref = Ref.mk("ert")
     val rea = lift((_: Int).toString) × (ref.cas("ert", "xyz") >>> lift(_ => "boo"))
-    val (s1, s2) = rea ! ((5, ()))
+    val (s1, s2) = rea.unsafePerform((5, ()))
     s1 should === ("5")
     s2 should === ("boo")
-    ref.read.run should === ("xyz")
+    ref.read.unsafeRun should === ("xyz")
   }
 
   "Combined updates" should "indeed be atomic" in {
@@ -50,7 +50,7 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
         }
       }
       val r = push(r1, i) * push(r2, i)
-      r.run
+      r.unsafeRun
     }
 
     def pushAll(maxSize: Long): Unit = {
@@ -72,8 +72,8 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     } yield ()
     tsk.unsafeRun()
 
-    val l1 = r1.read.run
-    val l2 = r2.read.run
+    val l1 = r1.read.unsafeRun
+    val l2 = r2.read.unsafeRun
     l1.length.toLong should === (2 * n + m)
     l2.length.toLong should === (2 * n + m)
     for ((i1, i2) <- l1 zip l2) {
@@ -84,7 +84,7 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   def pushAll(r: React[Int, _], count: Int): Unit = {
     for (_ <- 1 to count) {
       val i = java.util.concurrent.ThreadLocalRandom.current().nextInt()
-      r ! i
+      r.unsafePerform(i)
     }
   }
 
@@ -92,7 +92,7 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     require(expLen > 0)
     for (_ <- 1 to count) {
       val i = java.util.concurrent.ThreadLocalRandom.current().nextInt()
-      val lst = r.run
+      val lst = r.unsafeRun
       if (lst.length =!= expLen) {
         if (lst.length =!= 0) {
           errors.offer(s"actual length ${lst.length} doesn't equal expected length ${expLen}")
@@ -127,8 +127,8 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
       fail(s"Errors:\n${errors.asScala.mkString("\n")}")
     }
 
-    val l1 = s1.head.read.run
-    val l2 = s2.head.read.run
+    val l1 = s1.head.read.unsafeRun
+    val l2 = s2.head.read.unsafeRun
     if (l1 != l2) {
       fail("Different stacks at the end")
     }
@@ -161,7 +161,7 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
       fail(s"Errors:\n${errors.asScala.mkString("\n")}")
     }
 
-    val lsts = stacks.map(_.head.read.run)
+    val lsts = stacks.map(_.head.read.unsafeRun)
     if (!lsts.forall(lst => lst == lsts.head)) {
       fail("Different stacks at the end")
     }
@@ -171,10 +171,10 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     val r1 = Ref.mk("r1")
     val r2 = Ref.mk("r2")
     val rea = r1.cas("r1", "x") + r2.cas("r2", "x")
-    val res = rea ! (())
+    val res = rea.unsafeRun
     res should === (())
-    r1.read.run should === ("x")
-    r2.read.run should === ("r2")
+    r1.read.unsafeRun should === ("x")
+    r2.read.unsafeRun should === ("r2")
   }
 
   it should "use the second option, if the first is not available" in {
@@ -182,13 +182,13 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     val r2 = Ref.mk("r2")
     val rea = r1.cas("r1", "x") + (r2.cas("r2", "x") * r1.cas("z", "r1"))
     // r2: "r2" -> "x" AND r1: "z" -> "r1"
-    rea.run
-    r2.read.run should === ("x")
-    r1.read.run should === ("r1")
+    rea.unsafeRun
+    r2.read.unsafeRun should === ("x")
+    r1.read.unsafeRun should === ("r1")
     // r1: "r1" -> "x"
-    rea.run
-    r1.read.run should === ("x")
-    r2.read.run should === ("x")
+    rea.unsafeRun
+    r1.read.unsafeRun should === ("x")
+    r2.read.unsafeRun should === ("x")
   }
 
   "Post-commit actions" should "be executed" in {
@@ -203,15 +203,15 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     val pc1 = r.postCommit(r2.upd[String, Unit] { case (_, x) => (x, ()) })
     val pc2 = pc1.postCommit(r3.upd[String, Unit] { case (_, x) => (x, ()) })
 
-    pc1.run should === ("xx")
-    r1.read.run should === ("xx")
-    r2.read.run should === ("xx")
-    r3.read.run should === ("")
+    pc1.unsafeRun should === ("xx")
+    r1.read.unsafeRun should === ("xx")
+    r2.read.unsafeRun should === ("xx")
+    r3.read.unsafeRun should === ("")
 
-    pc2.run should === ("xxx")
-    r1.read.run should === ("xxx")
-    r2.read.run should === ("xxx")
-    r3.read.run should === ("xxx")
+    pc2.unsafeRun should === ("xxx")
+    r1.read.unsafeRun should === ("xxx")
+    r2.read.unsafeRun should === ("xxx")
+    r3.read.unsafeRun should === ("xxx")
   }
 
   "Popping then pushing back" should "work (???)" in {
@@ -219,11 +219,11 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     val popPush = stack.tryPop.rmap(_.getOrElse(0)) >>> stack.push
 
     stack.unsafeToList should === (List())
-    stack.push ! 1
+    stack.push.unsafePerform(1)
     stack.unsafeToList should === (List(1))
 
     // FIXME:
-    popPush.run
+    popPush.unsafeRun
     stack.unsafeToList should === (List(1, 1))
   }
 
@@ -232,46 +232,46 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     val cas1 = ref.cas("foo", "bar")
     val cas2 = ref.cas("foo", "baz")
     val r = cas1 >>> cas2
-    r.run
+    r.unsafeRun
 
     // FIXME:
-    ref.read.run should === ("baz")
+    ref.read.unsafeRun should === ("baz")
   }
 
   "Michael-Scott queue" should "work correctly" in {
     val q = new MichaelScottQueue[String]
     q.unsafeToList should === (Nil)
 
-    q.tryDeque.run should === (None)
+    q.tryDeque.unsafeRun should === (None)
     q.unsafeToList should === (Nil)
 
-    q.enqueue ! "a"
+    q.enqueue.unsafePerform("a")
     q.unsafeToList should === (List("a"))
 
-    q.tryDeque.run should === (Some("a"))
+    q.tryDeque.unsafeRun should === (Some("a"))
     q.unsafeToList should === (Nil)
-    q.tryDeque.run should === (None)
+    q.tryDeque.unsafeRun should === (None)
     q.unsafeToList should === (Nil)
 
-    q.enqueue ! "a"
+    q.enqueue.unsafePerform("a")
     q.unsafeToList should === (List("a"))
-    q.enqueue ! "b"
+    q.enqueue.unsafePerform("b")
     q.unsafeToList should === (List("a", "b"))
-    q.enqueue ! "c"
+    q.enqueue.unsafePerform("c")
     q.unsafeToList should === (List("a", "b", "c"))
 
-    q.tryDeque.run should === (Some("a"))
+    q.tryDeque.unsafeRun should === (Some("a"))
     q.unsafeToList should === (List("b", "c"))
 
-    q.enqueue ! "x"
+    q.enqueue.unsafePerform("x")
     q.unsafeToList should === (List("b", "c", "x"))
 
-    q.tryDeque.run should === (Some("b"))
+    q.tryDeque.unsafeRun should === (Some("b"))
     q.unsafeToList should === (List("c", "x"))
-    q.tryDeque.run should === (Some("c"))
+    q.tryDeque.unsafeRun should === (Some("c"))
     q.unsafeToList should === (List("x"))
-    q.tryDeque.run should === (Some("x"))
-    q.tryDeque.run should === (None)
+    q.tryDeque.unsafeRun should === (Some("x"))
+    q.tryDeque.unsafeRun should === (None)
     q.unsafeToList should === (Nil)
   }
 
@@ -280,14 +280,14 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     val q = new MichaelScottQueue[String]
     val produce = Task.delay {
       for (i <- 0 until max) {
-        q.enqueue ! i.toString
+        q.enqueue.unsafePerform(i.toString)
       }
     }
     val cs = new ConcurrentLinkedQueue[String]
     val stop = new AtomicBoolean(false)
     val consume = Task.delay {
       def go(): Unit = {
-        q.tryDeque.run match {
+        q.tryDeque.unsafeRun match {
           case Some(s) =>
             cs.offer(s)
             go()
@@ -371,8 +371,8 @@ class LawsSpec extends FunSuite with Discipline {
     def eqv(x: React[A, B], y: React[A, B]): Boolean = {
       (1 to 1000).forall { _ =>
         val a = arbA.arbitrary.sample.getOrElse(fail)
-        val bx = x ! a
-        val by = y ! a
+        val bx = x.unsafePerform(a)
+        val by = y.unsafePerform(a)
         equB.eqv(bx, by)
       }
     }

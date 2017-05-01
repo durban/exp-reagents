@@ -13,7 +13,7 @@ class QueueBench {
   @Group("MS")
   def michaelScottQueueProducer(s: MsSt, bh: Blackhole, t: ThreadSt): Unit = {
     import s.kcas
-    bh.consume(s.michaelScottQueue.enqueue ! t.nextItem())
+    bh.consume(s.michaelScottQueue.enqueue.unsafePerform(t.nextItem()))
     Blackhole.consumeCPU(producerWaitTime)
   }
 
@@ -21,7 +21,7 @@ class QueueBench {
   @Group("MS")
   def michaelScottQueueConsumer(s: MsSt, bh: Blackhole): Unit = {
     import s.kcas
-    bh.consume(s.michaelScottQueue.tryDeque.run)
+    bh.consume(s.michaelScottQueue.tryDeque.unsafeRun)
     Blackhole.consumeCPU(consumerWaitTime)
   }
 
@@ -70,7 +70,7 @@ object QueueBench {
       KCAS.CASN
     val michaelScottQueue = {
       val q = new MichaelScottQueue[String]
-      for (_ <- prefill) { q.enqueue ! prefillItem() }
+      for (_ <- prefill) { q.enqueue.unsafePerform(prefillItem()) }
       q
     }
   }
