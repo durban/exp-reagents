@@ -1,9 +1,11 @@
 package com.example.rea
+package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, Scope, State, Param, Setup }
+import org.openjdk.jmh.annotations.{ Benchmark, State, Param, Setup, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
-import kcas._
+import com.example.rea.kcas._
+import util._
 
 class CounterBench {
 

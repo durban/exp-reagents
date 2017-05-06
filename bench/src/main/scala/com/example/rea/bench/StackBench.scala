@@ -1,11 +1,12 @@
 package com.example.rea
+package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, Scope, State }
+import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
-import kcas._
+import com.example.rea.kcas._
+import util._
 
-// bench/jmh:run -i 6 -wi 6 -f 1 -t max .*Bench.*
 class StackBench {
 
   import StackBench._
