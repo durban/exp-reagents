@@ -13,24 +13,24 @@ class QueueBench {
 
   @Benchmark
   @Group("MS")
-  def michaelScottQueueProducer(s: MsSt, bh: Blackhole, t: ThreadSt): Unit = {
-    import s.kcas
-    bh.consume(s.michaelScottQueue.enqueue.unsafePerform(t.nextItem()))
+  def michaelScottQueueProducer(s: MsSt, bh: Blackhole, t: KCASThreadState): Unit = {
+    import t.kcasImpl
+    bh.consume(s.michaelScottQueue.enqueue.unsafePerform(t.nextString()))
     Blackhole.consumeCPU(producerWaitTime)
   }
 
   @Benchmark
   @Group("MS")
-  def michaelScottQueueConsumer(s: MsSt, bh: Blackhole): Unit = {
-    import s.kcas
+  def michaelScottQueueConsumer(s: MsSt, bh: Blackhole, t: KCASThreadState): Unit = {
+    import t.kcasImpl
     bh.consume(s.michaelScottQueue.tryDeque.unsafeRun)
     Blackhole.consumeCPU(consumerWaitTime)
   }
 
   @Benchmark
   @Group("LCK")
-  def lockedQueueProducer(s: LockedSt, bh: Blackhole, t: ThreadSt): Unit = {
-    bh.consume(s.lockedQueue.enqueue(t.nextItem()))
+  def lockedQueueProducer(s: LockedSt, bh: Blackhole, t: CommonThreadState): Unit = {
+    bh.consume(s.lockedQueue.enqueue(t.nextString()))
     Blackhole.consumeCPU(producerWaitTime)
   }
 
@@ -43,8 +43,8 @@ class QueueBench {
 
   @Benchmark
   @Group("JDK")
-  def concurrentQueueProducer(s: JdkSt, bh: Blackhole, t: ThreadSt): Unit = {
-    bh.consume(s.concurrentQueue.offer(t.nextItem()))
+  def concurrentQueueProducer(s: JdkSt, bh: Blackhole, t: CommonThreadState): Unit = {
+    bh.consume(s.concurrentQueue.offer(t.nextString()))
     Blackhole.consumeCPU(producerWaitTime)
   }
 
@@ -68,9 +68,8 @@ object QueueBench {
 
   @State(Scope.Benchmark)
   class MsSt {
-    implicit val kcas: KCAS =
-      KCAS.CASN
     val michaelScottQueue = {
+      implicit val prefillKcas: KCAS = KCAS.NaiveKCAS
       val q = new MichaelScottQueue[String]
       for (_ <- prefill) { q.enqueue.unsafePerform(prefillItem()) }
       q
@@ -93,15 +92,5 @@ object QueueBench {
       for (_ <- prefill) { q.offer(prefillItem()) }
       q
     }
-  }
-
-  @State(Scope.Thread)
-  class ThreadSt {
-
-    private[this] val rnd =
-      java.util.concurrent.ThreadLocalRandom.current()
-
-    def nextItem(): String =
-      rnd.nextLong().toString
   }
 }

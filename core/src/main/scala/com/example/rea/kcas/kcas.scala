@@ -16,18 +16,20 @@ private[rea] object KCAS {
   private[rea] val CASN: KCAS =
     kcas.CASN
 
-  private[this] def defaultImpl: KCAS = {
-    System.getProperty("com.example.rea.kcas.impl") match {
-      case null | "" =>
-        // fall back to default:
-        CASN
-      case "com.example.rea.kcas.CASN" =>
-        CASN
-      case "com.example.rea.kcas.NaiveKCAS" =>
-        NaiveKCAS
-      case x =>
-        throw new IllegalArgumentException(s"Invalid kCAS impl: '${x}'")
-    }
+  def unsafeLookup(fqn: String): KCAS = fqn match {
+    case fqns.NaiveKCAS =>
+      NaiveKCAS
+    case fqns.CASN =>
+      CASN
+    case _ =>
+      throw new IllegalArgumentException(fqn)
+  }
+
+  object fqns {
+    final val NaiveKCAS =
+      "com.example.rea.kcas.NaiveKCAS"
+    final val CASN =
+      "com.example.rea.kcas.CASN"
   }
 }
 

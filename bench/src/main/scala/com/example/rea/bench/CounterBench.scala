@@ -4,7 +4,6 @@ package bench
 import org.openjdk.jmh.annotations.{ Benchmark, State, Param, Setup, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
-import com.example.rea.kcas._
 import util._
 
 class CounterBench {
@@ -12,30 +11,30 @@ class CounterBench {
   import CounterBench._
 
   @Benchmark
-  def reference(s: ReferenceSt, t: ThreadSt, bh: Blackhole): Unit = {
-    bh.consume(s.referenceCtr.add(t.nextItem()))
+  def reference(s: ReferenceSt, t: CommonThreadState, bh: Blackhole): Unit = {
+    bh.consume(s.referenceCtr.add(t.nextLong()))
   }
 
   @Benchmark
-  def locked(s: LockedSt, t: ThreadSt, bh: Blackhole): Unit = {
-    bh.consume(s.lockedCtr.add(t.nextItem()))
+  def locked(s: LockedSt, t: CommonThreadState, bh: Blackhole): Unit = {
+    bh.consume(s.lockedCtr.add(t.nextLong()))
   }
 
   @Benchmark
-  def lockedN(s: LockedStN, t: ThreadSt, bh: Blackhole): Unit = {
-    bh.consume(s.lockedCtrN.add(t.nextItem()))
+  def lockedN(s: LockedStN, t: CommonThreadState, bh: Blackhole): Unit = {
+    bh.consume(s.lockedCtrN.add(t.nextLong()))
   }
 
   @Benchmark
-  def react(s: ReactSt, t: ThreadSt, bh: Blackhole): Unit = {
-    import s.kcas
-    bh.consume(s.reactCtr.add.unsafePerform(t.nextItem()))
+  def react(s: ReactSt, t: KCASThreadState, bh: Blackhole): Unit = {
+    import t.kcasImpl
+    bh.consume(s.reactCtr.add.unsafePerform(t.nextLong()))
   }
 
   @Benchmark
-  def reactN(s: ReactStN, t: ThreadSt, bh: Blackhole): Unit = {
-    import s.kcas
-    bh.consume(s.r.unsafePerform(t.nextItem()))
+  def reactN(s: ReactStN, t: KCASThreadState, bh: Blackhole): Unit = {
+    import t.kcasImpl
+    bh.consume(s.r.unsafePerform(t.nextLong()))
   }
 }
 
@@ -70,17 +69,12 @@ object CounterBench {
 
   @State(Scope.Benchmark)
   class ReactSt {
-    implicit val kcas: KCAS =
-      KCAS.CASN
     val reactCtr =
       new Counter
   }
 
   @State(Scope.Benchmark)
   class ReactStN {
-
-    implicit val kcas: KCAS =
-      KCAS.CASN
 
     @Param(Array("2", "4", "8", "16"))
     private[this] var n: Int = _
@@ -95,15 +89,5 @@ object CounterBench {
       ctrs = Array.fill(n)(new Counter)
       r = ctrs.map(_.add.rmap(_ => ())).reduceLeft { (a, b) => (a * b).rmap(_ => ()) }
     }
-  }
-
-  @State(Scope.Thread)
-  class ThreadSt {
-
-    private[this] val rnd =
-      java.util.concurrent.ThreadLocalRandom.current()
-
-    def nextItem(): Long =
-      rnd.nextLong()
   }
 }

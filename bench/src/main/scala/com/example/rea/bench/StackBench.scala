@@ -4,7 +4,6 @@ package bench
 import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
-import com.example.rea.kcas._
 import util._
 
 class StackBench {
@@ -12,10 +11,10 @@ class StackBench {
   import StackBench._
 
   @Benchmark
-  def treiberStack(s: TreiberSt, bh: Blackhole, ct: ThreadSt): Unit = {
-    import s.kcas
+  def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASThreadSt): Unit = {
+    import ct.kcasImpl
     if (ct.shouldPush()) {
-      bh.consume(s.treiberStack.push.unsafePerform(ct.item))
+      bh.consume(s.treiberStack.push.unsafePerform(ct.nextString()))
     } else {
       bh.consume(s.treiberStack.tryPop.unsafeRun)
     }
@@ -24,7 +23,7 @@ class StackBench {
   @Benchmark
   def referenceStack(s: ReferenceSt, bh: Blackhole, ct: ThreadSt): Unit = {
     if (ct.shouldPush()) {
-      bh.consume(s.referenceStack.push(ct.item))
+      bh.consume(s.referenceStack.push(ct.nextString()))
     } else {
       bh.consume(s.referenceStack.tryPop())
     }
@@ -33,7 +32,7 @@ class StackBench {
   @Benchmark
   def lockedStack(s: LockedSt, bh: Blackhole, ct: ThreadSt): Unit = {
     if (ct.shouldPush()) {
-      bh.consume(s.lockedStack.push(ct.item))
+      bh.consume(s.lockedStack.push(ct.nextString()))
     } else {
       bh.consume(s.lockedStack.tryPop())
     }
@@ -42,7 +41,7 @@ class StackBench {
   @Benchmark
   def concurrentDeque(s: JdkSt, bh: Blackhole, ct: ThreadSt): Unit = {
     if (ct.shouldPush()) {
-      bh.consume(s.concurrentDeque.push(ct.item))
+      bh.consume(s.concurrentDeque.push(ct.nextString()))
     } else {
       bh.consume(s.concurrentDeque.pollFirst())
     }
@@ -53,8 +52,6 @@ object StackBench {
 
   @State(Scope.Benchmark)
   class TreiberSt {
-    implicit val kcas: KCAS =
-      KCAS.CASN
     val treiberStack =
       new TreiberStack[String]
   }
@@ -78,10 +75,19 @@ object StackBench {
   }
 
   @State(Scope.Thread)
-  class ThreadSt {
+  class ThreadSt extends CommonThreadState {
 
-    val item =
-      scala.util.Random.nextString(10)
+    var count: Long =
+      Long.MinValue
+
+    def shouldPush(): Boolean = {
+      count += 1L
+      (count % 3L) == 0L
+    }
+  }
+
+  @State(Scope.Thread)
+  class KCASThreadSt extends KCASThreadState {
 
     var count: Long =
       Long.MinValue
