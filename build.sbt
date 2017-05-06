@@ -14,6 +14,10 @@
  * limitations under the License.
  */
 
+scalaVersion in ThisBuild := "2.12.1"
+crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value, "2.11.8")
+scalaOrganization in ThisBuild := "org.typelevel"
+
 lazy val core = project.in(file("core"))
   .settings(name := "choam-core")
   .settings(commonSettings)
@@ -26,9 +30,6 @@ lazy val bench = project.in(file("bench"))
   .dependsOn(core)
 
 lazy val commonSettings = Seq[Setting[_]](
-  scalaVersion := "2.12.1",
-  crossScalaVersions := Seq(scalaVersion.value, "2.11.8"),
-  scalaOrganization := "org.typelevel",
   scalacOptions ++= Seq(
     "-feature",
     "-deprecation",

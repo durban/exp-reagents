@@ -31,7 +31,7 @@ class CounterBench {
   }
 
   @Benchmark
-  def react2(s: ReactStN, t: ThreadSt, bh: Blackhole): Unit = {
+  def reactN(s: ReactStN, t: ThreadSt, bh: Blackhole): Unit = {
     import s.kcas
     bh.consume(s.r.unsafePerform(t.nextItem()))
   }
