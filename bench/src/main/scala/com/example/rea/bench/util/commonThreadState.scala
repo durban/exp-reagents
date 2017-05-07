@@ -25,7 +25,7 @@ class KCASThreadState extends CommonThreadState {
   @Param(Array(KCAS.fqns.CASN, KCAS.fqns.NaiveKCAS))
   private[this] var kcasName: String = _
 
-  private[bench] implicit var kcasImpl: KCAS = _
+  private[rea] implicit var kcasImpl: KCAS = _
 
   @Setup
   def setupKCASImpl(): Unit = {
