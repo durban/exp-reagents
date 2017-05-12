@@ -5,6 +5,7 @@ package bench
 import java.util.concurrent.ThreadLocalRandom
 
 import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
+import org.openjdk.jmh.infra.Blackhole
 
 import com.example.rea.bench.util._
 
@@ -23,12 +24,14 @@ class KCASBench {
   def failedCAS1(r: RefState, t: KCASThreadState): Unit = {
     val succ = t.kcasImpl.tryPerform(KCASD(CASD(r.ref, incorrectOv, t.nextString()) :: Nil))
     if (succ) throw new AssertionError("CAS should've failed")
+    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
   def failedCAS1Baseline(r: RefState, t: CommonThreadState): Unit = {
     val succ = r.ref.unsafeTryPerformCas(incorrectOv, t.nextString())
     if (succ) throw new AssertionError("CAS should've failed")
+    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
@@ -44,6 +47,7 @@ class KCASBench {
       else go()
     }
     go()
+    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
@@ -62,6 +66,7 @@ class KCASBench {
       else go()
     }
     go()
+    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
@@ -76,6 +81,7 @@ class KCASBench {
       else go()
     }
     go()
+    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
@@ -92,6 +98,7 @@ class KCASBench {
     for (ref <- refs) {
       goOne(ref)
     }
+    Blackhole.consumeCPU(t.tokens)
   }
 }
 
