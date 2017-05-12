@@ -16,7 +16,7 @@ class QueueBench {
   def michaelScottQueueProducer(s: MsSt, bh: Blackhole, t: KCASThreadState): Unit = {
     import t.kcasImpl
     bh.consume(s.michaelScottQueue.enqueue.unsafePerform(t.nextString()))
-    Blackhole.consumeCPU(producerWaitTime)
+    Blackhole.consumeCPU((producerWait * t.tokens).toLong)
   }
 
   @Benchmark
@@ -24,42 +24,42 @@ class QueueBench {
   def michaelScottQueueConsumer(s: MsSt, bh: Blackhole, t: KCASThreadState): Unit = {
     import t.kcasImpl
     bh.consume(s.michaelScottQueue.tryDeque.unsafeRun)
-    Blackhole.consumeCPU(consumerWaitTime)
+    Blackhole.consumeCPU((consumerWait * t.tokens).toLong)
   }
 
   @Benchmark
   @Group("LCK")
   def lockedQueueProducer(s: LockedSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.lockedQueue.enqueue(t.nextString()))
-    Blackhole.consumeCPU(producerWaitTime)
+    Blackhole.consumeCPU((producerWait * t.tokens).toLong)
   }
 
   @Benchmark
   @Group("LCK")
-  def lockedQueueConsumer(s: LockedSt, bh: Blackhole): Unit = {
+  def lockedQueueConsumer(s: LockedSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.lockedQueue.tryDequeue())
-    Blackhole.consumeCPU(consumerWaitTime)
+    Blackhole.consumeCPU((consumerWait * t.tokens).toLong)
   }
 
   @Benchmark
   @Group("JDK")
   def concurrentQueueProducer(s: JdkSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.concurrentQueue.offer(t.nextString()))
-    Blackhole.consumeCPU(producerWaitTime)
+    Blackhole.consumeCPU((producerWait * t.tokens).toLong)
   }
 
   @Benchmark
   @Group("JDK")
-  def concurrentQueueConsumer(s: JdkSt, bh: Blackhole): Unit = {
+  def concurrentQueueConsumer(s: JdkSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.concurrentQueue.poll())
-    Blackhole.consumeCPU(consumerWaitTime)
+    Blackhole.consumeCPU((consumerWait * t.tokens).toLong)
   }
 }
 
 object QueueBench {
 
-  final val producerWaitTime = 19L
-  final val consumerWaitTime = 10L
+  final val producerWait = 0.9
+  final val consumerWait = 0.5
 
   final val prefill = (1 to 1000000)
 

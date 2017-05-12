@@ -11,30 +11,40 @@ class CounterBench {
   import CounterBench._
 
   @Benchmark
+  def baseline(t: CommonThreadState): Unit = {
+    Blackhole.consumeCPU(t.tokens)
+  }
+
+  @Benchmark
   def reference(s: ReferenceSt, t: CommonThreadState, bh: Blackhole): Unit = {
     bh.consume(s.referenceCtr.add(t.nextLong()))
+    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
   def locked(s: LockedSt, t: CommonThreadState, bh: Blackhole): Unit = {
     bh.consume(s.lockedCtr.add(t.nextLong()))
+    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
   def lockedN(s: LockedStN, t: CommonThreadState, bh: Blackhole): Unit = {
     bh.consume(s.lockedCtrN.add(t.nextLong()))
+    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
   def react(s: ReactSt, t: KCASThreadState, bh: Blackhole): Unit = {
     import t.kcasImpl
     bh.consume(s.reactCtr.add.unsafePerform(t.nextLong()))
+    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
   def reactN(s: ReactStN, t: KCASThreadState, bh: Blackhole): Unit = {
     import t.kcasImpl
     bh.consume(s.r.unsafePerform(t.nextLong()))
+    Blackhole.consumeCPU(t.tokens)
   }
 }
 

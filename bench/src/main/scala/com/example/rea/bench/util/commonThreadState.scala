@@ -12,6 +12,8 @@ class CommonThreadState {
   private[this] val rnd =
     java.util.concurrent.ThreadLocalRandom.current()
 
+  val tokens: Long = 64
+
   def nextLong(): Long =
     rnd.nextLong()
 

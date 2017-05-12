@@ -18,6 +18,7 @@ class StackBench {
     } else {
       bh.consume(s.treiberStack.tryPop.unsafeRun)
     }
+    Blackhole.consumeCPU(ct.tokens)
   }
 
   @Benchmark
@@ -27,6 +28,7 @@ class StackBench {
     } else {
       bh.consume(s.referenceStack.tryPop())
     }
+    Blackhole.consumeCPU(ct.tokens)
   }
 
   @Benchmark
@@ -36,6 +38,7 @@ class StackBench {
     } else {
       bh.consume(s.lockedStack.tryPop())
     }
+    Blackhole.consumeCPU(ct.tokens)
   }
 
   @Benchmark
@@ -45,6 +48,7 @@ class StackBench {
     } else {
       bh.consume(s.concurrentDeque.pollFirst())
     }
+    Blackhole.consumeCPU(ct.tokens)
   }
 }
 
