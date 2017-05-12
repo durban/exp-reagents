@@ -28,22 +28,9 @@ class CounterBench {
   }
 
   @Benchmark
-  def lockedN(s: LockedStN, t: CommonThreadState, bh: Blackhole): Unit = {
-    bh.consume(s.lockedCtrN.add(t.nextLong()))
-    Blackhole.consumeCPU(t.tokens)
-  }
-
-  @Benchmark
   def react(s: ReactSt, t: KCASThreadState, bh: Blackhole): Unit = {
     import t.kcasImpl
     bh.consume(s.reactCtr.add.unsafePerform(t.nextLong()))
-    Blackhole.consumeCPU(t.tokens)
-  }
-
-  @Benchmark
-  def reactN(s: ReactStN, t: KCASThreadState, bh: Blackhole): Unit = {
-    import t.kcasImpl
-    bh.consume(s.r.unsafePerform(t.nextLong()))
     Blackhole.consumeCPU(t.tokens)
   }
 }
@@ -63,9 +50,36 @@ object CounterBench {
   }
 
   @State(Scope.Benchmark)
+  class ReactSt {
+    val reactCtr =
+      new Counter
+  }
+}
+
+class CounterBenchN {
+
+  import CounterBenchN._
+
+  @Benchmark
+  def lockedN(s: LockedStN, t: CommonThreadState, bh: Blackhole): Unit = {
+    bh.consume(s.lockedCtrN.add(t.nextLong()))
+    Blackhole.consumeCPU(t.tokens)
+  }
+
+  @Benchmark
+  def reactN(s: ReactStN, t: KCASThreadState, bh: Blackhole): Unit = {
+    import t.kcasImpl
+    bh.consume(s.r.unsafePerform(t.nextLong()))
+    Blackhole.consumeCPU(t.tokens)
+  }
+}
+
+object CounterBenchN {
+
+  @State(Scope.Benchmark)
   class LockedStN {
 
-    @Param(Array("2", "4", "8", "16"))
+    @Param(Array("2", "8"))
     private[this] var n: Int = _
 
     @volatile
@@ -78,15 +92,9 @@ object CounterBench {
   }
 
   @State(Scope.Benchmark)
-  class ReactSt {
-    val reactCtr =
-      new Counter
-  }
-
-  @State(Scope.Benchmark)
   class ReactStN {
 
-    @Param(Array("2", "4", "8", "16"))
+    @Param(Array("2", "8"))
     private[this] var n: Int = _
 
     private[this] var ctrs: Array[Counter] = _
