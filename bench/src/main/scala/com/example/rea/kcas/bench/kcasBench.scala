@@ -9,16 +9,9 @@ import org.openjdk.jmh.infra.Blackhole
 
 import com.example.rea.bench.util._
 
-class KCASBench {
+class FailedCAS1Bench {
 
-  import KCASBench._
-
-  @tailrec
-  private[this] def read(ref: Ref[String], kcas: KCAS): String = {
-    val r = kcas.tryReadOne(ref)
-    if (r eq null) read(ref, kcas)
-    else r
-  }
+  import KCASBenchHelpers._
 
   @Benchmark
   def failedCAS1(r: RefState, t: KCASThreadState): Unit = {
@@ -33,6 +26,11 @@ class KCASBench {
     if (succ) throw new AssertionError("CAS should've failed")
     Blackhole.consumeCPU(t.tokens)
   }
+}
+
+class CAS1LoopBench {
+
+  import KCASBenchHelpers._
 
   @Benchmark
   def successfulCAS1Loop(r: RefState, t: KCASThreadState): Unit = {
@@ -51,6 +49,26 @@ class KCASBench {
   }
 
   @Benchmark
+  def successfulCAS1LoopBaseline(r: RefState, t: CommonThreadState): Unit = {
+    val ref = r.ref
+    @tailrec
+    def go(): Unit = {
+      val ov = ref.unsafeTryRead()
+      val nv = (ov.toLong + t.nextLong()).toString
+      val succ = ref.unsafeTryPerformCas(ov, nv)
+      if (succ) ()
+      else go()
+    }
+    go()
+    Blackhole.consumeCPU(t.tokens)
+  }
+}
+
+class KCASLoopBench {
+
+  import KCASBenchHelpers._
+
+  @Benchmark
   def successfulKCASLoop(r: KRefState, t: KCASThreadState): Unit = {
     val refs = r.refs
     val kcasImpl = t.kcasImpl
@@ -62,21 +80,6 @@ class KCASBench {
         CASD(ref, ov, nv)
       }
       val succ = kcasImpl.tryPerform(KCASD(ds))
-      if (succ) ()
-      else go()
-    }
-    go()
-    Blackhole.consumeCPU(t.tokens)
-  }
-
-  @Benchmark
-  def successfulCAS1LoopBaseline(r: RefState, t: CommonThreadState): Unit = {
-    val ref = r.ref
-    @tailrec
-    def go(): Unit = {
-      val ov = ref.unsafeTryRead()
-      val nv = (ov.toLong + t.nextLong()).toString
-      val succ = ref.unsafeTryPerformCas(ov, nv)
       if (succ) ()
       else go()
     }
@@ -102,10 +105,17 @@ class KCASBench {
   }
 }
 
-object KCASBench {
+object KCASBenchHelpers {
 
   final val incorrectOv = "no such number"
   final val K = 8
+
+  @tailrec
+  def read(ref: Ref[String], kcas: KCAS): String = {
+    val r = kcas.tryReadOne(ref)
+    if (r eq null) read(ref, kcas)
+    else r
+  }
 
   @State(Scope.Benchmark)
   class RefState {
