@@ -115,4 +115,4 @@ lazy val dependencies = new {
   val scalaz = "org.scalaz" %% "scalaz-effect" % "7.2.8"
 }
 
-addCommandAlias("measurePerformance", "bench/jmh:run -i 10 -wi 10 -f 2 -t max -foe true -rf text -rff results.txt .*")
+addCommandAlias("measurePerformance", "bench/jmh:run -i 10 -wi 10 -f 2 -t max -foe true -rf json -rff results.json .*")
