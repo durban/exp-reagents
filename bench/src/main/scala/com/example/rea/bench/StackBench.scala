@@ -50,6 +50,16 @@ class StackBench {
     }
     Blackhole.consumeCPU(ct.tokens)
   }
+
+  @Benchmark
+  def stmStack(s: StmSt, bh: Blackhole, ct: ThreadSt): Unit = {
+    if (ct.shouldPush()) {
+      bh.consume(s.stmStack.push(ct.nextString()))
+    } else {
+      bh.consume(s.stmStack.tryPop())
+    }
+    Blackhole.consumeCPU(ct.tokens)
+  }
 }
 
 object StackBench {
@@ -76,6 +86,12 @@ object StackBench {
   class JdkSt {
     val concurrentDeque =
       new java.util.concurrent.ConcurrentLinkedDeque[String]
+  }
+
+  @State(Scope.Benchmark)
+  class StmSt {
+    val stmStack =
+      new StmStack[String]
   }
 
   @State(Scope.Thread)

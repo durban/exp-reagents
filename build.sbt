@@ -26,6 +26,10 @@ lazy val core = project.in(file("core"))
 lazy val bench = project.in(file("bench"))
   .settings(name := "choam-bench")
   .settings(commonSettings)
+  .settings(libraryDependencies ++=
+    dependencies.scalaStm +:
+    dependencies.fs2
+  )
   .enablePlugins(JmhPlugin)
   .dependsOn(core)
 
@@ -113,6 +117,8 @@ lazy val dependencies = new {
   )
 
   val scalaz = "org.scalaz" %% "scalaz-effect" % "7.2.8"
+
+  val scalaStm = "org.scala-stm" %% "scala-stm" % "0.8"
 }
 
 addCommandAlias("measurePerformance", "bench/jmh:run -i 10 -wi 10 -f 2 -t max -foe true -rf json -rff results.json .*")

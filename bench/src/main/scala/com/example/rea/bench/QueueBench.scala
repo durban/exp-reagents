@@ -54,6 +54,20 @@ class QueueBench {
     bh.consume(s.concurrentQueue.poll())
     Blackhole.consumeCPU((consumerWait * t.tokens).toLong)
   }
+
+  @Benchmark
+  @Group("STM")
+  def stmQueueProducer(s: StmSt, bh: Blackhole, t: CommonThreadState): Unit = {
+    bh.consume(s.stmQueue.enqueue(t.nextString()))
+    Blackhole.consumeCPU((producerWait * t.tokens).toLong)
+  }
+
+  @Benchmark
+  @Group("STM")
+  def stmQueueConsumer(s: StmSt, bh: Blackhole, t: CommonThreadState): Unit = {
+    bh.consume(s.stmQueue.tryDequeue())
+    Blackhole.consumeCPU((consumerWait * t.tokens).toLong)
+  }
 }
 
 object QueueBench {
@@ -90,6 +104,15 @@ object QueueBench {
     val concurrentQueue = {
       val q = new java.util.concurrent.ConcurrentLinkedQueue[String]
       for (_ <- prefill) { q.offer(prefillItem()) }
+      q
+    }
+  }
+
+  @State(Scope.Benchmark)
+  class StmSt {
+    val stmQueue = {
+      val q = new StmQueue[String]
+      for (_ <- prefill) { q.enqueue(prefillItem()) }
       q
     }
   }
