@@ -7,11 +7,32 @@ final class LockedStack[A] {
   private[this] var head: List[A] =
     Nil
 
-  def push(a: A): Unit = this.synchronized {
+  val lock =
+    new java.util.concurrent.locks.ReentrantLock
+
+  def push(a: A): Unit = {
+    lock.lock()
+    try {
+      unlockedPush(a)
+    } finally {
+      lock.unlock()
+    }
+  }
+
+  def unlockedPush(a: A): Unit = {
     head = a :: head
   }
 
-  def tryPop(): Option[A] = this.synchronized {
+  def tryPop(): Option[A] = {
+    lock.lock()
+    try {
+      unlockedTryPop()
+    } finally {
+      lock.unlock()
+    }
+  }
+
+  def unlockedTryPop(): Option[A] = {
     head match {
       case h :: t =>
         head = t
