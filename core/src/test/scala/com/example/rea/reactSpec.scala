@@ -92,7 +92,6 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   def popAll(r: React[Unit, List[Int]], expLen: Int, count: Int, errors: LinkedBlockingDeque[String]): Unit = {
     require(expLen > 0)
     for (_ <- 1 to count) {
-      val i = java.util.concurrent.ThreadLocalRandom.current().nextInt()
       val lst = r.unsafeRun
       if (lst.length =!= expLen) {
         if (lst.length =!= 0) {

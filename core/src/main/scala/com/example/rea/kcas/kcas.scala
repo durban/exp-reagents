@@ -136,7 +136,7 @@ private[kcas] object CASN extends KCAS {
             acquire()
           case cd @ CASNDesc(_) =>
             OtherDescriptor(cd)
-          case x =>
+          case _ =>
             // probably other op completed before us:
             AcquireFailure
         }
@@ -305,7 +305,7 @@ private[kcas] object NaiveKCAS extends KCAS {
     def lock(ops: List[CASD[_]]): List[CASD[_]] = ops match {
       case Nil =>
         Nil
-      case CASD(ref, ov, nv) :: tail =>
+      case CASD(ref, ov, _) :: tail =>
         if (ref.unsafeTryPerformCas(ov, null)) lock(tail)
         else ops // rollback
     }
@@ -314,7 +314,7 @@ private[kcas] object NaiveKCAS extends KCAS {
     def commit(ops: List[CASD[_]]): Unit = ops match {
       case Nil =>
         ()
-      case CASD(ref, ov, nv) :: tail =>
+      case CASD(ref, _, nv) :: tail =>
         ref.unsafeLazySet(nv)
         commit(tail)
     }
@@ -325,7 +325,7 @@ private[kcas] object NaiveKCAS extends KCAS {
         from match {
           case Nil =>
             impossible("this is the end")
-          case CASD(ref, ov, nv) :: tail =>
+          case CASD(ref, ov, _) :: tail =>
             ref.unsafeLazySet(ov)
             rollback(tail, to)
         }

@@ -319,7 +319,7 @@ object React {
       kcas.tryReadOne(ref) match {
         case null => Retry
         case a if equ(a, ov) => k.tryPerform(transform(a, b), CASD(ref, ov, nv) :: ops, kcas)
-        case a => Retry
+        case _ => Retry
       }
     }
 

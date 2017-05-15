@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-scalaVersion in ThisBuild := "2.12.1"
-crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value, "2.11.8")
+scalaVersion in ThisBuild := "2.12.2-bin-typelevel-4"
+crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value, "2.11.11-bin-typelevel-4")
 scalaOrganization in ThisBuild := "org.typelevel"
 
 lazy val core = project.in(file("core"))
   .settings(name := "choam-core")
   .settings(commonSettings)
-  .settings(tutSettings)
 
 lazy val bench = project.in(file("bench"))
   .settings(name := "choam-bench")
@@ -48,16 +47,21 @@ lazy val commonSettings = Seq[Setting[_]](
     "-Ywarn-numeric-widen",
     "-Ywarn-dead-code",
     "-Ypartial-unification",
-    "-Ywarn-unused-import"
+    "-Ywarn-unused:implicits",
+    "-Ywarn-unused:imports",
+    "-Ywarn-unused:locals",
+    "-Ywarn-unused:patvars",
+    "-Ywarn-unused:params",
+    "-Ywarn-unused:privates"
   ),
   scalacOptions := scalacOptions.value.flatMap {
-    case opt @ "-Xstrict-patmat-analysis" =>
+    case opt @ "-Ywarn-unused:_" =>
       if (scalaVersion.value.startsWith("2.12")) opt :: Nil
       else Nil
     case opt =>
       opt :: Nil
   },
-  scalacOptions in (Compile, console) ~= { _.filterNot("-Ywarn-unused-import" == _) },
+  scalacOptions in (Compile, console) ~= { _.filterNot("-Ywarn-unused:imports" == _) },
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.3" cross CrossVersion.binary),
 
@@ -80,12 +84,12 @@ lazy val commonSettings = Seq[Setting[_]](
 lazy val dependencies = new {
 
   val catsVersion = "0.9.0"
-  val circeVersion = "0.7.1"
+  val circeVersion = "0.8.0"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.2"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
   val catsFree = "org.typelevel" %% "cats-free" % catsVersion
-  val catsEffect = "org.typelevel" %% "cats-effect" % "0.1-0848c9b"
+  val catsEffect = "org.typelevel" %% "cats-effect" % "0.2"
 
   val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,

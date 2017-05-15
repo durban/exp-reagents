@@ -98,7 +98,7 @@ class CASNSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     @tailrec
     def repeat(times: Int)(block: => Unit): Unit = {
       if (times > 0) {
-        val u: Unit = block
+        val _: Unit = block
         repeat(times - 1)(block)
       }
     }

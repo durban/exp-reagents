@@ -20,7 +20,7 @@ class StmQueue[A] private[this] (sentinel: Node[A]) {
   def enqueue(a: A): Unit = atomic { implicit txn =>
     val node = Node(a, Ref[Elem[A]](End[A]()))
     tail.get.next.get match {
-      case e @ End() =>
+      case End() =>
         tail.get.next.set(node)
         tail.set(node)
       case Node(_, _) =>
