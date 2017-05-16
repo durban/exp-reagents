@@ -6,16 +6,23 @@ import scala.concurrent.stm._
 
 import StmQueue._
 
-class StmQueue[A] private[this] (sentinel: Node[A]) {
+class StmQueue[A] private[this] (sentinel: Node[A], els: Iterable[A]) {
+
+  def this(els: Iterable[A]) =
+    this(Node(nullOf[A], Ref(End[A]())), els)
 
   def this() =
-    this(Node(nullOf[A], Ref(End[A]())))
+    this(Iterable.empty)
 
   private[this] val head: Ref[Node[A]] =
     Ref(sentinel)
 
   private[this] val tail: Ref[Node[A]] =
     Ref(sentinel)
+
+  atomic { implicit txn =>
+    els.foreach(enqueue)
+  }
 
   def enqueue(a: A): Unit = atomic { implicit txn =>
     val node = Node(a, Ref[Elem[A]](End[A]()))

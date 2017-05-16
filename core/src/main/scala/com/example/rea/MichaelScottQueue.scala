@@ -4,13 +4,16 @@ import kcas._
 
 import MichaelScottQueue._
 
-final class MichaelScottQueue[A] private[this] (sentinel: Node[A]) {
+final class MichaelScottQueue[A] private[this] (sentinel: Node[A], els: Iterable[A]) {
 
   private[this] val head: Ref[Node[A]] = Ref.mk(sentinel)
   private[this] val tail: Ref[Node[A]] = Ref.mk(sentinel)
 
+  def this(els: Iterable[A]) =
+    this(Node(nullOf[A], Ref.mk(End[A]())), els)
+
   def this() =
-    this(Node(nullOf[A], Ref.mk(End[A]())))
+    this(Iterable.empty)
 
   val tryDeque: React[Unit, Option[A]] = {
     for {
@@ -55,6 +58,10 @@ final class MichaelScottQueue[A] private[this] (sentinel: Node[A]) {
     }
 
     go(head.read.unsafeRun, Nil).reverse
+  }
+
+  els.foreach { a =>
+    enqueue.unsafePerform(a)(KCAS.NaiveKCAS)
   }
 }
 

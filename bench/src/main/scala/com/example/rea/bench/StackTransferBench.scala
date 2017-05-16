@@ -8,7 +8,6 @@ import util._
 
 class StackTransferBench {
 
-  import StackBench.EmptyStack
   import StackTransferBench._
 
   @Benchmark
@@ -16,20 +15,13 @@ class StackTransferBench {
     import ct.kcasImpl
     bh.consume(s.treiberStack1.push.unsafePerform(ct.nextString()))
     bh.consume(s.transfer.unsafeRun)
-    if (s.treiberStack2.tryPop.unsafeRun eq None) throw EmptyStack
+    if (s.treiberStack2.tryPop.unsafeRun eq None) throw Errors.EmptyStack
     Blackhole.consumeCPU(ct.tokens)
   }
 
   @Benchmark
   def lockedStack(s: LockedSt, bh: Blackhole, ct: CommonThreadState): Unit = {
-    s.lockedStack1.lock.lock()
-    s.lockedStack2.lock.lock()
-    try {
-      bh.consume(s.lockedStack1.unlockedPush(ct.nextString()))
-    } finally {
-      s.lockedStack1.lock.unlock()
-      s.lockedStack2.lock.unlock()
-    }
+    bh.consume(s.lockedStack1.push(ct.nextString()))
 
     s.lockedStack1.lock.lock()
     s.lockedStack2.lock.lock()
@@ -41,14 +33,7 @@ class StackTransferBench {
       s.lockedStack2.lock.unlock()
     }
 
-    s.lockedStack1.lock.lock()
-    s.lockedStack2.lock.lock()
-    try {
-      if (s.lockedStack2.unlockedTryPop() eq None) throw EmptyStack
-    } finally {
-      s.lockedStack1.lock.unlock()
-      s.lockedStack2.lock.unlock()
-    }
+    if (s.lockedStack2.tryPop() eq None) throw Errors.EmptyStack
 
     Blackhole.consumeCPU(ct.tokens)
   }
@@ -61,22 +46,19 @@ class StackTransferBench {
       val item = s.stmStack1.tryPop().get
       s.stmStack2.push(item)
     })
-    if (s.stmStack2.tryPop() eq None) throw EmptyStack
+    if (s.stmStack2.tryPop() eq None) throw Errors.EmptyStack
     Blackhole.consumeCPU(ct.tokens)
   }
 }
 
 object StackTransferBench {
 
-  private[this] def prefill(): Iterable[String] =
-    Stream.continually(scala.util.Random.nextString(16)).take(10000)
-
   @State(Scope.Benchmark)
   class TreiberSt {
     val treiberStack1 =
-      new TreiberStack[String](prefill())
+      new TreiberStack[String](Prefill.prefill())
     val treiberStack2 =
-      new TreiberStack[String](prefill())
+      new TreiberStack[String](Prefill.prefill())
     val transfer =
       treiberStack1.tryPop.map(_.get) >>> treiberStack2.push
   }
@@ -84,16 +66,16 @@ object StackTransferBench {
   @State(Scope.Benchmark)
   class LockedSt {
     val lockedStack1 =
-      new LockedStack[String](prefill())
+      new LockedStack[String](Prefill.prefill())
     val lockedStack2 =
-      new LockedStack[String](prefill())
+      new LockedStack[String](Prefill.prefill())
   }
 
   @State(Scope.Benchmark)
   class StmSt {
     val stmStack1 =
-      new StmStack[String](prefill())
+      new StmStack[String](Prefill.prefill())
     val stmStack2 =
-      new StmStack[String](prefill())
+      new StmStack[String](Prefill.prefill())
   }
 }
