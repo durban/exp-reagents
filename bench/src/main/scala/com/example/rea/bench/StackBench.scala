@@ -5,64 +5,57 @@ import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
+import scala.util.control.NoStackTrace
 
 class StackBench {
 
   import StackBench._
 
   @Benchmark
-  def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASThreadSt): Unit = {
+  def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASThreadState): Unit = {
     import ct.kcasImpl
-    if (ct.shouldPush()) {
-      bh.consume(s.treiberStack.push.unsafePerform(ct.nextString()))
-    } else {
-      bh.consume(s.treiberStack.tryPop.unsafeRun)
-    }
-    Blackhole.consumeCPU(ct.tokens)
+    bh.consume(s.treiberStack.push.unsafePerform(ct.nextString()))
+    Blackhole.consumeCPU(ct.halfTokens)
+    if (s.treiberStack.tryPop.unsafeRun eq None) throw EmptyStack
+    Blackhole.consumeCPU(ct.halfTokens)
   }
 
   @Benchmark
-  def referenceStack(s: ReferenceSt, bh: Blackhole, ct: ThreadSt): Unit = {
-    if (ct.shouldPush()) {
-      bh.consume(s.referenceStack.push(ct.nextString()))
-    } else {
-      bh.consume(s.referenceStack.tryPop())
-    }
-    Blackhole.consumeCPU(ct.tokens)
+  def referenceStack(s: ReferenceSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+    bh.consume(s.referenceStack.push(ct.nextString()))
+    Blackhole.consumeCPU(ct.halfTokens)
+    if (s.referenceStack.tryPop() eq None) throw EmptyStack
+    Blackhole.consumeCPU(ct.halfTokens)
   }
 
   @Benchmark
-  def lockedStack(s: LockedSt, bh: Blackhole, ct: ThreadSt): Unit = {
-    if (ct.shouldPush()) {
-      bh.consume(s.lockedStack.push(ct.nextString()))
-    } else {
-      bh.consume(s.lockedStack.tryPop())
-    }
-    Blackhole.consumeCPU(ct.tokens)
+  def lockedStack(s: LockedSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+    bh.consume(s.lockedStack.push(ct.nextString()))
+    Blackhole.consumeCPU(ct.halfTokens)
+    if (s.lockedStack.tryPop() eq None) throw EmptyStack
+    Blackhole.consumeCPU(ct.halfTokens)
   }
 
   @Benchmark
-  def concurrentDeque(s: JdkSt, bh: Blackhole, ct: ThreadSt): Unit = {
-    if (ct.shouldPush()) {
-      bh.consume(s.concurrentDeque.push(ct.nextString()))
-    } else {
-      bh.consume(s.concurrentDeque.pollFirst())
-    }
-    Blackhole.consumeCPU(ct.tokens)
+  def concurrentDeque(s: JdkSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+    bh.consume(s.concurrentDeque.push(ct.nextString()))
+    Blackhole.consumeCPU(ct.halfTokens)
+    if (s.concurrentDeque.pollFirst() eq null) throw EmptyStack
+    Blackhole.consumeCPU(ct.halfTokens)
   }
 
   @Benchmark
-  def stmStack(s: StmSt, bh: Blackhole, ct: ThreadSt): Unit = {
-    if (ct.shouldPush()) {
-      bh.consume(s.stmStack.push(ct.nextString()))
-    } else {
-      bh.consume(s.stmStack.tryPop())
-    }
-    Blackhole.consumeCPU(ct.tokens)
+  def stmStack(s: StmSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+    bh.consume(s.stmStack.push(ct.nextString()))
+    Blackhole.consumeCPU(ct.halfTokens)
+    if (s.stmStack.tryPop() eq None) throw EmptyStack
+    Blackhole.consumeCPU(ct.halfTokens)
   }
 }
 
 object StackBench {
+
+  object EmptyStack extends AssertionError with NoStackTrace
 
   @State(Scope.Benchmark)
   class TreiberSt {
@@ -92,29 +85,5 @@ object StackBench {
   class StmSt {
     val stmStack =
       new StmStack[String]
-  }
-
-  @State(Scope.Thread)
-  class ThreadSt extends CommonThreadState {
-
-    var count: Long =
-      Long.MinValue
-
-    def shouldPush(): Boolean = {
-      count += 1L
-      (count % 3L) == 0L
-    }
-  }
-
-  @State(Scope.Thread)
-  class KCASThreadSt extends KCASThreadState {
-
-    var count: Long =
-      Long.MinValue
-
-    def shouldPush(): Boolean = {
-      count += 1L
-      (count % 3L) == 0L
-    }
   }
 }

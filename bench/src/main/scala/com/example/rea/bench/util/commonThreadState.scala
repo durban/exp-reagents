@@ -18,6 +18,9 @@ class CommonThreadState {
   val tokens: Long =
     64
 
+  val halfTokens: Long =
+    tokens >>> 1
+
   val producerTokens: Long =
     (tokens * producerWait).toLong
 

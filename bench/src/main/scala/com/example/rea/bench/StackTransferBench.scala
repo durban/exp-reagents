@@ -8,11 +8,10 @@ import util._
 
 class StackTransferBench {
 
-  import StackBench.{ ThreadSt, KCASThreadSt }
   import StackTransferBench._
 
   @Benchmark
-  def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASThreadSt): Unit = {
+  def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASThreadState): Unit = {
     import ct.kcasImpl
     bh.consume(s.treiberStack1.push.unsafePerform(ct.nextString()))
     bh.consume(s.transfer.unsafeRun)
@@ -21,7 +20,7 @@ class StackTransferBench {
   }
 
   @Benchmark
-  def lockedStack(s: LockedSt, bh: Blackhole, ct: ThreadSt): Unit = {
+  def lockedStack(s: LockedSt, bh: Blackhole, ct: CommonThreadState): Unit = {
     s.lockedStack1.lock.lock()
     s.lockedStack2.lock.lock()
     try {
@@ -54,7 +53,7 @@ class StackTransferBench {
   }
 
   @Benchmark
-  def stmStack(s: StmSt, bh: Blackhole, ct: ThreadSt): Unit = {
+  def stmStack(s: StmSt, bh: Blackhole, ct: CommonThreadState): Unit = {
     import scala.concurrent.stm._
     bh.consume(s.stmStack1.push(ct.nextString()))
     bh.consume(atomic { implicit txn =>
