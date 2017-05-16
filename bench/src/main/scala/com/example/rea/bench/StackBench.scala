@@ -1,11 +1,12 @@
 package com.example.rea
 package bench
 
+import scala.util.control.NoStackTrace
+
 import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
-import scala.util.control.NoStackTrace
 
 class StackBench {
 

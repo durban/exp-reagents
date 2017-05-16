@@ -9,9 +9,6 @@ import kcas._
 @State(Scope.Thread)
 class CommonThreadState {
 
-  private[this] final val producerWait = 0.9
-  private[this] final val consumerWait = 0.5
-
   private[this] val rnd =
     XorShift()
 
@@ -20,12 +17,6 @@ class CommonThreadState {
 
   val halfTokens: Long =
     tokens >>> 1
-
-  val producerTokens: Long =
-    (tokens * producerWait).toLong
-
-  val consumerTokens: Long =
-    (tokens * consumerWait).toLong
 
   def nextLong(): Long =
     rnd.nextLong()
