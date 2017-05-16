@@ -2,7 +2,10 @@ package com.example.rea
 
 import kcas._
 
-final class TreiberStack[A] {
+final class TreiberStack[A](els: Iterable[A]) {
+
+  def this() =
+    this(Iterable.empty)
 
   private[rea] val head = Ref.mk[List[A]](Nil)
 
@@ -21,5 +24,9 @@ final class TreiberStack[A] {
   private[rea] def unsafeToList(implicit kcas: KCAS): List[A] = {
     val r = head.upd[Unit, List[A]] { (l, _) => (l, l) }
     r.unsafeRun
+  }
+
+  els.foreach { a =>
+    push.unsafePerform(a)(KCAS.NaiveKCAS)
   }
 }

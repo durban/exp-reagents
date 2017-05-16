@@ -2,13 +2,23 @@ package com.example.rea
 package bench
 package util
 
-final class LockedStack[A] {
+final class LockedStack[A](els: Iterable[A]) {
+
+  def this() =
+    this(Iterable.empty)
 
   private[this] var head: List[A] =
     Nil
 
   val lock =
     new java.util.concurrent.locks.ReentrantLock
+
+  lock.lock()
+  try {
+    els.foreach(unlockedPush)
+  } finally {
+    lock.unlock()
+  }
 
   def push(a: A): Unit = {
     lock.lock()

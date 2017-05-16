@@ -34,20 +34,32 @@ object CounterBench {
 
   @State(Scope.Benchmark)
   class ReferenceSt {
-    val referenceCtr =
-      new ReferenceCounter
+    val referenceCtr = {
+      val ctr = new ReferenceCounter
+      val init = java.util.concurrent.ThreadLocalRandom.current().nextLong()
+      ctr.add(init)
+      ctr
+    }
   }
 
   @State(Scope.Benchmark)
   class LockedSt {
-    val lockedCtr =
-      new LockedCounter
+    val lockedCtr = {
+      val ctr = new LockedCounter
+      val init = java.util.concurrent.ThreadLocalRandom.current().nextLong()
+      ctr.add(init)
+      ctr
+    }
   }
 
   @State(Scope.Benchmark)
   class ReactSt {
-    val reactCtr =
-      new Counter
+    val reactCtr = {
+      val ctr = new Counter
+      val init = java.util.concurrent.ThreadLocalRandom.current().nextLong()
+      ctr.add.unsafePerform(init)(kcas.KCAS.NaiveKCAS)
+      ctr
+    }
   }
 }
 
@@ -82,7 +94,10 @@ object CounterBenchN {
 
     @Setup
     def setup(): Unit = {
-      lockedCtrN = new LockedCounterN(n)
+      val ctr = new LockedCounterN(n)
+      val init = java.util.concurrent.ThreadLocalRandom.current().nextLong()
+      ctr.add(init)
+      lockedCtrN = ctr
     }
   }
 
@@ -99,7 +114,12 @@ object CounterBenchN {
 
     @Setup
     def setup(): Unit = {
-      ctrs = Array.fill(n)(new Counter)
+      val init = java.util.concurrent.ThreadLocalRandom.current().nextLong()
+      ctrs = Array.fill(n) {
+        val c = new Counter
+        c.add.unsafePerform(init)(kcas.KCAS.NaiveKCAS)
+        c
+      }
       r = ctrs.map(_.add.rmap(_ => ())).reduceLeft { (a, b) => (a * b).rmap(_ => ()) }
     }
   }

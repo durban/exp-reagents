@@ -1,6 +1,7 @@
 package com.example.rea
 package bench
 
+import scala.collection.JavaConverters._
 import scala.util.control.NoStackTrace
 
 import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
@@ -58,33 +59,32 @@ object StackBench {
 
   object EmptyStack extends AssertionError with NoStackTrace
 
+  private[this] def prefill(): Iterable[String] =
+    Stream.continually(scala.util.Random.nextString(16)).take(10000)
+
   @State(Scope.Benchmark)
   class TreiberSt {
-    val treiberStack =
-      new TreiberStack[String]
+    val treiberStack = new TreiberStack[String](prefill())
   }
 
   @State(Scope.Benchmark)
   class ReferenceSt {
-    val referenceStack =
-      new ReferenceTreiberStack[String]
+    val referenceStack = new ReferenceTreiberStack[String](prefill())
   }
 
   @State(Scope.Benchmark)
   class LockedSt {
-    val lockedStack =
-      new LockedStack[String]
+    val lockedStack = new LockedStack[String](prefill())
   }
 
   @State(Scope.Benchmark)
   class JdkSt {
     val concurrentDeque =
-      new java.util.concurrent.ConcurrentLinkedDeque[String]
+      new java.util.concurrent.ConcurrentLinkedDeque[String](prefill().toList.asJava)
   }
 
   @State(Scope.Benchmark)
   class StmSt {
-    val stmStack =
-      new StmStack[String]
+    val stmStack = new StmStack[String](prefill())
   }
 }

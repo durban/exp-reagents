@@ -4,10 +4,15 @@ package util
 
 import java.util.concurrent.atomic.AtomicReference
 
-final class ReferenceTreiberStack[A] {
+final class ReferenceTreiberStack[A](els: Iterable[A]) {
+
+  def this() =
+    this(Iterable.empty)
 
   private[this] val head =
     new AtomicReference[List[A]](Nil)
+
+  els.foreach(push)
 
   @tailrec
   def push(a: A): Unit = {
