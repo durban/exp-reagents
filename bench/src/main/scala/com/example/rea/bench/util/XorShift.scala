@@ -10,6 +10,12 @@ final class XorShift private (private[this] var state: Int) {
     state ^= (state << 7)
     state
   }
+
+  def nextLong(): Long = {
+    val m = nextInt().toLong
+    val n = nextInt().toLong
+    m + (n << 32)
+  }
 }
 
 object XorShift {

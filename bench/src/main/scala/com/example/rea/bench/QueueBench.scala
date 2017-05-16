@@ -16,7 +16,7 @@ class QueueBench {
   def michaelScottQueueProducer(s: MsSt, bh: Blackhole, t: KCASThreadState): Unit = {
     import t.kcasImpl
     bh.consume(s.michaelScottQueue.enqueue.unsafePerform(t.nextString()))
-    Blackhole.consumeCPU((producerWait * t.tokens).toLong)
+    Blackhole.consumeCPU(t.producerTokens)
   }
 
   @Benchmark
@@ -24,60 +24,57 @@ class QueueBench {
   def michaelScottQueueConsumer(s: MsSt, bh: Blackhole, t: KCASThreadState): Unit = {
     import t.kcasImpl
     bh.consume(s.michaelScottQueue.tryDeque.unsafeRun)
-    Blackhole.consumeCPU((consumerWait * t.tokens).toLong)
+    Blackhole.consumeCPU(t.consumerTokens)
   }
 
   @Benchmark
   @Group("LCK")
   def lockedQueueProducer(s: LockedSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.lockedQueue.enqueue(t.nextString()))
-    Blackhole.consumeCPU((producerWait * t.tokens).toLong)
+    Blackhole.consumeCPU(t.producerTokens)
   }
 
   @Benchmark
   @Group("LCK")
   def lockedQueueConsumer(s: LockedSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.lockedQueue.tryDequeue())
-    Blackhole.consumeCPU((consumerWait * t.tokens).toLong)
+    Blackhole.consumeCPU(t.consumerTokens)
   }
 
   @Benchmark
   @Group("JDK")
   def concurrentQueueProducer(s: JdkSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.concurrentQueue.offer(t.nextString()))
-    Blackhole.consumeCPU((producerWait * t.tokens).toLong)
+    Blackhole.consumeCPU(t.producerTokens)
   }
 
   @Benchmark
   @Group("JDK")
   def concurrentQueueConsumer(s: JdkSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.concurrentQueue.poll())
-    Blackhole.consumeCPU((consumerWait * t.tokens).toLong)
+    Blackhole.consumeCPU(t.consumerTokens)
   }
 
   @Benchmark
   @Group("STM")
   def stmQueueProducer(s: StmSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.stmQueue.enqueue(t.nextString()))
-    Blackhole.consumeCPU((producerWait * t.tokens).toLong)
+    Blackhole.consumeCPU(t.producerTokens)
   }
 
   @Benchmark
   @Group("STM")
   def stmQueueConsumer(s: StmSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.stmQueue.tryDequeue())
-    Blackhole.consumeCPU((consumerWait * t.tokens).toLong)
+    Blackhole.consumeCPU(t.consumerTokens)
   }
 }
 
 object QueueBench {
 
-  final val producerWait = 0.9
-  final val consumerWait = 0.5
+  private[this] final val prefill = (1 to 1000000)
 
-  final val prefill = (1 to 1000000)
-
-  def prefillItem(): String =
+  private[this] def prefillItem(): String =
     scala.util.Random.nextString(16)
 
   @State(Scope.Benchmark)

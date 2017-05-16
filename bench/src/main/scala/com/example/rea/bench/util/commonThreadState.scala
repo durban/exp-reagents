@@ -9,16 +9,26 @@ import kcas._
 @State(Scope.Thread)
 class CommonThreadState {
 
-  private[this] val rnd =
-    java.util.concurrent.ThreadLocalRandom.current()
+  private[this] final val producerWait = 0.9
+  private[this] final val consumerWait = 0.5
 
-  val tokens: Long = 64
+  private[this] val rnd =
+    XorShift()
+
+  val tokens: Long =
+    64
+
+  val producerTokens: Long =
+    (tokens * producerWait).toLong
+
+  val consumerTokens: Long =
+    (tokens * consumerWait).toLong
 
   def nextLong(): Long =
     rnd.nextLong()
 
   def nextString(): String =
-    nextLong().toString
+    rnd.nextLong().abs.toString
 }
 
 @State(Scope.Thread)
