@@ -21,7 +21,7 @@ class FailedCAS1Bench {
   }
 
   @Benchmark
-  def failedCAS1Baseline(r: RefState, t: CommonThreadState): Unit = {
+  def failedCAS1Reference(r: RefState, t: CommonThreadState): Unit = {
     val succ = r.ref.unsafeTryPerformCas(incorrectOv, t.nextString())
     if (succ) throw new AssertionError("CAS should've failed")
     Blackhole.consumeCPU(t.tokens)
@@ -49,7 +49,7 @@ class CAS1LoopBench {
   }
 
   @Benchmark
-  def successfulCAS1LoopBaseline(r: RefState, t: CommonThreadState): Unit = {
+  def successfulCAS1LoopReference(r: RefState, t: CommonThreadState): Unit = {
     val ref = r.ref
     @tailrec
     def go(): Unit = {
@@ -88,7 +88,7 @@ class KCASLoopBench {
   }
 
   @Benchmark
-  def successfulKCASLoopBaseline(r: KRefState, t: CommonThreadState): Unit = {
+  def successfulKCASLoopReference(r: KRefState, t: CommonThreadState): Unit = {
     val refs = r.refs
     @tailrec
     def goOne(ref: Ref[String]): Unit = {

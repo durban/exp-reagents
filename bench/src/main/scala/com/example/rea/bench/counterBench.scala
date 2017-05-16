@@ -11,11 +11,6 @@ class CounterBench {
   import CounterBench._
 
   @Benchmark
-  def baseline(t: CommonThreadState): Unit = {
-    Blackhole.consumeCPU(t.tokens)
-  }
-
-  @Benchmark
   def reference(s: ReferenceSt, t: CommonThreadState, bh: Blackhole): Unit = {
     bh.consume(s.referenceCtr.add(t.nextLong()))
     Blackhole.consumeCPU(t.tokens)
