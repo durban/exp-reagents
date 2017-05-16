@@ -37,6 +37,21 @@ class StmQueue[A] private[this] (sentinel: Node[A]) {
         None
     }
   }
+
+  def unsafeToList(): List[A] = atomic { implicit txn =>
+    @tailrec
+    def go(e: Elem[A], acc: List[A]): List[A] = e match {
+      case Node(null, next) =>
+        // sentinel
+        go(next.get, acc)
+      case Node(a, next) =>
+        go(next.get, a :: acc)
+      case End() =>
+        acc
+    }
+
+    go(head.get, Nil).reverse
+  }
 }
 
 object StmQueue {
