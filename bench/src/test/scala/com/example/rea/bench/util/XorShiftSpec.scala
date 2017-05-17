@@ -2,10 +2,7 @@ package com.example.rea
 package bench
 package util
 
-import org.scalatest.{ FlatSpec, Matchers }
-import org.scalactic.TypeCheckedTripleEquals
-
-class XorShiftSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
+class XorShiftSpec extends BaseSpec {
 
   "XorShift" should "mostly work" in {
     val xs = XorShift()

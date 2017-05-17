@@ -8,13 +8,7 @@ import scala.concurrent.stm._
 
 import fs2._
 
-import org.scalatest.{ FlatSpec, Matchers }
-import org.scalactic.TypeCheckedTripleEquals
-
-class StmStackSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
-
-  implicit val str: Strategy =
-    Strategy.fromExecutionContext(scala.concurrent.ExecutionContext.global)
+class StmStackSpec extends BaseSpec {
 
   "StmStack" should "be a correct stack" in {
     val s = new StmStack[Int]

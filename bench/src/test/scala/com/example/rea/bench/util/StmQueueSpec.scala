@@ -8,13 +8,7 @@ import scala.concurrent.stm._
 
 import fs2._
 
-import org.scalatest.{ FlatSpec, Matchers }
-import org.scalactic.TypeCheckedTripleEquals
-
-class StmQueueSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
-
-  implicit val str: Strategy =
-    Strategy.fromExecutionContext(scala.concurrent.ExecutionContext.global)
+class StmQueueSpec extends BaseSpec {
 
   "StmQueue" should "be a correct queue" in {
     val q = new StmQueue[Int]
