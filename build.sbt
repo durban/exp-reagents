@@ -25,9 +25,14 @@ lazy val core = project.in(file("core"))
 lazy val bench = project.in(file("bench"))
   .settings(name := "choam-bench")
   .settings(commonSettings)
-  .settings(libraryDependencies ++=
-    dependencies.scalaStm +:
-    dependencies.fs2
+  .settings(
+    libraryDependencies ++= (
+      dependencies.fs2
+      ++ Seq(dependencies.scalaStm)
+      ++ dependencies.circe.map(_ % Test)
+      ++ dependencies.iteratee.map(_ % Test)
+    ),
+    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch)
   )
   .enablePlugins(JmhPlugin)
   .dependsOn(core)
@@ -85,6 +90,7 @@ lazy val dependencies = new {
 
   val catsVersion = "0.9.0"
   val circeVersion = "0.8.0"
+  val iterateeVersion = "0.11.0"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.2"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
@@ -94,7 +100,13 @@ lazy val dependencies = new {
   val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,
     "io.circe" %% "circe-generic" % circeVersion,
-    "io.circe" %% "circe-parser" % circeVersion
+    "io.circe" %% "circe-parser" % circeVersion,
+    "io.circe" %% "circe-streaming" % circeVersion
+  )
+
+  val iteratee = Seq(
+    "io.iteratee" %% "iteratee-core" % iterateeVersion,
+    "io.iteratee" %% "iteratee-files" % iterateeVersion
   )
 
   val scodec = Seq(

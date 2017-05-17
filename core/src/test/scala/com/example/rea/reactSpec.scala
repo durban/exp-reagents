@@ -127,8 +127,8 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
       fail(s"Errors:\n${errors.asScala.mkString("\n")}")
     }
 
-    val l1 = s1.head.read.unsafeRun
-    val l2 = s2.head.read.unsafeRun
+    val l1 = s1.unsafeToList
+    val l2 = s2.unsafeToList
     if (l1 != l2) {
       fail("Different stacks at the end")
     }
@@ -161,7 +161,7 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
       fail(s"Errors:\n${errors.asScala.mkString("\n")}")
     }
 
-    val lsts = stacks.map(_.head.read.unsafeRun)
+    val lsts = stacks.map(_.unsafeToList)
     if (!lsts.forall(lst => lst == lsts.head)) {
       fail("Different stacks at the end")
     }

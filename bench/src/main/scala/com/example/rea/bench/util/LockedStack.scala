@@ -7,8 +7,8 @@ final class LockedStack[A](els: Iterable[A]) {
   def this() =
     this(Iterable.empty)
 
-  private[this] var head: List[A] =
-    Nil
+  private[this] var head: TsList[A] =
+    TsList.End
 
   val lock =
     new java.util.concurrent.locks.ReentrantLock
@@ -30,7 +30,7 @@ final class LockedStack[A](els: Iterable[A]) {
   }
 
   def unlockedPush(a: A): Unit = {
-    head = a :: head
+    head = TsList.Cons(a, head)
   }
 
   def tryPop(): Option[A] = {
@@ -44,10 +44,10 @@ final class LockedStack[A](els: Iterable[A]) {
 
   def unlockedTryPop(): Option[A] = {
     head match {
-      case h :: t =>
+      case TsList.Cons(h, t) =>
         head = t
         Some(h)
-      case Nil =>
+      case TsList.End =>
         None
     }
   }
