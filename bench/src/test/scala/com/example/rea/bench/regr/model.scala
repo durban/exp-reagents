@@ -2,6 +2,8 @@ package com.example.rea
 package bench
 package regr
 
+import scala.reflect.ClassTag
+
 import cats.implicits._
 
 import io.circe.generic.JsonCodec
@@ -9,6 +11,9 @@ import io.circe.generic.JsonCodec
 final case class Results(
   rss: Vector[BenchmarkResult]
 ) {
+
+  def byClass[A](method: String, params: (String, String)*)(implicit ct: ClassTag[A]): BenchmarkResult =
+    lookup(ct.runtimeClass.getName + "." + method, params: _*)
 
   def lookup(name: String, params: (String, String)*): BenchmarkResult = {
     val parameters = Map(params: _*)
