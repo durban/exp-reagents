@@ -1,16 +1,19 @@
 package com.example.rea
 package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
+import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Measurement, State, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
 
+@Warmup(iterations = 10)
+@Measurement(iterations = 10)
 class QueueTransferBench {
 
   import QueueTransferBench._
 
   @Benchmark
+  @Measurement(iterations = 20)
   def michaelScottQueue(s: MsSt, bh: Blackhole, ct: KCASThreadState): Unit = {
     import ct.kcasImpl
     bh.consume(s.michaelScottQueue1.enqueue.unsafePerform(ct.nextString()))
@@ -20,6 +23,7 @@ class QueueTransferBench {
   }
 
   @Benchmark
+  @Measurement(iterations = 20)
   def lockedQueue(s: LockedSt, bh: Blackhole, ct: CommonThreadState): Unit = {
     bh.consume(s.lockedQueue1.enqueue(ct.nextString()))
 

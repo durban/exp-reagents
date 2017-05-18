@@ -19,8 +19,8 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
 
   final val expBenchMode = "thrpt"
   final val expThreads = 4
-  final val maxRelativeError = 0.1
-  final val tolerance = 0.03
+  final val maxRelativeError = 0.08
+  final val tolerance = 0.04
   final val resultsFile = s"bench${File.separator}results.json"
 
   final val naive = ("kcasName", kcas.KCAS.fqns.NaiveKCAS)
@@ -83,7 +83,7 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
       results.byClass[CounterBenchN]("reactN", casn, "n" -> "2") should beWithin(0.0214)
       results.byClass[CounterBenchN]("reactN", casn, "n" -> "8") should beWithin(0.00315)
       results.byClass[CounterBenchN]("reactN", naive, "n" -> "2") should beWithin(0.0285)
-      results.byClass[CounterBenchN]("reactN", naive, "n" -> "8") should beWithin(0.00345)
+      results.byClass[CounterBenchN]("reactN", naive, "n" -> "8") should beWithin(0.00328)
     }
   }
 
@@ -91,7 +91,7 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
 
     "QueueBench" in {
       results.byClass[QueueBench]("michaelScottQueue", casn) should beWithin(0.0142)
-      results.byClass[QueueBench]("michaelScottQueue", naive) should beWithin(0.0184)
+      results.byClass[QueueBench]("michaelScottQueue", naive) should beWithin(0.0173)
     }
 
     "QueueTransferBench" in {
@@ -108,8 +108,8 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
     }
 
     "StackTransferBench" in {
-      results.byClass[StackTransferBench]("treiberStack", casn) should beWithin(0.0166)
-      results.byClass[StackTransferBench]("treiberStack", naive) should beWithin(0.0244)
+      results.byClass[StackTransferBench]("treiberStack", casn) should beWithin(0.0174)
+      results.byClass[StackTransferBench]("treiberStack", naive) should beWithin(0.0254)
     }
   }
 
@@ -128,8 +128,8 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
     }
 
     "KCASLoopBench" in {
-      results.byClass[KCASLoopBench]("successfulKCASLoop", casn) should beWithin(0.00719)
-      results.byClass[KCASLoopBench]("successfulKCASLoop", naive) should beWithin(0.01)
+      results.byClass[KCASLoopBench]("successfulKCASLoop", casn) should beWithin(0.00928)
+      results.byClass[KCASLoopBench]("successfulKCASLoop", naive) should beWithin(0.0106)
     }
   }
 }

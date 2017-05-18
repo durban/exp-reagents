@@ -1,11 +1,13 @@
 package com.example.rea
 package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, State, Scope }
+import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Measurement, State, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
 
+@Warmup(iterations = 10)
+@Measurement(iterations = 10)
 class StackBench {
 
   import StackBench._
@@ -20,6 +22,7 @@ class StackBench {
   }
 
   @Benchmark
+  @Measurement(iterations = 20)
   def referenceStack(s: ReferenceSt, bh: Blackhole, ct: CommonThreadState): Unit = {
     bh.consume(s.referenceStack.push(ct.nextString()))
     Blackhole.consumeCPU(ct.halfTokens)
