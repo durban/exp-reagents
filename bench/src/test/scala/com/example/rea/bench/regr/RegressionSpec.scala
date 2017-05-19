@@ -18,6 +18,8 @@ import org.scalatest.{ FreeSpec, Matchers }
 import org.scalatest.matchers.Matcher
 import org.scalactic.TypeCheckedTripleEquals
 
+import kcas.bench._
+
 class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals {
 
   final val expBenchMode = "thrpt"
@@ -44,8 +46,8 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
     }
   }
 
-  def writeRelativeResults(rss: Results, baseline: BenchmarkResult, file: File): Unit = {
-    val rrs = rss.rss.map(r => RelativeResult.fromBenchmarkResult(r, baseline))
+  def writeRelativeResults(rss: Vector[BenchmarkResult], baseline: BenchmarkResult, file: File): Unit = {
+    val rrs = rss.map(r => RelativeResult.fromBenchmarkResult(r, baseline))
     val json = rrs.asJson
     val bs = json.spaces2.getBytes(UTF_8)
     Files.write(Paths.get(file.getPath), bs)
@@ -59,11 +61,34 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
     m.compose[BenchmarkResult](_.primaryMetric.score)
   }
 
-  "Sanity check" - {
+  def interestingBenchmarks(results: Results) = Vector(
+    results.byClass[CounterBench]("react", casn),
+    results.byClass[CounterBench]("react", naive),
+    results.byClass[CounterBenchN]("reactN", casn, "n" -> "2"),
+    results.byClass[CounterBenchN]("reactN", casn, "n" -> "8"),
+    results.byClass[CounterBenchN]("reactN", naive, "n" -> "2"),
+    results.byClass[CounterBenchN]("reactN", naive, "n" -> "8"),
+    results.byClass[QueueBench]("michaelScottQueue", casn),
+    results.byClass[QueueBench]("michaelScottQueue", naive),
+    results.byClass[QueueTransferBench]("michaelScottQueue", casn),
+    results.byClass[QueueTransferBench]("michaelScottQueue", naive),
+    results.byClass[StackBench]("treiberStack", casn),
+    results.byClass[StackBench]("treiberStack", naive),
+    results.byClass[StackTransferBench]("treiberStack", casn),
+    results.byClass[StackTransferBench]("treiberStack", naive),
+    results.byClass[CAS1LoopBench]("successfulCAS1Loop", casn),
+    results.byClass[CAS1LoopBench]("successfulCAS1Loop", naive),
+    results.byClass[FailedCAS1Bench]("failedCAS1", casn),
+    results.byClass[FailedCAS1Bench]("failedCAS1", naive),
+    results.byClass[KCASLoopBench]("successfulKCASLoop", casn),
+    results.byClass[KCASLoopBench]("successfulKCASLoop", naive),
+  )
 
-    "Write relative results" in {
-      writeRelativeResults(results, baseline, new File(rrFile))
-    }
+  "Write relative results" in {
+    writeRelativeResults(interestingBenchmarks(results), baseline, new File(rrFile))
+  }
+
+  "Sanity check" - {
 
     "Options" in {
       for (r <- results.rss) {
@@ -84,67 +109,6 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
     "Baseline" in {
       val baseline2 = results.byClass[BaselineBench]("baseline2")
       baseline2 should beWithin(1.0, of = baseline)
-    }
-  }
-
-  "Counters" - {
-
-    "CounterBench" in {
-      results.byClass[CounterBench]("react", casn) should beWithin(0.05)
-      results.byClass[CounterBench]("react", naive) should beWithin(0.09)
-    }
-
-    "CounterBenchN" in {
-      results.byClass[CounterBenchN]("reactN", casn, "n" -> "2") should beWithin(0.0214)
-      results.byClass[CounterBenchN]("reactN", casn, "n" -> "8") should beWithin(0.00315)
-      results.byClass[CounterBenchN]("reactN", naive, "n" -> "2") should beWithin(0.0285)
-      results.byClass[CounterBenchN]("reactN", naive, "n" -> "8") should beWithin(0.00328)
-    }
-  }
-
-  "Queues" - {
-
-    "QueueBench" in {
-      results.byClass[QueueBench]("michaelScottQueue", casn) should beWithin(0.0142)
-      results.byClass[QueueBench]("michaelScottQueue", naive) should beWithin(0.0173)
-    }
-
-    "QueueTransferBench" in {
-      results.byClass[QueueTransferBench]("michaelScottQueue", casn) should beWithin(0.0138)
-      results.byClass[QueueTransferBench]("michaelScottQueue", naive) should beWithin(0.0182)
-    }
-  }
-
-  "Stacks" - {
-
-    "StackBench" in {
-      results.byClass[StackBench]("treiberStack", casn) should beWithin(0.0263)
-      results.byClass[StackBench]("treiberStack", naive) should beWithin(0.047)
-    }
-
-    "StackTransferBench" in {
-      results.byClass[StackTransferBench]("treiberStack", casn) should beWithin(0.0174)
-      results.byClass[StackTransferBench]("treiberStack", naive) should beWithin(0.0254)
-    }
-  }
-
-  "CAS-es" - {
-
-    import kcas.bench._
-
-    "CAS1LoopBench" in {
-      results.byClass[CAS1LoopBench]("successfulCAS1Loop", casn) should beWithin(0.0431)
-      results.byClass[CAS1LoopBench]("successfulCAS1Loop", naive) should beWithin(0.0666)
-    }
-
-    "FailedCAS1Bench" in {
-      results.byClass[FailedCAS1Bench]("failedCAS1", casn) should beWithin(0.219)
-      results.byClass[FailedCAS1Bench]("failedCAS1", naive) should beWithin(0.294)
-    }
-
-    "KCASLoopBench" in {
-      results.byClass[KCASLoopBench]("successfulKCASLoop", casn) should beWithin(0.00928)
-      results.byClass[KCASLoopBench]("successfulKCASLoop", naive) should beWithin(0.0106)
     }
   }
 }

@@ -89,7 +89,7 @@ object RelativeResult {
       val af = as.split('.')(1)
       val bf = bs.split('.')(1)
       val prec = (af zip bf).takeWhile { case (a, b) => a === b }.length
-      new MathContext(prec + 2, RoundingMode.HALF_EVEN)
+      new MathContext(prec + 1, RoundingMode.HALF_EVEN)
     } else {
       whole
     }

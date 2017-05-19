@@ -1,162 +1,82 @@
 [
   {
-    "benchmark" : "com.example.rea.bench.BaselineBench.baseline()",
-    "relativeScore" : 1
-  },
-  {
-    "benchmark" : "com.example.rea.bench.BaselineBench.baseline2()",
-    "relativeScore" : 1.031
-  },
-  {
-    "benchmark" : "com.example.rea.bench.CounterBench.locked()",
-    "relativeScore" : 0.209
-  },
-  {
     "benchmark" : "com.example.rea.bench.CounterBench.react(kcasName=com.example.rea.kcas.CASN)",
-    "relativeScore" : 0.0490
+    "relativeScore" : 0.049
   },
   {
     "benchmark" : "com.example.rea.bench.CounterBench.react(kcasName=com.example.rea.kcas.NaiveKCAS)",
-    "relativeScore" : 0.09190
-  },
-  {
-    "benchmark" : "com.example.rea.bench.CounterBench.reference()",
-    "relativeScore" : 0.428
-  },
-  {
-    "benchmark" : "com.example.rea.bench.CounterBenchN.lockedN(n=2)",
-    "relativeScore" : 0.0916
-  },
-  {
-    "benchmark" : "com.example.rea.bench.CounterBenchN.lockedN(n=8)",
-    "relativeScore" : 0.0613
+    "relativeScore" : 0.0919
   },
   {
     "benchmark" : "com.example.rea.bench.CounterBenchN.reactN(kcasName=com.example.rea.kcas.CASN, n=2)",
-    "relativeScore" : 0.02190
+    "relativeScore" : 0.0219
   },
   {
     "benchmark" : "com.example.rea.bench.CounterBenchN.reactN(kcasName=com.example.rea.kcas.CASN, n=8)",
-    "relativeScore" : 0.00304011
+    "relativeScore" : 0.0030401
   },
   {
     "benchmark" : "com.example.rea.bench.CounterBenchN.reactN(kcasName=com.example.rea.kcas.NaiveKCAS, n=2)",
-    "relativeScore" : 0.0294
+    "relativeScore" : 0.029
   },
   {
     "benchmark" : "com.example.rea.bench.CounterBenchN.reactN(kcasName=com.example.rea.kcas.NaiveKCAS, n=8)",
-    "relativeScore" : 0.0032818
-  },
-  {
-    "benchmark" : "com.example.rea.bench.QueueBench.concurrentQueueProducer()",
-    "relativeScore" : 0.311
-  },
-  {
-    "benchmark" : "com.example.rea.bench.QueueBench.lockedQueueProducer()",
-    "relativeScore" : 0.1253
+    "relativeScore" : 0.003282
   },
   {
     "benchmark" : "com.example.rea.bench.QueueBench.michaelScottQueue(kcasName=com.example.rea.kcas.CASN)",
-    "relativeScore" : 0.01395
+    "relativeScore" : 0.0139
   },
   {
     "benchmark" : "com.example.rea.bench.QueueBench.michaelScottQueue(kcasName=com.example.rea.kcas.NaiveKCAS)",
-    "relativeScore" : 0.01730
-  },
-  {
-    "benchmark" : "com.example.rea.bench.QueueBench.stmQueueProducer()",
-    "relativeScore" : 0.0498
-  },
-  {
-    "benchmark" : "com.example.rea.bench.QueueTransferBench.lockedQueue()",
-    "relativeScore" : 0.08269
+    "relativeScore" : 0.0173
   },
   {
     "benchmark" : "com.example.rea.bench.QueueTransferBench.michaelScottQueue(kcasName=com.example.rea.kcas.CASN)",
-    "relativeScore" : 0.013726
+    "relativeScore" : 0.01373
   },
   {
     "benchmark" : "com.example.rea.bench.QueueTransferBench.michaelScottQueue(kcasName=com.example.rea.kcas.NaiveKCAS)",
-    "relativeScore" : 0.01799
-  },
-  {
-    "benchmark" : "com.example.rea.bench.QueueTransferBench.stmQueue()",
-    "relativeScore" : 0.01873
-  },
-  {
-    "benchmark" : "com.example.rea.bench.StackBench.concurrentDeque()",
-    "relativeScore" : 0.2286
-  },
-  {
-    "benchmark" : "com.example.rea.bench.StackBench.lockedStack()",
-    "relativeScore" : 0.1245
-  },
-  {
-    "benchmark" : "com.example.rea.bench.StackBench.referenceStack()",
-    "relativeScore" : 0.331
-  },
-  {
-    "benchmark" : "com.example.rea.bench.StackBench.stmStack()",
-    "relativeScore" : 0.0311
+    "relativeScore" : 0.0180
   },
   {
     "benchmark" : "com.example.rea.bench.StackBench.treiberStack(kcasName=com.example.rea.kcas.CASN)",
-    "relativeScore" : 0.025717
+    "relativeScore" : 0.02572
   },
   {
     "benchmark" : "com.example.rea.bench.StackBench.treiberStack(kcasName=com.example.rea.kcas.NaiveKCAS)",
-    "relativeScore" : 0.04826
-  },
-  {
-    "benchmark" : "com.example.rea.bench.StackTransferBench.lockedStack()",
-    "relativeScore" : 0.09451
-  },
-  {
-    "benchmark" : "com.example.rea.bench.StackTransferBench.stmStack()",
-    "relativeScore" : 0.02100
+    "relativeScore" : 0.0483
   },
   {
     "benchmark" : "com.example.rea.bench.StackTransferBench.treiberStack(kcasName=com.example.rea.kcas.CASN)",
-    "relativeScore" : 0.01739
+    "relativeScore" : 0.0174
   },
   {
     "benchmark" : "com.example.rea.bench.StackTransferBench.treiberStack(kcasName=com.example.rea.kcas.NaiveKCAS)",
-    "relativeScore" : 0.02544
+    "relativeScore" : 0.0254
   },
   {
     "benchmark" : "com.example.rea.kcas.bench.CAS1LoopBench.successfulCAS1Loop(kcasName=com.example.rea.kcas.CASN)",
-    "relativeScore" : 0.04373
+    "relativeScore" : 0.0437
   },
   {
     "benchmark" : "com.example.rea.kcas.bench.CAS1LoopBench.successfulCAS1Loop(kcasName=com.example.rea.kcas.NaiveKCAS)",
-    "relativeScore" : 0.06875
-  },
-  {
-    "benchmark" : "com.example.rea.kcas.bench.CAS1LoopBench.successfulCAS1LoopReference()",
-    "relativeScore" : 0.1061
+    "relativeScore" : 0.0687
   },
   {
     "benchmark" : "com.example.rea.kcas.bench.FailedCAS1Bench.failedCAS1(kcasName=com.example.rea.kcas.CASN)",
-    "relativeScore" : 0.222
+    "relativeScore" : 0.22
   },
   {
     "benchmark" : "com.example.rea.kcas.bench.FailedCAS1Bench.failedCAS1(kcasName=com.example.rea.kcas.NaiveKCAS)",
-    "relativeScore" : 0.290
-  },
-  {
-    "benchmark" : "com.example.rea.kcas.bench.FailedCAS1Bench.failedCAS1Reference()",
-    "relativeScore" : 0.488
+    "relativeScore" : 0.29
   },
   {
     "benchmark" : "com.example.rea.kcas.bench.KCASLoopBench.successfulKCASLoop(kcasName=com.example.rea.kcas.CASN)",
-    "relativeScore" : 0.0092953
+    "relativeScore" : 0.009295
   },
   {
     "benchmark" : "com.example.rea.kcas.bench.KCASLoopBench.successfulKCASLoop(kcasName=com.example.rea.kcas.NaiveKCAS)",
-    "relativeScore" : 0.010606
-  },
-  {
-    "benchmark" : "com.example.rea.kcas.bench.KCASLoopBench.successfulKCASLoopReference()",
-    "relativeScore" : 0.05656
+    "relativeScore" : 0.01061
   }
 ]
