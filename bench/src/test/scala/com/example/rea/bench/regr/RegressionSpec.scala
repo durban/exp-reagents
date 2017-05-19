@@ -3,12 +3,15 @@ package bench
 package regr
 
 import java.io.File
+import java.nio.file.{ Paths, Files }
+import java.nio.charset.StandardCharsets.UTF_8
 
 import cats.implicits._
 
 import io.iteratee._
 import io.iteratee.files.either
 
+import io.circe.syntax._
 import io.circe.streaming.{ byteParser, decoder }
 
 import org.scalatest.{ FreeSpec, Matchers }
@@ -22,6 +25,7 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
   final val maxRelativeError = 0.08
   final val tolerance = 0.04
   final val resultsFile = s"bench${File.separator}results.json"
+  final val rrFile = s"bench${File.separator}relative_results.json"
 
   final val naive = ("kcasName", kcas.KCAS.fqns.NaiveKCAS)
   final val casn = ("kcasName", kcas.KCAS.fqns.CASN)
@@ -40,6 +44,13 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
     }
   }
 
+  def writeRelativeResults(rss: Results, baseline: BenchmarkResult, file: File): Unit = {
+    val rrs = rss.rss.map(r => RelativeResult.fromBenchmarkResult(r, baseline))
+    val json = rrs.asJson
+    val bs = json.spaces2.getBytes(UTF_8)
+    Files.write(Paths.get(file.getPath), bs)
+  }
+
   def beWithin(multiplier: Double, of: BenchmarkResult = baseline): Matcher[BenchmarkResult] = {
     val target = of.primaryMetric.score * multiplier
     val min = target * (1 - tolerance)
@@ -49,6 +60,10 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
   }
 
   "Sanity check" - {
+
+    "Write relative results" in {
+      writeRelativeResults(results, baseline, new File(rrFile))
+    }
 
     "Options" in {
       for (r <- results.rss) {
