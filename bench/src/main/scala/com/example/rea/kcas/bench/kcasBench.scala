@@ -4,11 +4,12 @@ package bench
 
 import java.util.concurrent.ThreadLocalRandom
 
-import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Measurement, State, Scope }
+import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Fork, Measurement, State, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
 import com.example.rea.bench.util._
 
+@Fork(3)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
 class FailedCAS1Bench {
@@ -30,6 +31,7 @@ class FailedCAS1Bench {
   }
 }
 
+@Fork(3)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
 class CAS1LoopBench {
@@ -68,14 +70,14 @@ class CAS1LoopBench {
   }
 }
 
+@Fork(4)
 @Warmup(iterations = 10)
-@Measurement(iterations = 10)
+@Measurement(iterations = 30)
 class KCASLoopBench {
 
   import KCASBenchHelpers._
 
   @Benchmark
-  @Measurement(iterations = 20)
   def successfulKCASLoop(r: KRefState, t: KCASThreadState): Unit = {
     val refs = r.refs
     val kcasImpl = t.kcasImpl

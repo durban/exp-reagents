@@ -1,11 +1,12 @@
 package com.example.rea
 package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Measurement, State, Scope }
+import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Fork, Measurement, State, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
 
+@Fork(3)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
 class QueueBench {
