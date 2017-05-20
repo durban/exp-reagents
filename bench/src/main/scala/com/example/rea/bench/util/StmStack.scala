@@ -16,11 +16,11 @@ class StmStack[A](els: Iterable[A]) {
     els.foreach(push)
   }
 
-  def push(a: A): Unit = atomic { implicit txn =>
+  def push(a: A)(implicit mt: MaybeTxn): Unit = atomic { implicit txn =>
     head.set(TsList.Cons(a, head.get))
   }
 
-  def tryPop(): Option[A] = atomic { implicit txn =>
+  def tryPop()(implicit mt: MaybeTxn): Option[A] = atomic { implicit txn =>
     head.get match {
       case TsList.End =>
         None
@@ -30,7 +30,8 @@ class StmStack[A](els: Iterable[A]) {
     }
   }
 
-  private[bench] def unsafeToList(): List[A] = atomic { implicit txn =>
+  private[bench] def unsafeToList()(implicit mt: MaybeTxn): List[A] = atomic { implicit txn =>
     head.get.toList
   }
 }
+

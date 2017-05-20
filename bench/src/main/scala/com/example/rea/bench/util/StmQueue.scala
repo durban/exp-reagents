@@ -24,7 +24,7 @@ class StmQueue[A] private[this] (sentinel: Node[A], els: Iterable[A]) {
     els.foreach(enqueue)
   }
 
-  def enqueue(a: A): Unit = atomic { implicit txn =>
+  def enqueue(a: A)(implicit mt: MaybeTxn): Unit = atomic { implicit txn =>
     val node = Node(a, Ref[Elem[A]](End[A]()))
     tail.get.next.get match {
       case End() =>
@@ -35,7 +35,7 @@ class StmQueue[A] private[this] (sentinel: Node[A], els: Iterable[A]) {
     }
   }
 
-  def tryDequeue(): Option[A] = atomic { implicit txn =>
+  def tryDequeue()(implicit mt: MaybeTxn): Option[A] = atomic { implicit txn =>
     head.get.next.get match {
       case n @ Node(a, _) =>
         head.set(n.copy(data = nullOf[A]))
@@ -45,7 +45,7 @@ class StmQueue[A] private[this] (sentinel: Node[A], els: Iterable[A]) {
     }
   }
 
-  def unsafeToList(): List[A] = atomic { implicit txn =>
+  def unsafeToList()(implicit mt: MaybeTxn): List[A] = atomic { implicit txn =>
     @tailrec
     def go(e: Elem[A], acc: List[A]): List[A] = e match {
       case Node(null, next) =>
