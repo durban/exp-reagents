@@ -85,7 +85,12 @@ private[rea] object KCASD {
 /**
  * An implementation of [A Practical Multi-Word Compare-and-Swap Operation](
  * http://www.cl.cam.ac.uk/research/srg/netos/papers/2002-casn.pdf) by
- * Timothy L. Harris, Keir Fraser and Ian A. Pratt.
+ * Timothy L. Harris, Keir Fraser and Ian A. Pratt. A description of basically
+ * the same algorithm can also be found in [this technical report](
+ * https://www.cl.cam.ac.uk/techreports/UCAM-CL-TR-579.pdf).
+ *
+ * See also [Modular fine-grained concurrency verification](
+ * http://www.sigplan.org/Awards/Dissertation/2008_vafeiadis.pdf).
  */
 private[kcas] object CASN extends KCAS {
 

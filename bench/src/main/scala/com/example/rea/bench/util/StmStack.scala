@@ -34,4 +34,3 @@ class StmStack[A](els: Iterable[A]) {
     head.get.toList
   }
 }
-
