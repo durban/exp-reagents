@@ -2,9 +2,26 @@ package com.example.rea
 package kcas
 
 /** Common interface for k-CAS implementations */
-private[rea] trait KCAS {
-  def tryPerform(ops: KCASD): Boolean
+private[rea] abstract class KCAS {
+
+  trait Desc {
+    def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc
+    def tryPerform(): Boolean
+  }
+
+  def start(): Desc
+
   def tryReadOne[A](ref: Ref[A]): A
+
+  final def tryPerformBatch(ops: KCASD): Boolean = {
+    val desc = ops.entries.foldLeft(this.start()) { (d, op) =>
+      op match {
+        case op: CASD[a] =>
+          d.withCAS[a](op.ref, op.ov, op.nv)
+      }
+    }
+    desc.tryPerform()
+  }
 }
 
 /** Provides various k-CAS implementations */
@@ -16,11 +33,16 @@ private[rea] object KCAS {
   private[rea] lazy val CASN: KCAS =
     kcas.CASN
 
+  private[rea] lazy val MCAS: KCAS =
+    kcas.MCAS
+
   def unsafeLookup(fqn: String): KCAS = fqn match {
     case fqns.NaiveKCAS =>
       NaiveKCAS
     case fqns.CASN =>
       CASN
+    case fqns.MCAS =>
+      MCAS
     case _ =>
       throw new IllegalArgumentException(fqn)
   }
@@ -30,6 +52,8 @@ private[rea] object KCAS {
       "com.example.rea.kcas.NaiveKCAS"
     final val CASN =
       "com.example.rea.kcas.CASN"
+    final val MCAS =
+      "com.example.rea.kcas.MCAS"
   }
 }
 

@@ -124,7 +124,7 @@ class CASNSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     val flag = Ref.mk("go")
     val ref = Ref.mk[Obj](A)
     val desc = RDCSSDesc(flag, "go", ref, A, B)
-    ref.unsafeLazySet(polluteTheHeap[Obj](desc))
+    ref.unsafeSet(polluteTheHeap[Obj](desc))
     ref.unsafeTryRead() shouldBe theSameInstanceAs (desc)
     val res = RDCSSRead(ref)
     assert(res === B)
@@ -135,73 +135,18 @@ class CASNSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     val flag = Ref.mk("stop")
     val ref = Ref.mk[Obj](A)
     val desc = RDCSSDesc(flag, "go", ref, A, B)
-    ref.unsafeLazySet(polluteTheHeap[Obj](desc))
+    ref.unsafeSet(polluteTheHeap[Obj](desc))
     ref.unsafeTryRead() shouldBe theSameInstanceAs (desc)
     val res = RDCSSRead(ref)
     assert(res === A)
     ref.unsafeTryRead() shouldBe theSameInstanceAs (A)
   }
 
-  "CASN" should "succeed if old values match, and there is no contention" in {
-    val r1 = Ref.mk("r1")
-    val r2 = Ref.mk("r2")
-    val r3 = Ref.mk("r3")
-    val succ = CASN(CASNDesc(List(
-      CASD(r1, "r1", "x"),
-      CASD(r2, "r2", "y"),
-      CASD(r3, "r3", "z")
-    )))
-    assert(succ)
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("x")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("y")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("z")
-  }
-
-  it should "fail if any of the old values doesn't match" in {
-    val r1 = Ref.mk("r1")
-    val r2 = Ref.mk("r2")
-    val r3 = Ref.mk("r3")
-
-    def go(): Boolean = {
-      CASN(CASNDesc(List(
-        CASD(r1, "r1", "x"),
-        CASD(r2, "r2", "y"),
-        CASD(r3, "r3", "z")
-      )))
-    }
-
-    r1.unsafeLazySet("x")
-    assert(!go())
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("x")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("r2")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("r3")
-
-    r1.unsafeLazySet("r1")
-    r2.unsafeLazySet("x")
-    assert(!go())
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("r1")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("x")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("r3")
-
-    r2.unsafeLazySet("r2")
-    r3.unsafeLazySet("x")
-    assert(!go())
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("r1")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("r2")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("x")
-
-    r3.unsafeLazySet("r3")
-    assert(go())
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("x")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("y")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("z")
-  }
-
   "CASNRead" should "help the other operation" in {
     val r1 = Ref.mk("r1")
     val r2 = Ref.mk("r2")
     val other = CASNDesc(CASD(r1, "r1", "x") :: CASD(r2, "r2", "y") :: Nil)
-    r1.unsafeLazySet(polluteTheHeap[String](other))
+    r1.unsafeSet(polluteTheHeap[String](other))
     val res = CASNRead(r1)
     res should === ("x")
     r1.unsafeTryRead() should === ("x")
@@ -212,7 +157,7 @@ class CASNSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     val r1 = Ref.mk("r1")
     val r2 = Ref.mk("r2")
     val other = CASNDesc(CASD(r1, "r1", "x") :: CASD(r2, "zzz", "y") :: Nil)
-    r1.unsafeLazySet(polluteTheHeap[String](other))
+    r1.unsafeSet(polluteTheHeap[String](other))
     val res = CASNRead(r1)
     res should === ("r1")
     r1.unsafeTryRead() should === ("r1")

@@ -189,7 +189,7 @@ object React {
       extends React[A, A] {
 
     protected def tryPerform(a: A, reaction: Reaction, kcas: KCAS): TentativeResult[A] = {
-      if (kcas.tryPerform(KCASD(reaction.ops))) Success(a, reaction)
+      if (kcas.tryPerformBatch(KCASD(reaction.ops))) Success(a, reaction)
       else Retry
     }
 

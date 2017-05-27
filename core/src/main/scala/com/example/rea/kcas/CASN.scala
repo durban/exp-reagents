@@ -18,8 +18,17 @@ package kcas
  */
 private[kcas] object CASN extends KCAS {
 
-  override def tryPerform(ops: KCASD): Boolean =
-    CASN(CASNDesc(ops.entries))
+  final case class DescRepr(ops: List[CASD[_]]) extends this.Desc {
+
+    def tryPerform(): Boolean =
+      CASN(CASNDesc(KCASD(ops).entries))
+
+    def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc =
+      this.copy(ops = CASD(ref, ov, nv) :: ops)
+  }
+
+  override def start(): this.Desc =
+    new DescRepr(Nil)
 
   override def tryReadOne[A](ref: Ref[A]): A =
     CASNRead(ref)

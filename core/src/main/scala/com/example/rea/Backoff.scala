@@ -2,6 +2,9 @@ package com.example.rea
 
 import java.util.concurrent.ThreadLocalRandom
 
+// TODO: make thread-local instances, reset
+// TODO: and reuse them as needed (to avoid allocations)
+
 /**
  * Truncated exponential backoff.
  *

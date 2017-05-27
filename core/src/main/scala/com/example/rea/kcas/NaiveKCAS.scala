@@ -14,12 +14,22 @@ package kcas
  */
 private[kcas] object NaiveKCAS extends KCAS {
 
+  final case class DescRepr(ops: List[CASD[_]]) extends this.Desc {
+
+    def tryPerform(): Boolean =
+      perform(KCASD(ops))
+
+    def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc =
+      copy(ops = CASD(ref, ov, nv) :: ops)
+  }
+
+  def start(): this.Desc =
+    DescRepr(Nil)
+
   def tryReadOne[A](ref: Ref[A]): A =
     ref.unsafeTryRead()
 
-  def tryPerform(ops: KCASD): Boolean = {
-
-    // TODO: sort list
+  private def perform(ops: KCASD): Boolean = {
 
     @tailrec
     def lock(ops: List[CASD[_]]): List[CASD[_]] = ops match {

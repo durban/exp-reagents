@@ -12,24 +12,30 @@ import cats.effect.IO
 
 import org.scalacheck.{ Gen, Arbitrary }
 
-import org.scalatest.{ FlatSpec, Matchers, FunSuite }
-import org.scalactic.TypeCheckedTripleEquals
+import org.scalatest.FunSuite
 
 import org.typelevel.discipline.scalatest.Discipline
 
-import fs2.{ Task, Strategy }
+import fs2.Task
 
 import kcas._
 
-class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
+class ReactSpecNaiveKCAS
+  extends ReactSpec
+  with SpecNaiveKCAS
+
+class ReactSpecCASN
+  extends ReactSpec
+  with SpecCASN
+
+// TODO: fix this
+class ReactSpecMCAS
+  extends ReactSpec
+  with SpecMCAS
+
+abstract class ReactSpec extends BaseSpec {
 
   import React._
-
-  implicit val str: Strategy =
-    Strategy.fromExecutionContext(scala.concurrent.ExecutionContext.global)
-
-  implicit val kcasImpl: KCAS =
-    KCAS.CASN
 
   "Simple CAS" should "work as expected" in {
     val ref = Ref.mk("ert")
@@ -104,6 +110,7 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   }
 
   "2 combined stack" should "work atomically" in {
+    // TODO: add kill switch to shut down tasks if an assertion fails
     val s1 = new TreiberStack[Int]
     val s2 = new TreiberStack[Int]
     val push = s1.push * s2.push
@@ -310,7 +317,12 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
       _ <- c2
     } yield ()
 
-    tsk.unsafeRun()
+    try {
+      tsk.unsafeRun()
+    } finally {
+      stop.set(true)
+    }
+
     cs.asScala.toVector.sorted should === (
       (0 until max).toVector.flatMap(n => Vector(n.toString, n.toString)).sorted
     )
@@ -328,10 +340,19 @@ class ReactSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   }
 }
 
-class LawsSpec extends FunSuite with Discipline {
+class LawsSpecNaiveKCAS
+  extends LawsSpec
+  with SpecNaiveKCAS
 
-  implicit val kcasImpl: KCAS =
-    KCAS.CASN
+class LawsSpecCASN
+  extends LawsSpec
+  with SpecCASN
+
+class LawsSpecMCAS
+  extends LawsSpec
+  with SpecMCAS
+
+abstract class LawsSpec extends FunSuite with Discipline with KCASImplSpec {
 
   implicit def arbReact[A, B](implicit arbA: Arbitrary[A], arbB: Arbitrary[B], arbAB: Arbitrary[A => B]): Arbitrary[React[A, B]] = Arbitrary {
     Gen.oneOf(

@@ -15,3 +15,7 @@ class TreiberStackSpecNaiveKCAS
 class TreiberStackSpecCASN
   extends TreiberStackSpec
   with SpecCASN
+
+class TreiberStackSpecMCAS
+  extends TreiberStackSpec
+  with SpecMCAS

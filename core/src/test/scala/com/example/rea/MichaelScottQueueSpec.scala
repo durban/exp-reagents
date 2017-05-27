@@ -15,3 +15,7 @@ class MichaelScottQueueSpecNaiveKCAS
 class MichaelScottQueueSpecCASN
   extends MichaelScottQueueSpec
   with SpecCASN
+
+class MichaelScottQueueSpecMCAS
+  extends MichaelScottQueueSpec
+  with SpecMCAS

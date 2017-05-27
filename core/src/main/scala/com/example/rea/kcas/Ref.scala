@@ -33,6 +33,9 @@ final class Ref[A] private (initial: A) {
   private[kcas] def unsafeLazySet(nv: A): Unit =
     value.lazySet(nv)
 
+  private[kcas] def unsafeSet(nv: A): Unit =
+    value.set(nv)
+
   override def toString: String =
     s"Ref@${Integer.toHexString(this.##)}"
 

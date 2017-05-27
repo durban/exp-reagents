@@ -28,7 +28,7 @@ class CommonThreadState {
 @State(Scope.Thread)
 class KCASThreadState extends CommonThreadState {
 
-  @Param(Array(KCAS.fqns.CASN, KCAS.fqns.NaiveKCAS))
+  @Param(Array(KCAS.fqns.CASN, KCAS.fqns.NaiveKCAS, KCAS.fqns.MCAS))
   private[this] var kcasName: String = _
 
   private[rea] implicit var kcasImpl: KCAS = _
