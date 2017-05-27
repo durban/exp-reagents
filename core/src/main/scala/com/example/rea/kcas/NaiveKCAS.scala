@@ -12,24 +12,32 @@ package kcas
  *
  * Implemented as a baseline for benchmarking and correctness tests.
  */
-private[kcas] object NaiveKCAS extends KCAS {
+private[kcas] object NaiveKCAS extends KCAS { self =>
 
-  final case class DescRepr(ops: List[CASD[_]]) extends this.Desc {
+  final case class DescRepr(ops: List[CASD[_]]) extends self.Desc with self.Snap {
 
-    def tryPerform(): Boolean =
-      perform(KCASD(ops))
+    override def tryPerform(): Boolean = {
+      // TODO: sort!!!
+      perform(ops)
+    }
 
-    def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc =
+    override def withCAS[A](ref: Ref[A], ov: A, nv: A): self.Desc =
       copy(ops = CASD(ref, ov, nv) :: ops)
+
+    override def snapshot(): self.Snap =
+      this
+
+    override def load(): self.Desc =
+      this
   }
 
-  def start(): this.Desc =
+  override def start(): self.Desc =
     DescRepr(Nil)
 
-  def tryReadOne[A](ref: Ref[A]): A =
+  override def tryReadOne[A](ref: Ref[A]): A =
     ref.unsafeTryRead()
 
-  private def perform(ops: KCASD): Boolean = {
+  private def perform(ops: List[CASD[_]]): Boolean = {
 
     @tailrec
     def lock(ops: List[CASD[_]]): List[CASD[_]] = ops match {
@@ -64,7 +72,7 @@ private[kcas] object NaiveKCAS extends KCAS {
       }
     }
 
-    ops.entries match {
+    ops match {
       case Nil =>
         true
       case h :: Nil =>

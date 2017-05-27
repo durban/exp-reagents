@@ -7,9 +7,12 @@ import java.util.concurrent.atomic.AtomicInteger
 /**
  * An optimized version of `CASN`.
  */
-private[kcas] object MCAS extends KCAS {
+private[kcas] object MCAS extends KCAS { self =>
 
-  override def start(): this.Desc = {
+  override def start(): self.Desc =
+    startInternal()
+
+  private[MCAS] def startInternal(): MCASDesc = {
     val desc = TlSt.get().loanDescriptor()
     desc.start()
     desc
@@ -101,7 +104,7 @@ private[kcas] object MCAS extends KCAS {
   private final case object Failed extends Decided
   private final case object Succeeded extends Decided
 
-  private final class MCASDesc extends this.Desc {
+  private final class MCASDesc extends self.Desc {
 
     private[this] val refcount =
       new AtomicInteger(1) // LSB is a claim flag
@@ -181,7 +184,7 @@ private[kcas] object MCAS extends KCAS {
       status.unsafeSet(Undecided)
     }
 
-    override def withCAS[A](ref: Ref[A], ov: A, nv: A): this.type = {
+    override def withCAS[A](ref: Ref[A], ov: A, nv: A): self.Desc = {
       val entry = TlSt.get().loanEntry[A]()
       entry.ref = ref
       entry.ov = ov
@@ -190,6 +193,43 @@ private[kcas] object MCAS extends KCAS {
       entry.next = head
       head = entry
       this
+    }
+
+    private[MCAS] def withEntries(head: MCASEntry): Unit = {
+      @tailrec
+      def fix(head: MCASEntry): Unit = {
+        if (head ne null) {
+          head.desc = this
+          fix(head.next)
+        }
+      }
+
+      fix(head)
+      this.head = head
+    }
+
+    override def snapshot(): self.Snap = {
+      val tlst = TlSt.get()
+
+      @tailrec
+      def copy(head: MCASEntry, acc: MCASEntry): MCASEntry = {
+        if (head eq null) {
+          // we're done
+          acc
+        } else {
+          val entry = tlst.loanEntry[head.A]()
+          entry.ref = head.ref
+          entry.ov = head.ov
+          entry.nv = head.nv
+          // NB: not saving desc
+          entry.next = acc
+          copy(head.next, entry)
+        }
+      }
+
+      val res = copy(head, null)
+      if (res ne null) res
+      else EmptySnapshot
     }
 
     override def tryPerform(): Boolean = {
@@ -322,7 +362,14 @@ private[kcas] object MCAS extends KCAS {
       this.asInstanceOf[A]
   }
 
-  private final class MCASEntry() {
+  private sealed abstract class Snapshot extends self.Snap
+
+  private final object EmptySnapshot extends Snapshot {
+    override def load(): MCASDesc =
+      MCAS.startInternal()
+  }
+
+  private final class MCASEntry extends Snapshot {
 
     type A
 
@@ -338,6 +385,12 @@ private[kcas] object MCAS extends KCAS {
     var nv: A = _
     var desc: MCASDesc = _
     var next: MCASEntry = _
+
+    override def load(): MCASDesc = {
+      val desc = MCAS.startInternal()
+      desc.withEntries(this)
+      desc
+    }
 
     private[MCAS] def as[X]: X =
       this.asInstanceOf[X]

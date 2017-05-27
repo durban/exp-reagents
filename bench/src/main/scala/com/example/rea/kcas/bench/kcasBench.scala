@@ -9,6 +9,8 @@ import org.openjdk.jmh.infra.Blackhole
 
 import com.example.rea.bench.util._
 
+// TODO: don't use tryPerformBatch
+
 @Fork(3)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
@@ -18,7 +20,7 @@ class FailedCAS1Bench {
 
   @Benchmark
   def failedCAS1(r: RefState, t: KCASThreadState): Unit = {
-    val succ = t.kcasImpl.tryPerformBatch(KCASD(CASD(r.ref, incorrectOv, t.nextString()) :: Nil))
+    val succ = t.kcasImpl.tryPerformBatch(CASD(r.ref, incorrectOv, t.nextString()) :: Nil)
     if (succ) throw new AssertionError("CAS should've failed")
     Blackhole.consumeCPU(t.tokens)
   }
@@ -46,7 +48,7 @@ class CAS1LoopBench {
     def go(): Unit = {
       val ov = read(ref, kcasImpl)
       val nv = (ov.toLong + t.nextLong()).toString
-      val succ = kcasImpl.tryPerformBatch(KCASD(CASD(ref, ov, nv) :: Nil))
+      val succ = kcasImpl.tryPerformBatch(CASD(ref, ov, nv) :: Nil)
       if (succ) ()
       else go()
     }
@@ -88,7 +90,7 @@ class KCASLoopBench {
         val nv = (ov.toLong + t.nextLong()).toString
         CASD(ref, ov, nv)
       }
-      val succ = kcasImpl.tryPerformBatch(KCASD(ds))
+      val succ = kcasImpl.tryPerformBatch(ds)
       if (succ) ()
       else go()
     }

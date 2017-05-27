@@ -16,15 +16,23 @@ package kcas
  * and [this discussion](
  * https://cstheory.stackexchange.com/questions/7083/a-practical-multi-word-compare-and-swap-operation).
  */
-private[kcas] object CASN extends KCAS {
+private[kcas] object CASN extends KCAS { self =>
 
-  final case class DescRepr(ops: List[CASD[_]]) extends this.Desc {
+  final case class DescRepr(ops: List[CASD[_]]) extends self.Desc with self.Snap {
 
-    def tryPerform(): Boolean =
-      CASN(CASNDesc(KCASD(ops).entries))
+    override def tryPerform(): Boolean = {
+      // TODO: sort!!!
+      CASN(CASNDesc(ops))
+    }
 
-    def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc =
+    override def withCAS[A](ref: Ref[A], ov: A, nv: A): self.Desc =
       this.copy(ops = CASD(ref, ov, nv) :: ops)
+
+    override def snapshot(): Snap =
+      this
+
+    override def load(): self.Desc =
+      this
   }
 
   override def start(): this.Desc =

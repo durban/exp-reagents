@@ -1,20 +1,30 @@
 package com.example.rea
 package kcas
 
+// TODO: detect impossible CAS-es
+// TODO: support thread interruption in  (some) retry loops
+// TODO: think about exception safety (e.g., leaving behind descriptors)
+
 /** Common interface for k-CAS implementations */
-private[rea] abstract class KCAS {
+private[rea] abstract class KCAS { self =>
 
   trait Desc {
+    final def impl: KCAS = self
     def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc
+    def snapshot(): Snap
     def tryPerform(): Boolean
+  }
+
+  trait Snap {
+    def load(): Desc
   }
 
   def start(): Desc
 
   def tryReadOne[A](ref: Ref[A]): A
 
-  final def tryPerformBatch(ops: KCASD): Boolean = {
-    val desc = ops.entries.foldLeft(this.start()) { (d, op) =>
+  private[rea] final def tryPerformBatch(ops: List[CASD[_]]): Boolean = {
+    val desc = ops.foldLeft(this.start()) { (d, op) =>
       op match {
         case op: CASD[a] =>
           d.withCAS[a](op.ref, op.ov, op.nv)
@@ -57,6 +67,8 @@ private[rea] object KCAS {
   }
 }
 
+// TODO: eliminate this (or preserve only as an impl detail of CASN)
+
 /** CAS descriptor */
 private[rea] sealed case class CASD[A](ref: Ref[A], ov: A, nv: A) {
 
@@ -78,24 +90,9 @@ private[rea] sealed case class CASD[A](ref: Ref[A], ov: A, nv: A) {
     ref.##
 }
 
-/** A set of CAS descriptors */
-private[rea] final class KCASD private (casds: List[CASD[_]]) {
-  val entries: List[CASD[_]] = {
-    // TODO: detect impossible CAS-es
-    val s = new scala.collection.mutable.TreeSet()(KCASD.ordering)
-    for (casd <- casds) {
-      s += casd
-    }
-    s.toList
-  }
-}
+private[rea] object CASD {
 
-private[rea] object KCASD {
-
-  def apply(casds: List[CASD[_]]): KCASD =
-    new KCASD(casds)
-
-  private val ordering: Ordering[CASD[_]] = new Ordering[CASD[_]] {
+  val ordering: Ordering[CASD[_]] = new Ordering[CASD[_]] {
     override def compare(cx: CASD[_], cy: CASD[_]): Int = {
       val x = cx.globalRank
       val y = cy.globalRank

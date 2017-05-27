@@ -198,6 +198,106 @@ abstract class ReactSpec extends BaseSpec {
     r2.read.unsafeRun should === ("x")
   }
 
+  it should "work if it's after some other operation" in {
+    val r1a = Ref.mk("1a")
+    val r1b = Ref.mk("1b")
+    val r2a = Ref.mk("2a")
+    val r2b = Ref.mk("2b")
+    val r3a = Ref.mk("3a")
+    val r3b = Ref.mk("3b")
+    val rea =
+      r1a.cas("1a", "xa") >>>
+      r1b.cas("1b", "xb") >>>
+      (
+       (r2a.cas("2a", "ya") >>> r2b.cas("2b", "yb")) +
+       (r3a.cas("3a", "za") >>> r3b.cas("3b", "zb"))
+      )
+
+    // 1st choice selected:
+    rea.unsafeRun
+    r1a.read.unsafeRun should === ("xa")
+    r1b.read.unsafeRun should === ("xb")
+    r2a.read.unsafeRun should === ("ya")
+    r2b.read.unsafeRun should === ("yb")
+    r3a.read.unsafeRun should === ("3a")
+    r3b.read.unsafeRun should === ("3b")
+
+    r1a.cas("xa", "1a").unsafeRun
+    r1b.cas("xb", "1b").unsafeRun
+    r1a.read.unsafeRun should === ("1a")
+    r1b.read.unsafeRun should === ("1b")
+
+    // 2nd choice selected:
+    rea.unsafeRun
+    r1a.read.unsafeRun should === ("xa")
+    r1b.read.unsafeRun should === ("xb")
+    r2a.read.unsafeRun should === ("ya")
+    r2b.read.unsafeRun should === ("yb")
+    r3a.read.unsafeRun should === ("za")
+    r3b.read.unsafeRun should === ("zb")
+  }
+
+  it should "work even if it's computed" in {
+    val r1a = Ref.mk("1a")
+    val r1b = Ref.mk("1b")
+    val r2a = Ref.mk("2a")
+    val r2b = Ref.mk("2b")
+    val r3a = Ref.mk("3a")
+    val r3b = Ref.mk("3b")
+    val rea =
+      r1a.read >>>
+      React.computed { s =>
+        if (s eq "1a") {
+          r1b.cas("1b", "xb") >>> (r2a.cas("2a", "ya") + r3a.cas("3a", "za"))
+        } else {
+          r1b.cas("1b", "xx") >>> (r2b.cas("2b", "yb") + r3b.cas("3b", "zb"))
+        }
+      }
+
+    // THEN selected, 1st choice selected:
+    rea.unsafeRun
+    r1a.read.unsafeRun should === ("1a")
+    r1b.read.unsafeRun should === ("xb")
+    r2a.read.unsafeRun should === ("ya")
+    r2b.read.unsafeRun should === ("2b")
+    r3a.read.unsafeRun should === ("3a")
+    r3b.read.unsafeRun should === ("3b")
+
+    r1b.cas("xb", "1b").unsafeRun
+
+    // THEN selected, 2nd choice selected:
+    rea.unsafeRun
+    r1a.read.unsafeRun should === ("1a")
+    r1b.read.unsafeRun should === ("xb")
+    r2a.read.unsafeRun should === ("ya")
+    r2b.read.unsafeRun should === ("2b")
+    r3a.read.unsafeRun should === ("za")
+    r3b.read.unsafeRun should === ("3b")
+
+    r1a.cas("1a", "xa").unsafeRun
+    r1b.cas("xb", "1b").unsafeRun
+
+    // ELSE selected, 1st choice selected:
+    rea.unsafeRun
+    r1a.read.unsafeRun should === ("xa")
+    r1b.read.unsafeRun should === ("xx")
+    r2a.read.unsafeRun should === ("ya")
+    r2b.read.unsafeRun should === ("yb")
+    r3a.read.unsafeRun should === ("za")
+    r3b.read.unsafeRun should === ("3b")
+
+    r1b.cas("xx", "1b").unsafeRun
+
+    // ELSE selected, 2nd choice selected:
+    rea.unsafeRun
+    r1a.read.unsafeRun should === ("xa")
+    r1b.read.unsafeRun should === ("xx")
+    r2a.read.unsafeRun should === ("ya")
+    r2b.read.unsafeRun should === ("yb")
+    r3a.read.unsafeRun should === ("za")
+    r3b.read.unsafeRun should === ("zb")
+  }
+
   "Post-commit actions" should "be executed" in {
     val r1 = Ref.mk("x")
     val r2 = Ref.mk("")
@@ -221,7 +321,8 @@ abstract class ReactSpec extends BaseSpec {
     r3.read.unsafeRun should === ("xxx")
   }
 
-  "Popping then pushing back" should "work (???)" in {
+  // TODO: this is a conflicting CAS
+  "Popping then pushing back" should "work (???)" ignore {
     val stack = new TreiberStack[Int]
     val popPush = stack.tryPop.rmap(_.getOrElse(0)) >>> stack.push
 
@@ -234,7 +335,8 @@ abstract class ReactSpec extends BaseSpec {
     stack.unsafeToList should === (List(1, 1))
   }
 
-  "Impossible CAS" should "work (???)" in {
+  // TODO: this is a conflicting CAS
+  "Impossible CAS" should "work (???)" ignore {
     val ref = Ref.mk("foo")
     val cas1 = ref.cas("foo", "bar")
     val cas2 = ref.cas("foo", "baz")

@@ -7,11 +7,11 @@ abstract class KCASSpec extends BaseSpec {
     val r1 = Ref.mk("r1")
     val r2 = Ref.mk("r2")
     val r3 = Ref.mk("r3")
-    val succ = kcasImpl.tryPerformBatch(KCASD(List(
+    val succ = kcasImpl.tryPerformBatch(List(
       CASD(r1, "r1", "x"),
       CASD(r2, "r2", "y"),
       CASD(r3, "r3", "z")
-    )))
+    ))
     assert(succ)
     r1.unsafeTryRead() shouldBe theSameInstanceAs ("x")
     r2.unsafeTryRead() shouldBe theSameInstanceAs ("y")
@@ -24,11 +24,11 @@ abstract class KCASSpec extends BaseSpec {
     val r3 = Ref.mk("r3")
 
     def go(): Boolean = {
-      kcasImpl.tryPerformBatch(KCASD(List(
+      kcasImpl.tryPerformBatch(List(
         CASD(r1, "r1", "x"),
         CASD(r2, "r2", "y"),
         CASD(r3, "r3", "z")
-      )))
+      ))
     }
 
     r1.unsafeSet("x")

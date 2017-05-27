@@ -29,7 +29,7 @@ sealed abstract class React[-A, +B] {
   final def unsafePerform(a: A)(implicit kcas: KCAS): B = {
     @tailrec
     def go(): Success[B] = {
-      tryPerform(a, Reaction.empty, kcas) match {
+      tryPerform(a, Reaction.empty, kcas.start()) match {
         case Retry =>
           // TODO: implement backoff
           go()
@@ -46,7 +46,7 @@ sealed abstract class React[-A, +B] {
     res.value
   }
 
-  protected def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[B]
+  protected def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B]
 
   def + [X <: A, Y >: B](that: React[X, Y]): React[X, Y] =
     new Choice[X, Y](this, that)
@@ -163,22 +163,18 @@ object React {
       self.unsafePerform(())
   }
 
+  // TODO: rename to PostCommit
+  // TODO: optimize building
   private final case class Reaction(
-    ops: List[CASD[_]],
     postCommit: List[React[Unit, Unit]]
   ) {
-
-    // TODO: insert into a sorted data structure
-
-    def :: (cas: CASD[_]): Reaction =
-      this.copy(ops = cas :: ops)
 
     def :: (act: React[Unit, Unit]): Reaction =
       this.copy(postCommit = act :: postCommit)
   }
 
   private object Reaction {
-    val empty: Reaction = Reaction(Nil, Nil)
+    val empty: Reaction = Reaction(Nil)
   }
 
   protected[React] sealed trait TentativeResult[+A]
@@ -188,8 +184,8 @@ object React {
   private final class Commit[A]
       extends React[A, A] {
 
-    protected def tryPerform(a: A, reaction: Reaction, kcas: KCAS): TentativeResult[A] = {
-      if (kcas.tryPerformBatch(KCASD(reaction.ops))) Success(a, reaction)
+    protected def tryPerform(a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[A] = {
+      if (desc.tryPerform()) Success(a, reaction)
       else Retry
     }
 
@@ -211,8 +207,8 @@ object React {
   private final class PostCommit[A, B](pc: React[A, Unit], k: React[A, B])
       extends React[A, B] {
 
-    def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[B] =
-      k.tryPerform(a, pc.lmap[Unit](_ => a) :: ops, kcas)
+    def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B] =
+      k.tryPerform(a, pc.lmap[Unit](_ => a) :: ops, desc)
 
     def andThenImpl[C](that: React[B, C]): React[A, C] =
       new PostCommit[A, C](pc, k >>> that)
@@ -230,8 +226,8 @@ object React {
   private final class Lift[A, B, C](private val func: A => B, private val k: React[B, C])
       extends React[A, C] {
 
-    def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[C] = {
-      k.tryPerform(func(a), ops, kcas)
+    def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[C] = {
+      k.tryPerform(func(a), ops, desc)
     }
 
     def andThenImpl[D](that: React[C, D]): React[A, D] = {
@@ -257,8 +253,8 @@ object React {
   private final class Computed[A, B, C](f: A => React[Unit, B], k: React[B, C])
       extends React[A, C] {
 
-    def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[C] = {
-      (f(a) >>> k).tryPerform((), ops, kcas)
+    def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[C] = {
+      (f(a) >>> k).tryPerform((), ops, desc)
     }
 
     def andThenImpl[D](that: React[C, D]): React[A, D] = {
@@ -286,13 +282,13 @@ object React {
   private final class Choice[A, B](first: React[A, B], second: React[A, B])
       extends React[A, B] {
 
-    def tryPerform(a: A, ops: Reaction, kcas: KCAS): TentativeResult[B] = {
-      first.tryPerform(a, ops, kcas) match {
-        case Retry => second.tryPerform(a, ops, kcas) match {
-          case Retry => Retry
-          case ok => ok
-        }
-        case ok => ok
+    def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B] = {
+      val snap = desc.snapshot()
+      first.tryPerform(a, ops, desc) match {
+        case Retry =>
+          second.tryPerform(a, ops, snap.load())
+        case ok =>
+          ok
       }
     }
 
@@ -315,10 +311,10 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(b: B, ops: Reaction, kcas: KCAS): TentativeResult[D] = {
-      kcas.tryReadOne(ref) match {
+    protected def tryPerform(b: B, pc: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
+      desc.impl.tryReadOne(ref) match {
         case null => Retry
-        case a if equ(a, ov) => k.tryPerform(transform(a, b), CASD(ref, ov, nv) :: ops, kcas)
+        case a if equ(a, ov) => k.tryPerform(transform(a, b), pc, desc.withCAS(ref, ov, nv))
         case _ => Retry
       }
     }
@@ -361,10 +357,10 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(b: B, ops: Reaction, kcas: KCAS): TentativeResult[D] = {
-      kcas.tryReadOne(ref) match {
+    protected def tryPerform(b: B, ops: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
+      desc.impl.tryReadOne(ref) match {
         case null => Retry
-        case a => k.tryPerform(transform(a, b), ops, kcas)
+        case a => k.tryPerform(transform(a, b), ops, desc)
       }
     }
 
