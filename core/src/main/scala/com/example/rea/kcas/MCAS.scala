@@ -4,6 +4,8 @@ package kcas
 import java.lang.ThreadLocal
 import java.util.concurrent.atomic.AtomicInteger
 
+// TODO: remove volatiles (but think about them)
+
 /**
  * An optimized version of `CASN`.
  */
@@ -30,7 +32,7 @@ private[kcas] object MCAS extends KCAS {
       case d: MCASDesc =>
         // help the other op:
         d.incr()
-        if (equ(ref.unsafeTryRead(), d.as[A])) {
+        if (equ(ref.unsafeTryRead(), d.as[A]) && !d.isLsbSet()) {
           d.perform()
         } else {
           d.decr()
@@ -53,9 +55,9 @@ private[kcas] object MCAS extends KCAS {
           val desc = e.desc
           if (desc ne null) {
             desc.incr()
-            if (equ(ref.unsafeTryRead(), r) && (e.desc eq desc)) {
+            if (equ(ref.unsafeTryRead(), r) && (e.desc eq desc) && !desc.isLsbSet()) {
               try {
-                RDCSSComp(desc.status, Undecided, e, desc)
+                RDCSSComp(desc.status, e, desc)
               } finally {
                 desc.decr()
               }
@@ -75,12 +77,11 @@ private[kcas] object MCAS extends KCAS {
 
   private def RDCSSComp[A](
     status: Ref[MCASStatus],
-    expSt: MCASStatus,
     entry: MCASEntry,
     nv: MCASDesc,
   ): Unit = {
     val s: MCASStatus = status.unsafeTryRead()
-    if (equ(s, expSt)) {
+    if (s eq Undecided) {
       CAS1fromEntry[entry.A](entry.ref, entry, nv.as[entry.A])
     } else {
       CAS1fromEntry(entry.ref, entry, entry.ov)
@@ -110,10 +111,10 @@ private[kcas] object MCAS extends KCAS {
     private[MCAS] val status: Ref[MCASStatus] =
       Ref.mk(Undecided)
 
-    var next: MCASDesc =
+    @volatile var next: MCASDesc =
       _
 
-    private[this] var head: MCASEntry =
+    @volatile private[this] var head: MCASEntry =
       _
 
     def rawRefCnt(): Int =
@@ -136,6 +137,9 @@ private[kcas] object MCAS extends KCAS {
       }
     }
 
+    def isLsbSet(): Boolean =
+      (refcount.get() % 2) == 1
+
     /**
      * @return true iff the (logical) refcount reached 0
      */
@@ -155,12 +159,12 @@ private[kcas] object MCAS extends KCAS {
     }
 
     @tailrec
-    def clearLowestBit(): Unit = {
+    def clearLsb(): Unit = {
       val ov: Int = refcount.get()
       assert((ov % 2) == 1, "lowest bit is not set")
       val nv = ov - 1
       if (!refcount.compareAndSet(ov, nv)) {
-        clearLowestBit()
+        clearLsb()
       }
     }
 
@@ -199,13 +203,13 @@ private[kcas] object MCAS extends KCAS {
             if (entry eq null) {
               Succeeded
             } else {
-              val res = RDCSStoDesc(status, Undecided, entry, this)
+              val res = RDCSStoDesc(status, entry, this)
               res match {
                 case OtherDescriptor(that) =>
                   if (this ne that) {
                     // help the other op:
                     that.incr()
-                    if (equ(entry.ref.unsafeTryRead(), that.as[entry.A])) {
+                    if (equ(entry.ref.unsafeTryRead(), that.as[entry.A]) && !that.isLsbSet()) {
                       that.perform()
                     } else {
                       that.decr()
@@ -254,7 +258,6 @@ private[kcas] object MCAS extends KCAS {
 
     private def RDCSStoDesc[A](
       status: Ref[MCASStatus],
-      expSt: MCASStatus,
       entry: MCASEntry,
       nv: MCASDesc,
     ): RDCSSResult = {
@@ -271,9 +274,9 @@ private[kcas] object MCAS extends KCAS {
               val desc = e.desc
               if (desc ne null) {
                 desc.incr()
-                if (equ(entry.ref.unsafeTryRead(), e.as[entry.A]) && (e.desc eq desc)) {
+                if (equ(entry.ref.unsafeTryRead(), e.as[entry.A]) && (e.desc eq desc) && !desc.isLsbSet()) {
                   try {
-                    RDCSSComp(status, expSt, e, nv)
+                    RDCSSComp(desc.status, e, desc)
                   } finally {
                     desc.decr()
                   }
@@ -296,7 +299,7 @@ private[kcas] object MCAS extends KCAS {
       val res = acquire()
       res match {
         case AcquireSuccess =>
-          RDCSSComp(status, expSt, entry, nv)
+          RDCSSComp(status, entry, nv)
         case _ =>
           // `acquire` failed, no need
           // to call `RDCSSComp`, it
@@ -315,11 +318,11 @@ private[kcas] object MCAS extends KCAS {
 
     type A
 
-    var ref: Ref[A] = _
-    var ov: A = _
-    var nv: A = _
-    var desc: MCASDesc = _
-    var next: MCASEntry = _
+    @volatile var ref: Ref[A] = _
+    @volatile var ov: A = _
+    @volatile var nv: A = _
+    @volatile var desc: MCASDesc = _
+    @volatile var next: MCASEntry = _
 
     private[MCAS] def as[X]: X =
       this.asInstanceOf[X]
@@ -327,13 +330,14 @@ private[kcas] object MCAS extends KCAS {
 
   private final class TlSt {
 
-    private[this] var freeEntries: MCASEntry =
+    @volatile private[this] var freeEntries: MCASEntry =
       _
 
-    private[this] var freeDescriptors: MCASDesc =
+    @volatile private[this] var freeDescriptors: MCASDesc =
       _
 
     def loanEntry[A0](): MCASEntry { type A = A0 } = {
+      //(new MCASEntry).asInstanceOf[MCASEntry { type A = A0 }]
       val res: MCASEntry = freeEntries
       if (res eq null) {
         (new MCASEntry).asInstanceOf[MCASEntry { type A = A0 }]
@@ -349,10 +353,11 @@ private[kcas] object MCAS extends KCAS {
       e.nv = nullOf[e.A]
       e.desc = null
       e.next = freeEntries
-      //XXX: freeEntries = e
+      freeEntries = e
     }
 
     def loanDescriptor(): MCASDesc = {
+      //new MCASDesc
       val nxt = freeDescriptors
       val res = if (nxt eq null) {
         new MCASDesc
@@ -361,13 +366,13 @@ private[kcas] object MCAS extends KCAS {
         nxt
       }
       res.incr()
-      res.clearLowestBit()
+      res.clearLsb()
       res
     }
 
     def releaseDescriptor(d: MCASDesc) = {
       d.next = freeDescriptors
-      //XXX: freeDescriptors = d
+      freeDescriptors = d
     }
   }
 
