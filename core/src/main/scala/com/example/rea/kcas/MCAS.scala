@@ -4,8 +4,6 @@ package kcas
 import java.lang.ThreadLocal
 import java.util.concurrent.atomic.AtomicInteger
 
-// TODO: remove volatiles (but think about them)
-
 /**
  * An optimized version of `CASN`.
  */
@@ -111,10 +109,20 @@ private[kcas] object MCAS extends KCAS {
     private[MCAS] val status: Ref[MCASStatus] =
       Ref.mk(Undecided)
 
-    @volatile var next: MCASDesc =
+    // These `var`s doesn't need be volatile, since the
+    // only way a thread can get its hands on a descriptor
+    // is either
+    // (1) by getting it from the thread-local freelist
+    //     (in which case it's either brand new, or the
+    //     fields were previously cleared by the same
+    //     thread when it was released);
+    // (2) or by getting it from a `Ref`, in which case
+    //     the volatile read guarantees visibility.
+
+    var next: MCASDesc =
       _
 
-    @volatile private[this] var head: MCASEntry =
+    private[this] var head: MCASEntry =
       _
 
     def rawRefCnt(): Int =
@@ -318,11 +326,18 @@ private[kcas] object MCAS extends KCAS {
 
     type A
 
-    @volatile var ref: Ref[A] = _
-    @volatile var ov: A = _
-    @volatile var nv: A = _
-    @volatile var desc: MCASDesc = _
-    @volatile var next: MCASEntry = _
+    // These `var`s doesn't need be volatile, since the
+    // only way a thread can get its hands on an entry
+    // is either
+    // (1) by getting it from the thread-local freelist;
+    // (2) or by getting it from a `Ref`, in which case
+    //     the volatile read guarantees visibility.
+
+    var ref: Ref[A] = _
+    var ov: A = _
+    var nv: A = _
+    var desc: MCASDesc = _
+    var next: MCASEntry = _
 
     private[MCAS] def as[X]: X =
       this.asInstanceOf[X]
@@ -330,10 +345,13 @@ private[kcas] object MCAS extends KCAS {
 
   private final class TlSt {
 
-    @volatile private[this] var freeEntries: MCASEntry =
+    // These `var`s are thread-local, so
+    // there is no need for volatile.
+
+    private[this] var freeEntries: MCASEntry =
       _
 
-    @volatile private[this] var freeDescriptors: MCASDesc =
+    private[this] var freeDescriptors: MCASDesc =
       _
 
     def loanEntry[A0](): MCASEntry { type A = A0 } = {
