@@ -2,7 +2,7 @@ package com.example.rea
 package kcas
 
 // TODO: detect impossible CAS-es
-// TODO: support thread interruption in  (some) retry loops
+// TODO: support thread interruption in (some) retry loops
 // TODO: think about exception safety (e.g., leaving behind descriptors)
 
 /** Common interface for k-CAS implementations */
@@ -92,7 +92,7 @@ private[rea] sealed case class CASD[A](ref: Ref[A], ov: A, nv: A) {
 
 private[rea] object CASD {
 
-  val ordering: Ordering[CASD[_]] = new Ordering[CASD[_]] {
+  implicit val ordering: Ordering[CASD[_]] = new Ordering[CASD[_]] {
     override def compare(cx: CASD[_], cy: CASD[_]): Int = {
       val x = cx.globalRank
       val y = cy.globalRank

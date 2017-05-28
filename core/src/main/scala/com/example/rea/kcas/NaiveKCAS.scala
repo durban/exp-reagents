@@ -16,10 +16,8 @@ private[kcas] object NaiveKCAS extends KCAS { self =>
 
   final case class DescRepr(ops: List[CASD[_]]) extends self.Desc with self.Snap {
 
-    override def tryPerform(): Boolean = {
-      // TODO: sort!!!
-      perform(ops)
-    }
+    override def tryPerform(): Boolean =
+      perform(ops.sorted)
 
     override def withCAS[A](ref: Ref[A], ov: A, nv: A): self.Desc =
       copy(ops = CASD(ref, ov, nv) :: ops)

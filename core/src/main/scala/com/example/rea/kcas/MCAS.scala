@@ -238,7 +238,7 @@ private[kcas] object MCAS extends KCAS { self =>
     }
 
     private def sort(): Unit = {
-      // TODO!!!
+      // TODO: sort entries
     }
 
     // Can be called from other threads!

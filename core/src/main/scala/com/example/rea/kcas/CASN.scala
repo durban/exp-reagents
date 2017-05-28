@@ -20,10 +20,8 @@ private[kcas] object CASN extends KCAS { self =>
 
   final case class DescRepr(ops: List[CASD[_]]) extends self.Desc with self.Snap {
 
-    override def tryPerform(): Boolean = {
-      // TODO: sort!!!
-      CASN(CASNDesc(ops))
-    }
+    override def tryPerform(): Boolean =
+      CASN(CASNDesc(ops.sorted))
 
     override def withCAS[A](ref: Ref[A], ov: A, nv: A): self.Desc =
       this.copy(ops = CASD(ref, ov, nv) :: ops)
@@ -136,7 +134,6 @@ private[kcas] object CASN extends KCAS { self =>
   private final case object Failed extends Decided
   private final case object Succeeded extends Decided
 
-  // TODO: sort entries
   private[kcas] final case class CASNDesc(entries: List[CASD[_]]) {
 
     private[CASN] val status: Ref[CASNStatus] =
