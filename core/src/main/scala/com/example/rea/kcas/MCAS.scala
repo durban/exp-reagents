@@ -6,6 +6,11 @@ import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * An optimized version of `CASN`.
+ *
+ * Reference counting implementation is based on
+ * [Correction of a Memory Management Method for Lock-Free Data Structures](
+ * http://www.dtic.mil/cgi-bin/GetTRDoc?AD=ADA309143) by Maged M. Michael and
+ * Michael L. Scott.
  */
 private[kcas] object MCAS extends KCAS { self =>
 
@@ -157,13 +162,9 @@ private[kcas] object MCAS extends KCAS { self =>
     @tailrec
     private def decrementAndTestAndSet(): Boolean = {
       val ov: Int = refcount.get()
-      val (nv, rel) = if (ov == 2) {
-        (1, true)
-      } else {
-        (ov - 2, false)
-      }
+      val nv: Int = if (ov == 2) 1 else ov - 2
       if (refcount.compareAndSet(ov, nv)) {
-        rel
+        ov == 2
       } else {
         decrementAndTestAndSet()
       }
@@ -237,8 +238,55 @@ private[kcas] object MCAS extends KCAS { self =>
       perform()
     }
 
+    // TODO: write unittest for this
     private def sort(): Unit = {
-      // TODO: sort entries
+      def mergeSort(h: MCASEntry): MCASEntry = {
+        if ((h eq null) || (h.next eq null)) {
+          h
+        } else {
+          // return the head of the second half
+          def split(h: MCASEntry): MCASEntry = {
+            if ((h eq null) || (h.next eq null)) {
+              null
+            } else {
+              var slow: MCASEntry = h
+              var fast: MCASEntry = h.next
+              while (fast ne null) {
+                fast = fast.next
+                if (fast ne null) {
+                  slow = slow.next
+                  fast = fast.next
+                }
+              }
+              val res = slow.next
+              slow.next = null
+              res
+            }
+          }
+          var a: MCASEntry = h
+          var b: MCASEntry = split(h)
+          a = mergeSort(a)
+          b = mergeSort(b)
+          def merge(a: MCASEntry, b: MCASEntry): MCASEntry = {
+            if (a eq null) b
+            else if (b eq null) a
+            else {
+              if (a.globalRank <= b.globalRank) {
+                val res = a
+                res.next = merge(a.next, b)
+                res
+              } else {
+                val res = b
+                res.next = merge(a, b.next)
+                res
+              }
+            }
+          }
+          merge(a, b)
+        }
+      }
+
+      head = mergeSort(head)
     }
 
     // Can be called from other threads!
@@ -391,6 +439,9 @@ private[kcas] object MCAS extends KCAS { self =>
       desc.withEntries(this)
       desc
     }
+
+    private[MCAS] def globalRank: Int =
+      ref.##
 
     private[MCAS] def as[X]: X =
       this.asInstanceOf[X]
