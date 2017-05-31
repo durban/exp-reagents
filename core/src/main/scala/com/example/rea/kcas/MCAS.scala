@@ -29,7 +29,6 @@ private[kcas] object MCAS extends KCAS { self =>
   private sealed trait RDCSSResult
   private final case object AcquireSuccess extends RDCSSResult
   private final case object AcquireFailure extends RDCSSResult
-  private final case class OtherDescriptor(d: MCASDesc) extends RDCSSResult
 
   @tailrec
   private def read[A](ref: Ref[A]): A = {
@@ -109,7 +108,7 @@ private[kcas] object MCAS extends KCAS { self =>
   private final case object Failed extends Decided
   private final case object Succeeded extends Decided
 
-  private final class MCASDesc extends self.Desc {
+  private final class MCASDesc extends self.Desc with RDCSSResult {
 
     private[this] val refcount =
       new AtomicInteger(1) // LSB is a claim flag
@@ -300,7 +299,7 @@ private[kcas] object MCAS extends KCAS { self =>
             } else {
               val res = RDCSStoDesc(status, entry, this)
               res match {
-                case OtherDescriptor(that) =>
+                case that: MCASDesc =>
                   if (this ne that) {
                     // help the other op:
                     that.incr()
@@ -382,8 +381,7 @@ private[kcas] object MCAS extends KCAS { self =>
               // retry ours:
               acquire()
             case d: MCASDesc =>
-              // TODO: avoid allocation here
-              OtherDescriptor(d)
+              d
             case _ =>
               // probably other op completed before us:
               AcquireFailure
