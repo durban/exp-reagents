@@ -21,7 +21,7 @@ class FailedCAS1Bench {
 
   @Benchmark
   def failedCAS1(r: RefState, t: KCASThreadState): Unit = {
-    val succ = t.kcasImpl.tryPerformBatch(CASD(r.ref, incorrectOv, t.nextString()) :: Nil)
+    val succ = t.kcasImpl.start().withCAS(r.ref, incorrectOv, t.nextString()).tryPerform()
     if (succ) throw new AssertionError("CAS should've failed")
     Blackhole.consumeCPU(t.tokens)
   }
@@ -50,7 +50,7 @@ class CAS1LoopBench {
     def go(): Unit = {
       val ov = read(ref, kcasImpl)
       val nv = (ov.toLong + t.nextLong()).toString
-      val succ = kcasImpl.tryPerformBatch(CASD(ref, ov, nv) :: Nil)
+      val succ = kcasImpl.start().withCAS(ref, ov, nv).tryPerform()
       if (succ) ()
       else go()
     }
@@ -88,12 +88,12 @@ class KCASLoopBench {
     val kcasImpl = t.kcasImpl
     @tailrec
     def go(): Unit = {
-      val ds = refs.map { ref =>
+      val desc = refs.foldLeft(kcasImpl.start()) { (desc, ref) =>
         val ov = read(ref, kcasImpl)
         val nv = (ov.toLong + t.nextLong()).toString
-        CASD(ref, ov, nv)
+        desc.withCAS(ref, ov, nv)
       }
-      val succ = kcasImpl.tryPerformBatch(ds)
+      val succ = desc.tryPerform()
       if (succ) ()
       else go()
     }

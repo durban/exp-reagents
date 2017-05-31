@@ -22,16 +22,6 @@ private[rea] abstract class KCAS { self =>
   def start(): Desc
 
   def tryReadOne[A](ref: Ref[A]): A
-
-  private[rea] final def tryPerformBatch(ops: List[CASD[_]]): Boolean = {
-    val desc = ops.foldLeft(this.start()) { (d, op) =>
-      op match {
-        case op: CASD[a] =>
-          d.withCAS[a](op.ref, op.ov, op.nv)
-      }
-    }
-    desc.tryPerform()
-  }
 }
 
 /** Provides various k-CAS implementations */

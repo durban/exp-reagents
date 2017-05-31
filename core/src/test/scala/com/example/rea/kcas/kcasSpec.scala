@@ -3,11 +3,21 @@ package kcas
 
 abstract class KCASSpec extends BaseSpec {
 
+  private final def tryPerformBatch(ops: List[CASD[_]]): Boolean = {
+    val desc = ops.foldLeft(kcasImpl.start()) { (d, op) =>
+      op match {
+        case op: CASD[a] =>
+          d.withCAS[a](op.ref, op.ov, op.nv)
+      }
+    }
+    desc.tryPerform()
+  }
+
   "k-CAS" should "succeed if old values match, and there is no contention" in {
     val r1 = Ref.mk("r1")
     val r2 = Ref.mk("r2")
     val r3 = Ref.mk("r3")
-    val succ = kcasImpl.tryPerformBatch(List(
+    val succ = tryPerformBatch(List(
       CASD(r1, "r1", "x"),
       CASD(r2, "r2", "y"),
       CASD(r3, "r3", "z")
@@ -24,7 +34,7 @@ abstract class KCASSpec extends BaseSpec {
     val r3 = Ref.mk("r3")
 
     def go(): Boolean = {
-      kcasImpl.tryPerformBatch(List(
+      tryPerformBatch(List(
         CASD(r1, "r1", "x"),
         CASD(r2, "r2", "y"),
         CASD(r3, "r3", "z")
