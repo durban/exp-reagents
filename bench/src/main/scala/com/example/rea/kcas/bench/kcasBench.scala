@@ -4,16 +4,17 @@ package bench
 
 import java.util.concurrent.ThreadLocalRandom
 
-import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Fork, Measurement, State, Scope }
+import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import com.example.rea.bench.util._
 
 // TODO: don't use tryPerformBatch
 
-@Fork(3)
+@Fork(2)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
+@BenchmarkMode(Array(Mode.AverageTime))
 class FailedCAS1Bench {
 
   import KCASBenchHelpers._
@@ -33,9 +34,10 @@ class FailedCAS1Bench {
   }
 }
 
-@Fork(3)
+@Fork(2)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
+@BenchmarkMode(Array(Mode.AverageTime))
 class CAS1LoopBench {
 
   import KCASBenchHelpers._
@@ -72,9 +74,10 @@ class CAS1LoopBench {
   }
 }
 
-@Fork(4)
+@Fork(3)
 @Warmup(iterations = 10)
 @Measurement(iterations = 30)
+@BenchmarkMode(Array(Mode.AverageTime))
 class KCASLoopBench {
 
   import KCASBenchHelpers._

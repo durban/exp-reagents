@@ -12,11 +12,23 @@ class CommonThreadState {
   private[this] val rnd =
     XorShift()
 
-  val tokens: Long =
-    64
+  /** Approximately 0.3µs (i5-4300M) */
+  private[this] val baseTokens: Long =
+    128
 
-  val halfTokens: Long =
-    tokens >>> 1
+  /**
+   * Amount to left-shift `baseTokens`:
+   * - 0 for high contention (≅ 0.3µs)
+   * - 4 for low contention (≅ 4.8µs)
+   */
+  @Param(Array("0", "4"))
+  private[this] var shift: Int = _
+
+  def tokens: Long =
+    baseTokens << shift
+
+  def halfTokens: Long =
+    baseTokens << (shift - 1)
 
   def nextLong(): Long =
     rnd.nextLong()

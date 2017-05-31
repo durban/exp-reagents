@@ -1,11 +1,12 @@
 package com.example.rea
 package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Measurement, Fork, State, Scope, Param }
+import org.openjdk.jmh.annotations._
 
 @Fork(2)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
+@BenchmarkMode(Array(Mode.AverageTime))
 class BackoffBench {
 
   import BackoffBench._
@@ -23,7 +24,7 @@ object BackoffBench {
 
     val b = new Backoff
 
-    @Param(Array("0", "1", "2", "4", "8", "16"))
+    @Param(Array("1", "2", "4", "8"))
     var w: Int = _
   }
 }

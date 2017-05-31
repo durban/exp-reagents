@@ -1,12 +1,12 @@
 package com.example.rea
 package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, Measurement, Warmup, Fork, State, Param, Setup, Scope }
+import org.openjdk.jmh.annotations.{ Benchmark, Measurement, Warmup, Fork, State, Setup, Scope }
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
 
-@Fork(3)
+@Fork(2)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
 class CounterBench {
@@ -66,7 +66,7 @@ object CounterBench {
   }
 }
 
-@Fork(3)
+@Fork(2)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
 class CounterBenchN {
@@ -93,8 +93,7 @@ object CounterBenchN {
   @State(Scope.Benchmark)
   class LockedStN {
 
-    @Param(Array("2", "8"))
-    private[this] var n: Int = _
+    private[this] final val n = 8
 
     @volatile
     var lockedCtrN: LockedCounterN = _
@@ -111,8 +110,7 @@ object CounterBenchN {
   @State(Scope.Benchmark)
   class ReactStN {
 
-    @Param(Array("2", "8"))
-    private[this] var n: Int = _
+    private[this] final val n = 8
 
     private[this] var ctrs: Array[Counter] = _
 
