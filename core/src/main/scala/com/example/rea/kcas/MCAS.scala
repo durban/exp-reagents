@@ -238,7 +238,6 @@ private[kcas] object MCAS extends KCAS { self =>
       perform()
     }
 
-    // TODO: write unittest for this
     private def sort(): Unit = {
       def mergeSort(h: MCASEntry): MCASEntry = {
         if ((h eq null) || (h.next eq null)) {
