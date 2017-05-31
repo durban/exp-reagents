@@ -23,7 +23,7 @@ class QueueBench {
   }
 
   @Benchmark
-  def lockedQueueProducer(s: LockedSt, bh: Blackhole, t: CommonThreadState): Unit = {
+  def lockedQueue(s: LockedSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.lockedQueue.enqueue(t.nextString()))
     Blackhole.consumeCPU(t.halfTokens)
     if (s.lockedQueue.tryDequeue() eq None) throw Errors.EmptyQueue
@@ -31,7 +31,7 @@ class QueueBench {
   }
 
   @Benchmark
-  def concurrentQueueProducer(s: JdkSt, bh: Blackhole, t: CommonThreadState): Unit = {
+  def concurrentQueue(s: JdkSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.concurrentQueue.offer(t.nextString()))
     Blackhole.consumeCPU(t.halfTokens)
     if (s.concurrentQueue.poll() eq null) throw Errors.EmptyQueue
@@ -39,7 +39,7 @@ class QueueBench {
   }
 
   @Benchmark
-  def stmQueueProducer(s: StmSt, bh: Blackhole, t: CommonThreadState): Unit = {
+  def stmQueue(s: StmSt, bh: Blackhole, t: CommonThreadState): Unit = {
     bh.consume(s.stmQueue.enqueue(t.nextString()))
     Blackhole.consumeCPU(t.halfTokens)
     if (s.stmQueue.tryDequeue() eq None) throw Errors.EmptyQueue
