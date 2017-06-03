@@ -28,7 +28,6 @@ class ReactSpecCASN
   extends ReactSpec
   with SpecCASN
 
-// TODO: fix this
 class ReactSpecMCAS
   extends ReactSpec
   with SpecMCAS

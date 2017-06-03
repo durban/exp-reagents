@@ -32,10 +32,6 @@
     "relativeScore" : 4.45284741434184E-14
   },
   {
-    "benchmark" : "com.example.rea.kcas.bench.KCASLoopBench.successfulKCASLoop(kcasName=com.example.rea.kcas.NaiveKCAS, shift=0)",
-    "relativeScore" : 1.1585992665505E-12
-  },
-  {
     "benchmark" : "com.example.rea.bench.CounterBench.react(kcasName=com.example.rea.kcas.CASN, shift=0)",
     "relativeScore" : 0.133
   },
@@ -66,10 +62,6 @@
   {
     "benchmark" : "com.example.rea.kcas.bench.FailedCAS1Bench.failedCAS1(kcasName=com.example.rea.kcas.CASN, shift=0)",
     "relativeScore" : 5.84077681824254E-14
-  },
-  {
-    "benchmark" : "com.example.rea.kcas.bench.KCASLoopBench.successfulKCASLoop(kcasName=com.example.rea.kcas.CASN, shift=0)",
-    "relativeScore" : 1.406154414495E-12
   },
   {
     "benchmark" : "com.example.rea.bench.CounterBench.react(kcasName=com.example.rea.kcas.MCAS, shift=0)",
@@ -104,10 +96,6 @@
     "relativeScore" : 5.52048818113286E-14
   },
   {
-    "benchmark" : "com.example.rea.kcas.bench.KCASLoopBench.successfulKCASLoop(kcasName=com.example.rea.kcas.MCAS, shift=0)",
-    "relativeScore" : 1.79374577848E-12
-  },
-  {
     "benchmark" : "com.example.rea.bench.CounterBench.react(kcasName=com.example.rea.kcas.NaiveKCAS, shift=4)",
     "relativeScore" : 0.05963
   },
@@ -138,10 +126,6 @@
   {
     "benchmark" : "com.example.rea.kcas.bench.FailedCAS1Bench.failedCAS1(kcasName=com.example.rea.kcas.NaiveKCAS, shift=4)",
     "relativeScore" : 3.95846379493564E-13
-  },
-  {
-    "benchmark" : "com.example.rea.kcas.bench.KCASLoopBench.successfulKCASLoop(kcasName=com.example.rea.kcas.NaiveKCAS, shift=4)",
-    "relativeScore" : 1.1609581581637E-12
   },
   {
     "benchmark" : "com.example.rea.bench.CounterBench.react(kcasName=com.example.rea.kcas.CASN, shift=4)",
@@ -176,10 +160,6 @@
     "relativeScore" : 4.14146761297764E-13
   },
   {
-    "benchmark" : "com.example.rea.kcas.bench.KCASLoopBench.successfulKCASLoop(kcasName=com.example.rea.kcas.CASN, shift=4)",
-    "relativeScore" : 1.478400278219E-12
-  },
-  {
     "benchmark" : "com.example.rea.bench.CounterBench.react(kcasName=com.example.rea.kcas.MCAS, shift=4)",
     "relativeScore" : 0.05837
   },
@@ -210,9 +190,5 @@
   {
     "benchmark" : "com.example.rea.kcas.bench.FailedCAS1Bench.failedCAS1(kcasName=com.example.rea.kcas.MCAS, shift=4)",
     "relativeScore" : 4.02775152665249E-13
-  },
-  {
-    "benchmark" : "com.example.rea.kcas.bench.KCASLoopBench.successfulKCASLoop(kcasName=com.example.rea.kcas.MCAS, shift=4)",
-    "relativeScore" : 1.416945135121E-12
   }
 ]
