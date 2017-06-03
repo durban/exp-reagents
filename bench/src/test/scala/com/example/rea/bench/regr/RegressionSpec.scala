@@ -6,6 +6,8 @@ import java.io.File
 import java.nio.file.{ Paths, Files }
 import java.nio.charset.StandardCharsets.UTF_8
 
+import scala.reflect.ClassTag
+
 import cats.implicits._
 
 import io.iteratee._
@@ -22,7 +24,6 @@ import kcas.bench._
 
 class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals {
 
-  final val expBenchMode = "thrpt"
   final val expThreads = 4
   final val maxRelativeError = 0.08
   final val tolerance = 0.04
@@ -31,9 +32,10 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
 
   final val naive = ("kcasName", kcas.KCAS.fqns.NaiveKCAS)
   final val casn = ("kcasName", kcas.KCAS.fqns.CASN)
+  final val mcas = ("kcasName", kcas.KCAS.fqns.MCAS)
 
   val results = load(new File(resultsFile))
-  val baseline = results.byClass[BaselineBench]("baseline")
+  val baseline = results.byClass[BaselineBench]("baseline", "shift" -> "0")
 
   def load(file: File): Results = {
     val src = either.readBytes(file)
@@ -61,28 +63,26 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
     m.compose[BenchmarkResult](_.primaryMetric.score)
   }
 
-  def interestingBenchmarks(results: Results) = Vector(
-    results.byClass[CounterBench]("react", casn),
-    results.byClass[CounterBench]("react", naive),
-    results.byClass[CounterBenchN]("reactN", casn, "n" -> "2"),
-    results.byClass[CounterBenchN]("reactN", casn, "n" -> "8"),
-    results.byClass[CounterBenchN]("reactN", naive, "n" -> "2"),
-    results.byClass[CounterBenchN]("reactN", naive, "n" -> "8"),
-    results.byClass[QueueBench]("michaelScottQueue", casn),
-    results.byClass[QueueBench]("michaelScottQueue", naive),
-    results.byClass[QueueTransferBench]("michaelScottQueue", casn),
-    results.byClass[QueueTransferBench]("michaelScottQueue", naive),
-    results.byClass[StackBench]("treiberStack", casn),
-    results.byClass[StackBench]("treiberStack", naive),
-    results.byClass[StackTransferBench]("treiberStack", casn),
-    results.byClass[StackTransferBench]("treiberStack", naive),
-    results.byClass[CAS1LoopBench]("successfulCAS1Loop", casn),
-    results.byClass[CAS1LoopBench]("successfulCAS1Loop", naive),
-    results.byClass[FailedCAS1Bench]("failedCAS1", casn),
-    results.byClass[FailedCAS1Bench]("failedCAS1", naive),
-    results.byClass[KCASLoopBench]("successfulKCASLoop", casn),
-    results.byClass[KCASLoopBench]("successfulKCASLoop", naive),
-  )
+  def tagName[A](name: String)(implicit tag: ClassTag[A]): (ClassTag[_], String) =
+    (tag, name)
+
+  def interestingBenchmarks(results: Results): Vector[BenchmarkResult] = {
+    for {
+      contention <- Vector("shift" -> "0", "shift" -> "4")
+      kcasImpl <- Vector(naive, casn, mcas)
+      method <- Vector(
+        tagName[CounterBench]("react"),
+        tagName[CounterBenchN]("reactN"),
+        tagName[QueueBench]("michaelScottQueue"),
+        tagName[QueueTransferBench]("michaelScottQueue"),
+        tagName[StackBench]("treiberStack"),
+        tagName[StackTransferBench]("treiberStack"),
+        tagName[CAS1LoopBench]("successfulCAS1Loop"),
+        tagName[FailedCAS1Bench]("failedCAS1"),
+        tagName[KCASLoopBench]("successfulKCASLoop"),
+      )
+    } yield results.byClass(method._2, kcasImpl, contention)(method._1)
+  }
 
   "Write relative results" in {
     writeRelativeResults(interestingBenchmarks(results), baseline, new File(rrFile))
@@ -92,7 +92,6 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
 
     "Options" in {
       for (r <- results.rss) {
-        r.mode should === (expBenchMode)
         r.threads should === (expThreads)
       }
     }
@@ -104,11 +103,6 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
           s"-- relative error of ${r.repr}"
         )
       }
-    }
-
-    "Baseline" in {
-      val baseline2 = results.byClass[BaselineBench]("baseline2")
-      baseline2 should beWithin(1.0, of = baseline)
     }
   }
 }
