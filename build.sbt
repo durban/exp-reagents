@@ -44,7 +44,7 @@ lazy val commonSettings = Seq[Setting[_]](
     "-unchecked",
     "-encoding", "UTF-8",
     "-language:higherKinds,experimental.macros",
-    "-opt:l:method",
+    "-opt:l:project",
     "-Xlint:_",
     "-Xfuture",
     "-Xfatal-warnings",

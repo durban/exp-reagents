@@ -47,6 +47,7 @@ private[kcas] object CASN extends KCAS { self =>
     n2: A2
   ) {
 
+    @inline
     private[CASN] def as[A]: A =
       this.asInstanceOf[A]
   }
@@ -139,6 +140,7 @@ private[kcas] object CASN extends KCAS { self =>
     private[CASN] val status: Ref[CASNStatus] =
       Ref.mk(Undecided)
 
+    @inline
     private[CASN] def as[A]: A =
       this.asInstanceOf[A]
   }

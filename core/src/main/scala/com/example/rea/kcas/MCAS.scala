@@ -403,6 +403,7 @@ private[kcas] object MCAS extends KCAS { self =>
       res
     }
 
+    @inline
     private[MCAS] def as[A]: A =
       this.asInstanceOf[A]
   }
@@ -440,6 +441,7 @@ private[kcas] object MCAS extends KCAS { self =>
     private[MCAS] def globalRank: Int =
       ref.##
 
+    @inline
     private[MCAS] def as[X]: X =
       this.asInstanceOf[X]
   }
