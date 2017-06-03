@@ -79,7 +79,6 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
         tagName[StackTransferBench]("treiberStack"),
         tagName[CAS1LoopBench]("successfulCAS1Loop"),
         tagName[FailedCAS1Bench]("failedCAS1"),
-        tagName[KCASLoopBench]("successfulKCASLoop"),
       )
     } yield results.byClass(method._2, kcasImpl, contention)(method._1)
   }

@@ -9,8 +9,6 @@ import org.openjdk.jmh.infra.Blackhole
 
 import com.example.rea.bench.util._
 
-// TODO: don't use tryPerformBatch
-
 @Fork(2)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
@@ -74,55 +72,9 @@ class CAS1LoopBench {
   }
 }
 
-@Fork(3)
-@Warmup(iterations = 10)
-@Measurement(iterations = 30)
-@BenchmarkMode(Array(Mode.AverageTime))
-class KCASLoopBench {
-
-  import KCASBenchHelpers._
-
-  @Benchmark
-  def successfulKCASLoop(r: KRefState, t: KCASThreadState): Unit = {
-    val refs = r.refs
-    val kcasImpl = t.kcasImpl
-    @tailrec
-    def go(): Unit = {
-      val desc = refs.foldLeft(kcasImpl.start()) { (desc, ref) =>
-        val ov = read(ref, kcasImpl)
-        val nv = (ov.toLong + t.nextLong()).toString
-        desc.withCAS(ref, ov, nv)
-      }
-      val succ = desc.tryPerform()
-      if (succ) ()
-      else go()
-    }
-    go()
-    Blackhole.consumeCPU(t.tokens)
-  }
-
-  @Benchmark
-  def successfulKCASLoopReference(r: KRefState, t: CommonThreadState): Unit = {
-    val refs = r.refs
-    @tailrec
-    def goOne(ref: Ref[String]): Unit = {
-      val ov = ref.unsafeTryRead()
-      val nv = (ov.toLong + t.nextLong()).toString
-      val succ = ref.unsafeTryPerformCas(ov, nv)
-      if (succ) ()
-      else goOne(ref)
-    }
-    for (ref <- refs) {
-      goOne(ref)
-    }
-    Blackhole.consumeCPU(t.tokens)
-  }
-}
-
 object KCASBenchHelpers {
 
   final val incorrectOv = "no such number"
-  final val K = 8
 
   @tailrec
   def read(ref: Ref[String], kcas: KCAS): String = {
@@ -134,12 +86,5 @@ object KCASBenchHelpers {
   @State(Scope.Benchmark)
   class RefState {
     val ref = kcas.Ref.mk(ThreadLocalRandom.current().nextLong().toString)
-  }
-
-  @State(Scope.Benchmark)
-  class KRefState {
-    val refs = List.fill(K) {
-      kcas.Ref.mk(ThreadLocalRandom.current().nextLong().toString)
-    }
   }
 }
