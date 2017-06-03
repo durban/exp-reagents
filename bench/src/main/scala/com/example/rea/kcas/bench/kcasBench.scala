@@ -46,7 +46,7 @@ class CAS1LoopBench {
     val kcasImpl = t.kcasImpl
     @tailrec
     def go(): Unit = {
-      val ov = read(ref, kcasImpl)
+      val ov = kcasImpl.read(ref)
       val nv = (ov.toLong + t.nextLong()).toString
       val succ = kcasImpl.start().withCAS(ref, ov, nv).tryPerform()
       if (succ) ()
@@ -75,13 +75,6 @@ class CAS1LoopBench {
 object KCASBenchHelpers {
 
   final val incorrectOv = "no such number"
-
-  @tailrec
-  def read(ref: Ref[String], kcas: KCAS): String = {
-    val r = kcas.tryReadOne(ref)
-    if (r eq null) read(ref, kcas)
-    else r
-  }
 
   @State(Scope.Benchmark)
   class RefState {

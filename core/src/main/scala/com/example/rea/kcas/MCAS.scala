@@ -24,14 +24,14 @@ private[kcas] object MCAS extends KCAS { self =>
   }
 
   override def tryReadOne[A](ref: Ref[A]): A =
-    read(ref)
+    internalRead(ref)
 
   private sealed trait RDCSSResult
   private final case object AcquireSuccess extends RDCSSResult
   private final case object AcquireFailure extends RDCSSResult
 
   @tailrec
-  private def read[A](ref: Ref[A]): A = {
+  private def internalRead[A](ref: Ref[A]): A = {
     val r = RDCSSRead(ref)
     r match {
       case d: MCASDesc =>
@@ -43,7 +43,7 @@ private[kcas] object MCAS extends KCAS { self =>
           d.decr()
         }
         // and retry:
-        read(ref)
+        internalRead(ref)
       case _ =>
         // ok, we found it:
         r

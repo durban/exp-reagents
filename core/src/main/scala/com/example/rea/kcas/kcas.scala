@@ -22,6 +22,16 @@ private[rea] abstract class KCAS { self =>
   def start(): Desc
 
   def tryReadOne[A](ref: Ref[A]): A
+
+  @tailrec
+  final def read[A](ref: Ref[A]): A = {
+    tryReadOne(ref) match {
+      case null =>
+        read(ref)
+      case a =>
+        a
+    }
+  }
 }
 
 /** Provides various k-CAS implementations */

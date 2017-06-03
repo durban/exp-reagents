@@ -22,13 +22,16 @@ class CommonThreadState {
    * - 4 for low contention (≅ 4.8µs)
    */
   @Param(Array("0", "4"))
-  private[this] var shift: Int = _
+  private[this] var contention: Int = _
 
   def tokens: Long =
-    baseTokens << shift
+    baseTokens << contention
 
   def halfTokens: Long =
-    baseTokens << (shift - 1)
+    baseTokens << (contention - 1)
+
+  def nextInt(): Int =
+    rnd.nextInt()
 
   def nextLong(): Long =
     rnd.nextLong()
