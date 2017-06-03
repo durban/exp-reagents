@@ -10,13 +10,13 @@ import cats.laws.discipline.ArrowTests
 import cats.implicits._
 import cats.effect.IO
 
+import fs2.async
+
 import org.scalacheck.{ Gen, Arbitrary }
 
 import org.scalatest.FunSuite
 
 import org.typelevel.discipline.scalatest.Discipline
-
-import fs2.Task
 
 import kcas._
 
@@ -69,14 +69,14 @@ abstract class ReactSpec extends BaseSpec {
     val n = 80000L
     val m = 50000L
     val tsk = for {
-      f1a <- Task.start(Task.delay { pushAll(n) })
-      f1b <- Task.start(Task.delay { pushAll(n) })
-      f2 <- Task.start(Task.delay { pushAll(m) })
+      f1a <- async.start(IO { pushAll(n) })
+      f1b <- async.start(IO { pushAll(n) })
+      f2 <- async.start(IO { pushAll(m) })
       _ <- f1a
       _ <- f1b
       _ <- f2
     } yield ()
-    tsk.unsafeRun()
+    tsk.unsafeRunSync()
 
     val l1 = r1.read.unsafeRun
     val l2 = r2.read.unsafeRun
@@ -118,16 +118,16 @@ abstract class ReactSpec extends BaseSpec {
     val n = 8000000
     val m = 7000000
     val tsk = for {
-      push1 <- Task.start(Task.delay { pushAll(push.rmap(_ => ()), n) })
-      push2 <- Task.start(Task.delay { pushAll(push, n) })
-      pop1 <- Task.start(Task.delay { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
-      pop2 <- Task.start(Task.delay { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
+      push1 <- async.start(IO { pushAll(push.rmap(_ => ()), n) })
+      push2 <- async.start(IO { pushAll(push, n) })
+      pop1 <- async.start(IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
+      pop2 <- async.start(IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
       _ <- push1
       _ <- push2
       _ <- pop1
       _ <- pop2
     } yield ()
-    tsk.unsafeRun()
+    tsk.unsafeRunSync()
 
     if (!errors.isEmpty) {
       fail(s"Errors:\n${errors.asScala.mkString("\n")}")
@@ -152,16 +152,16 @@ abstract class ReactSpec extends BaseSpec {
     val n = 8000000
     val m = 7500000
     val tsk = for {
-      push1 <- Task.start(Task.delay { pushAll(push, n) })
-      push2 <- Task.start(Task.delay { pushAll(pushFlipped, n) })
-      pop1 <- Task.start(Task.delay { popAll(pop, expLen = nStacks, count = m, errors) })
-      pop2 <- Task.start(Task.delay { popAll(popFlipped, expLen = nStacks, count = m, errors) })
+      push1 <- async.start(IO { pushAll(push, n) })
+      push2 <- async.start(IO { pushAll(pushFlipped, n) })
+      pop1 <- async.start(IO { popAll(pop, expLen = nStacks, count = m, errors) })
+      pop2 <- async.start(IO { popAll(popFlipped, expLen = nStacks, count = m, errors) })
       _ <- push1
       _ <- push2
       _ <- pop1
       _ <- pop2
     } yield ()
-    tsk.unsafeRun()
+    tsk.unsafeRunSync()
 
     if (!errors.isEmpty) {
       fail(s"Errors:\n${errors.asScala.mkString("\n")}")
@@ -386,14 +386,14 @@ abstract class ReactSpec extends BaseSpec {
   it should "allow multiple producers and consumers" in {
     val max = 10000
     val q = new MichaelScottQueue[String]
-    val produce = Task.delay {
+    val produce = IO {
       for (i <- 0 until max) {
         q.enqueue.unsafePerform(i.toString)
       }
     }
     val cs = new ConcurrentLinkedQueue[String]
     val stop = new AtomicBoolean(false)
-    val consume = Task.delay {
+    val consume = IO {
       def go(): Unit = {
         q.tryDeque.unsafeRun match {
           case Some(s) =>
@@ -407,19 +407,19 @@ abstract class ReactSpec extends BaseSpec {
       go()
     }
     val tsk = for {
-      p1 <- Task.start(produce)
-      c1 <- Task.start(consume)
-      p2 <- Task.start(produce)
-      c2 <- Task.start(consume)
+      p1 <- async.start(produce)
+      c1 <- async.start(consume)
+      p2 <- async.start(produce)
+      c2 <- async.start(consume)
       _ <- p1
       _ <- p2
-      _ <- Task.delay { stop.set(true) }
+      _ <- IO { stop.set(true) }
       _ <- c1
       _ <- c2
     } yield ()
 
     try {
-      tsk.unsafeRun()
+      tsk.unsafeRunSync()
     } finally {
       stop.set(true)
     }

@@ -6,7 +6,9 @@ import java.util.concurrent.ThreadLocalRandom
 
 import scala.concurrent.stm._
 
-import fs2._
+import cats.effect.IO
+
+import fs2.async
 
 class StmStackSpec extends BaseSpec {
 
@@ -53,17 +55,17 @@ class StmStackSpec extends BaseSpec {
     }
 
     val tsk = for {
-      fpu1 <- Task.start(Task.delay { push(XorShift(seed1)) })
-      fpu2 <- Task.start(Task.delay { push(XorShift(seed2)) })
-      fpo1 <- Task.start(Task.delay { pop(N) })
-      fpo2 <- Task.start(Task.delay { pop(N) })
+      fpu1 <- async.start(IO { push(XorShift(seed1)) })
+      fpu2 <- async.start(IO { push(XorShift(seed2)) })
+      fpo1 <- async.start(IO { pop(N) })
+      fpo2 <- async.start(IO { pop(N) })
       _ <- fpu1
       _ <- fpu2
       cs1 <- fpo1
       cs2 <- fpo2
     } yield cs1 ^ cs2
 
-    val cs = tsk.unsafeRun()
+    val cs = tsk.unsafeRunSync()
     val xs1 = XorShift(seed1)
     val expCs1 = (1 to N).foldLeft(0) { (cs, _) =>
       cs ^ xs1.nextInt()
@@ -106,16 +108,16 @@ class StmStackSpec extends BaseSpec {
       }
     }
     val tsk = for {
-      fpu1 <- Task.start(Task.delay { push(XorShift()) })
-      fpo1 <- Task.start(Task.delay { pop() })
-      fpu2 <- Task.start(Task.delay { push(XorShift()) })
-      fpo2 <- Task.start(Task.delay { pop() })
+      fpu1 <- async.start(IO { push(XorShift()) })
+      fpo1 <- async.start(IO { pop() })
+      fpu2 <- async.start(IO { push(XorShift()) })
+      fpo2 <- async.start(IO { pop() })
       _ <- fpu1
       _ <- fpu2
       _ <- fpo1
       _ <- fpo2
     } yield ()
 
-    tsk.unsafeRun()
+    tsk.unsafeRunSync()
   }
 }

@@ -2,7 +2,11 @@ package com.example
 package rea
 package kcas
 
-import fs2.{ Task, Strategy }
+import scala.concurrent.ExecutionContext
+
+import cats.effect.IO
+
+import fs2.async
 
 import org.scalatest.{ FlatSpec, Matchers }
 import org.scalactic.TypeCheckedTripleEquals
@@ -16,8 +20,8 @@ class CASNSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   final case object B extends Obj
   final case object C extends Obj
 
-  implicit val str: Strategy =
-    Strategy.fromExecutionContext(scala.concurrent.ExecutionContext.global)
+  implicit val ec: ExecutionContext =
+    ExecutionContext.global
 
   "RDCSS" should "succeed if old values match" in {
     val r1 = Ref.mk("r1")
@@ -108,16 +112,16 @@ class CASNSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     }
 
     val tsk = for {
-      f1 <- Task.start(Task.delay(repeat(10000)(modify(_ + 1))))
-      f2 <- Task.start(Task.delay(repeat(10000)(modify(_ - 1))))
+      f1 <- async.start(IO(repeat(10000)(modify(_ + 1))))
+      f2 <- async.start(IO(repeat(10000)(modify(_ - 1))))
       _ <- f1
       _ <- f2
       _ = assert(RDCSSRead(r2).intValue === 0)
-      _ <- Task.delay(stop())
-      _ <- Task.delay(repeat(10000)(modify(_ + 1)))
+      _ <- IO(stop())
+      _ <- IO(repeat(10000)(modify(_ + 1)))
       _ = assert(RDCSSRead(r2).intValue === 0)
     } yield ()
-    tsk.unsafeRun()
+    tsk.unsafeRunSync()
   }
 
   "RDCSSRead" should "help perform the operation" in {

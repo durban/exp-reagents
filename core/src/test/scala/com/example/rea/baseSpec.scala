@@ -1,6 +1,6 @@
 package com.example.rea
 
-import fs2.Strategy
+import scala.concurrent.ExecutionContext
 
 import org.scalatest.{ FlatSpecLike, Matchers }
 import org.scalactic.TypeCheckedTripleEquals
@@ -11,8 +11,8 @@ trait KCASImplSpec {
 
 trait BaseSpec extends KCASImplSpec with FlatSpecLike with Matchers with TypeCheckedTripleEquals {
 
-  implicit val str: Strategy =
-    Strategy.fromExecutionContext(scala.concurrent.ExecutionContext.global)
+  implicit val ec: ExecutionContext =
+    ExecutionContext.global
 }
 
 trait SpecNaiveKCAS extends KCASImplSpec {

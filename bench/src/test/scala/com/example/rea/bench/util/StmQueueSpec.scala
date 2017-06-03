@@ -4,9 +4,11 @@ package util
 
 import java.util.concurrent.ThreadLocalRandom
 
-import scala.concurrent.stm._
+import cats.effect.IO
 
-import fs2._
+import fs2.async
+
+import scala.concurrent.stm._
 
 class StmQueueSpec extends BaseSpec {
 
@@ -58,17 +60,17 @@ class StmQueueSpec extends BaseSpec {
     val seed1 = ThreadLocalRandom.current().nextInt()
     val seed2 = ThreadLocalRandom.current().nextInt()
     val tsk = for {
-      fpu1 <- Task.start(Task.delay { enq(XorShift(seed1)) })
-      fpu2 <- Task.start(Task.delay { enq(XorShift(seed2)) })
-      fpo1 <- Task.start(Task.delay { deq(N) })
-      fpo2 <- Task.start(Task.delay { deq(N) })
+      fpu1 <- async.start(IO { enq(XorShift(seed1)) })
+      fpu2 <- async.start(IO { enq(XorShift(seed2)) })
+      fpo1 <- async.start(IO { deq(N) })
+      fpo2 <- async.start(IO { deq(N) })
       _ <- fpu1
       _ <- fpu2
       cs1 <- fpo1
       cs2 <- fpo2
     } yield cs1 ^ cs2
 
-    val cs = tsk.unsafeRun()
+    val cs = tsk.unsafeRunSync()
     val xs1 = XorShift(seed1)
     val expCs1 = (1 to N).foldLeft(0) { (cs, _) =>
       cs ^ xs1.nextInt()
@@ -111,16 +113,16 @@ class StmQueueSpec extends BaseSpec {
       }
     }
     val tsk = for {
-      fpu1 <- Task.start(Task.delay { enq(XorShift()) })
-      fpo1 <- Task.start(Task.delay { deq() })
-      fpu2 <- Task.start(Task.delay { enq(XorShift()) })
-      fpo2 <- Task.start(Task.delay { deq() })
+      fpu1 <- async.start(IO { enq(XorShift()) })
+      fpo1 <- async.start(IO { deq() })
+      fpu2 <- async.start(IO { enq(XorShift()) })
+      fpo2 <- async.start(IO { deq() })
       _ <- fpu1
       _ <- fpu2
       _ <- fpo1
       _ <- fpo2
     } yield ()
 
-    tsk.unsafeRun()
+    tsk.unsafeRunSync()
   }
 }
