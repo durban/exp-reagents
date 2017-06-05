@@ -7,28 +7,10 @@ import org.openjdk.jmh.annotations.{ State, Param, Setup, Scope }
 import kcas._
 
 @State(Scope.Thread)
-class CommonThreadState {
+class RandomState {
 
   private[this] val rnd =
     XorShift()
-
-  /** Approximately 0.3µs (i5-4300M) */
-  private[this] val baseTokens: Long =
-    128
-
-  /**
-   * Amount to left-shift `baseTokens`:
-   * - 0 for high contention (≅ 0.3µs)
-   * - 4 for low contention (≅ 4.8µs)
-   */
-  @Param(Array("0", "4"))
-  private[this] var contention: Int = _
-
-  def tokens: Long =
-    baseTokens << contention
-
-  def halfTokens: Long =
-    baseTokens << (contention - 1)
 
   def nextInt(): Int =
     rnd.nextInt()
@@ -40,11 +22,42 @@ class CommonThreadState {
     rnd.nextLong().abs.toString
 }
 
+object CommonThreadState {
+
+  /** Approximately 0.3µs (i5-4300M) */
+  final val BaseTokens = 128L
+
+  /** BaseTokens << 0 */
+  final val LowContention = 0
+
+  final val LowContentionS = "0"
+
+  /** BaseTokens << 4 (≅ 4.8µs) */
+  final val HighContention = 4
+
+  final val HighContentionS = "4"
+}
+
 @State(Scope.Thread)
-class KCASThreadState extends CommonThreadState {
+class CommonThreadState extends RandomState {
+
+  import CommonThreadState._
+
+  @Param(Array(LowContentionS, HighContentionS))
+  private[this] var contention: Int = _
+
+  def tokens: Long =
+    BaseTokens << contention
+
+  def halfTokens: Long =
+    BaseTokens << (contention - 1)
+}
+
+@State(Scope.Thread)
+trait KCASImplState {
 
   @Param(Array(KCAS.fqns.CASN, KCAS.fqns.NaiveKCAS, KCAS.fqns.MCAS))
-  private[this] var kcasName: String = _
+  private[rea] var kcasName: String = _
 
   private[rea] implicit var kcasImpl: KCAS = _
 
@@ -53,3 +66,6 @@ class KCASThreadState extends CommonThreadState {
     this.kcasImpl = KCAS.unsafeLookup(kcasName)
   }
 }
+
+@State(Scope.Thread)
+class KCASThreadState extends CommonThreadState with KCASImplState

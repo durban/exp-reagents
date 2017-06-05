@@ -5,7 +5,7 @@ package bench
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-import com.example.rea.bench.util.KCASThreadState
+import com.example.rea.bench.util.{ CommonThreadState, RandomState, KCASImplState }
 
 /**
  * Resource allocation scenario, described in [Software transactional memory](
@@ -80,7 +80,11 @@ object ResourceAllocation {
     }
   }
 
-  class ThSt extends KCASThreadState {
+  @State(Scope.Thread)
+  class ThSt extends RandomState with KCASImplState {
+
+    val tokens: Long =
+      CommonThreadState.BaseTokens << CommonThreadState.LowContention
 
     private[this] var selectedRss: Array[Ref[String]] = _
 
