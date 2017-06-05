@@ -3,6 +3,9 @@ package kcas
 
 import java.lang.ThreadLocal
 import java.util.concurrent.atomic.AtomicInteger
+import java.lang.ref.WeakReference
+
+import scala.annotation.elidable
 
 /**
  * An optimized version of `CASN`.
@@ -108,7 +111,14 @@ private[kcas] object MCAS extends KCAS { self =>
   private final case object Failed extends Decided
   private final case object Succeeded extends Decided
 
-  private final class MCASDesc extends self.Desc with RDCSSResult {
+  private abstract class FreeList[A] {
+    var next: A
+  }
+
+  private final class MCASDesc
+      extends FreeList[MCASDesc]
+      with self.Desc
+      with RDCSSResult {
 
     private[this] val refcount =
       new AtomicInteger(1) // LSB is a claim flag
@@ -126,11 +136,13 @@ private[kcas] object MCAS extends KCAS { self =>
     // (2) or by getting it from a `Ref`, in which case
     //     the volatile read guarantees visibility.
 
-    var next: MCASDesc =
+    override var next: MCASDesc =
       _
 
     private[this] var head: MCASEntry =
       _
+
+    // TODO: store the number of entries in a field
 
     def rawRefCnt(): Int =
       refcount.get()
@@ -142,13 +154,15 @@ private[kcas] object MCAS extends KCAS { self =>
       if (decrementAndTestAndSet()) {
         val tlst = TlSt.get()
         // release entries:
+        var k = 0
         while (head ne null) {
           val e = head
           head = e.next
           tlst.releaseEntry(e)
+          k += 1
         }
         // release descriptor:
-        tlst.releaseDescriptor(this)
+        tlst.releaseDescriptor(this, k)
       }
     }
 
@@ -335,7 +349,7 @@ private[kcas] object MCAS extends KCAS { self =>
 
         @tailrec
         def phase2(entry: MCASEntry): Boolean = {
-          if (entry eq null) {
+          if (entry eq null) { // TODO: maybe use match
             // we're done:
             succeeded
           } else {
@@ -408,14 +422,14 @@ private[kcas] object MCAS extends KCAS { self =>
       this.asInstanceOf[A]
   }
 
-  private sealed abstract class Snapshot extends self.Snap
+  private sealed trait Snapshot extends self.Snap
 
   private final object EmptySnapshot extends Snapshot {
     override def load(): MCASDesc =
       MCAS.startInternal()
   }
 
-  private final class MCASEntry extends Snapshot {
+  private final class MCASEntry extends FreeList[MCASEntry] with Snapshot {
 
     type A
 
@@ -430,7 +444,7 @@ private[kcas] object MCAS extends KCAS { self =>
     var ov: A = _
     var nv: A = _
     var desc: MCASDesc = _
-    var next: MCASEntry = _
+    override var next: MCASEntry = _
 
     override def load(): MCASDesc = {
       val desc = MCAS.startInternal()
@@ -444,9 +458,18 @@ private[kcas] object MCAS extends KCAS { self =>
     @inline
     private[MCAS] def as[X]: X =
       this.asInstanceOf[X]
+
+    @inline
+    private[MCAS] def cast[A0]: MCASEntry { type A = A0 } =
+      this.asInstanceOf[MCASEntry { type A = A0 }]
   }
 
   private final class TlSt {
+
+    import TlSt._
+
+    private[this] val threadId: Long =
+      Thread.currentThread().getId
 
     // These `var`s are thread-local, so
     // there is no need for volatile.
@@ -454,16 +477,55 @@ private[kcas] object MCAS extends KCAS { self =>
     private[this] var freeEntries: MCASEntry =
       _
 
+    private[this] var numFreeEntries: Int =
+      0
+
+    private[this] var weakFreeEntries: WeakReference[MCASEntry] =
+      _
+
     private[this] var freeDescriptors: MCASDesc =
       _
 
+    private[this] var numFreeDescriptors: Int =
+      0
+
+    private[this] var weakFreeDescriptors: WeakReference[MCASDesc] =
+      _
+
+    @elidable(LEVEL)
+    private[this] var numAllocs: Long =
+      0L
+
+    /** Counter of operations (for reporting statistics) */
+    @elidable(LEVEL)
+    private[this] var numOps: Long =
+      Long.MinValue
+
+    /** Size of the biggest k-CAS executed by this thread so far */
+    private[this] var maxK: Int =
+      0
+
     def loanEntry[A0](): MCASEntry { type A = A0 } = {
       val res: MCASEntry = freeEntries
-      if (res eq null) {
-        (new MCASEntry).asInstanceOf[MCASEntry { type A = A0 }]
+      if (res eq null) { // TODO: maybe use match
+        loanWeakEntry[A0]() match {
+          case null =>
+            incrAllocs()
+            (new MCASEntry).cast[A0]
+          case e =>
+            e
+        }
       } else {
         freeEntries = res.next
-        res.asInstanceOf[MCASEntry { type A = A0 }]
+        decrFreeEntries()
+        res.cast[A0]
+      }
+    }
+
+    def loanWeakEntry[A0](): MCASEntry { type A = A0 } = {
+      loanWeak(weakFreeEntries) match {
+        case null => null
+        case e => e.cast[A0]
       }
     }
 
@@ -472,16 +534,51 @@ private[kcas] object MCAS extends KCAS { self =>
       e.ov = nullOf[e.A]
       e.nv = nullOf[e.A]
       e.desc = null
-      e.next = freeEntries
-      freeEntries = e
+      if (numFreeEntries >= (maxK * EntryMultiplier)) {
+        releaseWeakEntry(e)
+      } else {
+        e.next = freeEntries
+        freeEntries = e
+        incrFreeEntries()
+      }
+    }
+
+    def releaseWeak[A >: Null <: FreeList[A]](a: A, wr: WeakReference[A]): WeakReference[A] = {
+      // TODO: maybe don't always allocate new
+      wr match {
+        case null =>
+          a.next = null
+          new WeakReference(a)
+        case wr =>
+          wr.get() match {
+            case null =>
+              a.next = null
+              new WeakReference(a)
+            case head =>
+              a.next = head.next
+              head.next = a
+              wr
+          }
+      }
+    }
+
+    def releaseWeakEntry(e: MCASEntry): Unit = {
+      weakFreeEntries = releaseWeak(e, weakFreeEntries)
     }
 
     def loanDescriptor(): MCASDesc = {
       val nxt = freeDescriptors
       val res = if (nxt eq null) {
-        new MCASDesc
+        loanWeakDescriptor() match {
+          case null =>
+            incrAllocs()
+            new MCASDesc
+          case d =>
+            d
+        }
       } else {
         freeDescriptors = nxt.next
+        decrFreeDesc()
         nxt
       }
       res.incr()
@@ -489,13 +586,116 @@ private[kcas] object MCAS extends KCAS { self =>
       res
     }
 
-    def releaseDescriptor(d: MCASDesc) = {
-      d.next = freeDescriptors
-      freeDescriptors = d
+    def loanWeak[A >: Null <: FreeList[A]](wr: WeakReference[A]): A = {
+      wr match {
+        case null =>
+          null
+        case wr =>
+          wr.get() match {
+            case null =>
+              null
+            case head =>
+              head.next match {
+                case null =>
+                  null
+                case tail =>
+                  head.next = tail.next
+                  tail.next = null
+                  tail
+              }
+          }
+      }
     }
+
+    def loanWeakDescriptor(): MCASDesc =
+      loanWeak(weakFreeDescriptors)
+
+    def releaseDescriptor(d: MCASDesc, k: Int) = {
+      // TODO: saveK should be called before releasing entries
+      saveK(k)
+      if (numFreeDescriptors >= DescriptorMultiplier) {
+        releaseWeakDescriptor(d)
+      } else {
+        d.next = freeDescriptors
+        freeDescriptors = d
+        incrFreeDesc()
+      }
+      incrOpNum()
+    }
+
+    private def releaseWeakDescriptor(d: MCASDesc): Unit = {
+      weakFreeDescriptors = releaseWeak(d, weakFreeDescriptors)
+    }
+
+    private def saveK(k: Int): Unit = {
+      if (k > maxK) {
+        maxK = k
+      }
+    }
+
+    private def incrFreeDesc(): Unit = {
+      numFreeDescriptors += 1
+    }
+
+    private def decrFreeDesc(): Unit = {
+      numFreeDescriptors -= 1
+    }
+
+    private def incrFreeEntries(): Unit = {
+      numFreeEntries += 1
+    }
+
+    private def decrFreeEntries(): Unit = {
+      numFreeEntries -= 1
+    }
+
+    @elidable(LEVEL)
+    private def incrOpNum(): Unit = {
+      numOps += 1L
+      if ((numOps % ReportPeriod) == 0) {
+        reportStatistics()
+      }
+    }
+
+    @elidable(LEVEL)
+    private def incrAllocs(): Unit = {
+      numAllocs += 1L
+    }
+
+    @elidable(LEVEL)
+    private def reportStatistics(): Unit =
+      log(s"maxK = ${maxK}; allocs = ${numAllocs}")
+
+    @elidable(LEVEL)
+    private def log(msg: String): Unit =
+      System.out.println(s"[Thread ${threadId}] ${msg}")
   }
 
   private final object TlSt {
+
+    /*
+     * Ideally a thread would only need
+     * 1 descriptor and `maxK` entry.
+     * However, (due to helping) retaining
+     * (for reuse) more than that can be
+     * beneficial. These multipliers control
+     * how big we let these freelists grow.
+     *
+     * After a freelist is full, we're inserting
+     * the descriptors/entries to another freelist,
+     * which is only held by a weak reference. Thus,
+     * this freelist can be freed by the GC any time.
+     */
+
+    /** The descriptor freelist is at most this long */
+    private final val DescriptorMultiplier = 16
+
+    /** The entry freelist is at most `maxK` * this long */
+    private final val EntryMultiplier = 16
+
+    private final val ReportPeriod = 1024 * 1024
+
+    private final val LEVEL = elidable.CONFIG
 
     private[this] val inst =
       new ThreadLocal[TlSt]()

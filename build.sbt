@@ -49,6 +49,7 @@ lazy val commonSettings = Seq[Setting[_]](
     "-Xfuture",
     "-Xfatal-warnings",
     "-Xstrict-patmat-analysis",
+    "-Xelide-below", "INFO",
     "-Yno-adapted-args",
     "-Ywarn-numeric-widen",
     "-Ywarn-dead-code",
