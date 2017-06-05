@@ -458,7 +458,6 @@ private[kcas] object MCAS extends KCAS { self =>
       _
 
     def loanEntry[A0](): MCASEntry { type A = A0 } = {
-      //(new MCASEntry).asInstanceOf[MCASEntry { type A = A0 }]
       val res: MCASEntry = freeEntries
       if (res eq null) {
         (new MCASEntry).asInstanceOf[MCASEntry { type A = A0 }]
@@ -478,7 +477,6 @@ private[kcas] object MCAS extends KCAS { self =>
     }
 
     def loanDescriptor(): MCASDesc = {
-      //new MCASDesc
       val nxt = freeDescriptors
       val res = if (nxt eq null) {
         new MCASDesc
