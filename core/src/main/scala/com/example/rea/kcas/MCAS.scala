@@ -40,7 +40,8 @@ private[kcas] object MCAS extends KCAS { self =>
       case d: MCASDesc =>
         // help the other op:
         d.incr()
-        if (equ(ref.unsafeTryRead(), d.as[A]) && !d.isLsbSet()) {
+        if (equ(ref.unsafeTryRead(), d.as[A])) {
+          assert(!d.isLsbSet())
           d.perform()
         } else {
           d.decr()
@@ -63,7 +64,8 @@ private[kcas] object MCAS extends KCAS { self =>
           val desc = e.desc
           if (desc ne null) {
             desc.incr()
-            if (equ(ref.unsafeTryRead(), r) && (e.desc eq desc) && !desc.isLsbSet()) {
+            if (equ(ref.unsafeTryRead(), r) && (e.desc eq desc)) {
+              assert(!desc.isLsbSet())
               try {
                 RDCSSComp(desc.status, e, desc)
               } finally {
@@ -317,7 +319,8 @@ private[kcas] object MCAS extends KCAS { self =>
                   if (this ne that) {
                     // help the other op:
                     that.incr()
-                    if (equ(entry.ref.unsafeTryRead(), that.as[entry.A]) && !that.isLsbSet()) {
+                    if (equ(entry.ref.unsafeTryRead(), that.as[entry.A])) {
+                      assert(!that.isLsbSet())
                       that.perform()
                     } else {
                       that.decr()
@@ -382,7 +385,8 @@ private[kcas] object MCAS extends KCAS { self =>
               val desc = e.desc
               if (desc ne null) {
                 desc.incr()
-                if (equ(entry.ref.unsafeTryRead(), e.as[entry.A]) && (e.desc eq desc) && !desc.isLsbSet()) {
+                if (equ(entry.ref.unsafeTryRead(), e.as[entry.A]) && (e.desc eq desc)) {
+                  assert(!desc.isLsbSet())
                   try {
                     RDCSSComp(desc.status, e, desc)
                   } finally {
