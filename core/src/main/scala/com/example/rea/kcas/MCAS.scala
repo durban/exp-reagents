@@ -7,6 +7,9 @@ import java.lang.ref.WeakReference
 
 import scala.annotation.elidable
 
+// TODO: Figure out some zero-cost way to safely work
+// TODO: with nullable things (e.g., Nullable[MCASEntry]).
+
 /**
  * An optimized version of `CASN`.
  *
@@ -351,14 +354,12 @@ private[kcas] object MCAS extends KCAS { self =>
         val succeeded = (failOrSucc eq Succeeded)
 
         @tailrec
-        def phase2(entry: MCASEntry): Boolean = {
-          if (entry eq null) { // TODO: maybe use match
-            // we're done:
+        def phase2(entry: MCASEntry): Boolean = entry match {
+          case null =>
             succeeded
-          } else {
+          case entry =>
             CAS1fromDesc(entry.ref, this, if (succeeded) entry.nv else entry.ov)
             phase2(entry.next)
-          }
         }
 
         phase2(head)
@@ -510,19 +511,19 @@ private[kcas] object MCAS extends KCAS { self =>
       0
 
     def loanEntry[A0](): MCASEntry { type A = A0 } = {
-      val res: MCASEntry = freeEntries
-      if (res eq null) { // TODO: maybe use match
-        loanWeakEntry[A0]() match {
-          case null =>
-            incrAllocs()
-            (new MCASEntry).cast[A0]
-          case e =>
-            e
-        }
-      } else {
-        freeEntries = res.next
-        decrFreeEntries()
-        res.cast[A0]
+      freeEntries match {
+        case null =>
+          loanWeakEntry[A0]() match {
+            case null =>
+              incrAllocs()
+              (new MCASEntry).cast[A0]
+            case e =>
+              e
+          }
+        case entry =>
+          freeEntries = entry.next
+          decrFreeEntries()
+          entry.cast[A0]
       }
     }
 
@@ -705,13 +706,13 @@ private[kcas] object MCAS extends KCAS { self =>
       new ThreadLocal[TlSt]()
 
     def get(): TlSt = {
-      val res = inst.get()
-      if (res eq null) {
-        val ntl = new TlSt
-        inst.set(ntl)
-        ntl
-      } else {
-        res
+      inst.get() match {
+        case null =>
+          val ntl = new TlSt
+          inst.set(ntl)
+          ntl
+        case tl =>
+          tl
       }
     }
   }
