@@ -147,7 +147,9 @@ private[kcas] object MCAS extends KCAS { self =>
     private[this] var head: MCASEntry =
       _
 
-    // TODO: store the number of entries in a field
+    /** Number of entries */
+    private[this] var k: Int =
+      0
 
     def rawRefCnt(): Int =
       refcount.get()
@@ -159,15 +161,16 @@ private[kcas] object MCAS extends KCAS { self =>
       if (decrementAndTestAndSet()) {
         val tlst = TlSt.get()
         // release entries:
-        var k = 0
+        tlst.saveK(k)
         while (head ne null) {
           val e = head
           head = e.next
           tlst.releaseEntry(e)
-          k += 1
+          k -= 1
         }
+        assert(k == 0, "k of empty descriptor is not zero")
         // release descriptor:
-        tlst.releaseDescriptor(this, k)
+        tlst.releaseDescriptor(this)
       }
     }
 
@@ -200,6 +203,7 @@ private[kcas] object MCAS extends KCAS { self =>
 
     def start(): Unit = {
       assert(head eq null, "head of new descriptor is not null")
+      assert(k == 0, "k of new descriptor is not zero")
       status.unsafeSet(Undecided)
     }
 
@@ -211,19 +215,25 @@ private[kcas] object MCAS extends KCAS { self =>
       entry.desc = this
       entry.next = head
       head = entry
+      k += 1
       this
     }
 
     private[MCAS] def withEntries(head: MCASEntry): Unit = {
       @tailrec
-      def fix(head: MCASEntry): Unit = {
+      def fix(head: MCASEntry, acc: Int): Int = {
         if (head ne null) {
           head.desc = this
-          fix(head.next)
+          fix(head.next, acc + 1)
+        } else {
+          acc
         }
       }
 
-      fix(head)
+      assert(this.k == 0, "loading snapshot into non-empty descriptor (k != 0)")
+      assert(this.head eq null, "loading snapshot into non-empty descriptor (head != null)")
+
+      this.k = fix(head, 0)
       this.head = head
     }
 
@@ -615,9 +625,7 @@ private[kcas] object MCAS extends KCAS { self =>
     def loanWeakDescriptor(): MCASDesc =
       loanWeak(weakFreeDescriptors)
 
-    def releaseDescriptor(d: MCASDesc, k: Int) = {
-      // TODO: saveK should be called before releasing entries
-      saveK(k)
+    def releaseDescriptor(d: MCASDesc) = {
       if (numFreeDescriptors >= DescriptorMultiplier) {
         releaseWeakDescriptor(d)
       } else {
@@ -632,7 +640,7 @@ private[kcas] object MCAS extends KCAS { self =>
       weakFreeDescriptors = releaseWeak(d, weakFreeDescriptors)
     }
 
-    private def saveK(k: Int): Unit = {
+    def saveK(k: Int): Unit = {
       if (k > maxK) {
         maxK = k
       }
