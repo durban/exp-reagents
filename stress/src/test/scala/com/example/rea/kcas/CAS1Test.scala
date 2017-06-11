@@ -15,24 +15,40 @@ import org.openjdk.jcstress.infra.results.ZZL_Result
 ))
 class CAS1Test {
 
-  private[this] val ref =
+  private[this] val ref: Ref[String] =
     Ref.mk("ov")
 
   private[this] val impl: KCAS =
     MCAS // TODO: test others
 
   @Actor
-  def actor1(r: ZZL_Result): Unit = {
+  def writer1(r: ZZL_Result): Unit = {
     r.r1 = impl.start().withCAS(ref, "ov", "x").tryPerform()
   }
 
   @Actor
-  def actor2(r: ZZL_Result): Unit = {
+  def writer2(r: ZZL_Result): Unit = {
     r.r2 = impl.start().withCAS(ref, "ov", "y").tryPerform()
+  }
+
+  @Actor
+  def reader(r: ZZL_Result): Unit = {
+    r.r3 = impl.read(ref)
   }
 
   @Arbiter
   def arbiter(r: ZZL_Result): Unit = {
-    r.r3 = impl.read(ref)
+    val fv = impl.read(ref)
+    r.r3 match {
+      case null =>
+        throw new AssertionError(s"unexpected value: null")
+      case "ov" =>
+        // OK
+      case nv if (nv eq fv) =>
+        // OK
+      case nv =>
+        throw new AssertionError(s"unexpected value: ${nv}")
+    }
+    r.r3 = fv
   }
 }
