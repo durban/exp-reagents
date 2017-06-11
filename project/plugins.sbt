@@ -19,4 +19,10 @@ addSbtPlugin("org.tpolecat" % "tut-plugin" % "0.5.1")
 addSbtPlugin("org.typelevel" % "sbt-typelevel" % "0.3.2")
 addSbtPlugin("org.scalastyle" % "scalastyle-sbt-plugin" % "0.8.0")
 addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.25")
+addSbtPlugin("pl.project13.sbt" % "sbt-jcstress" % "0.1.0")
 addSbtPlugin("com.geirsson" % "sbt-scalafmt" % "0.6.8")
+
+resolvers += Resolver.url(
+  "sbt-jcstress-repo",
+  url("http://dl.bintray.com/ktosopl/sbt-plugins")
+)(Resolver.ivyStylePatterns)

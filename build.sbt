@@ -37,6 +37,12 @@ lazy val bench = project.in(file("bench"))
   .enablePlugins(JmhPlugin)
   .dependsOn(core)
 
+lazy val stress = project.in(file("stress"))
+  .settings(name := "choam-stress")
+  .settings(commonSettings)
+  .enablePlugins(JCStressPlugin)
+  .dependsOn(core)
+
 lazy val commonSettings = Seq[Setting[_]](
   scalacOptions ++= Seq(
     "-feature",
