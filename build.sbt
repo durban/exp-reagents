@@ -31,15 +31,16 @@ lazy val bench = project.in(file("bench"))
       ++ Seq(dependencies.scalaStm)
       ++ dependencies.circe.map(_ % Test)
       ++ dependencies.iteratee.map(_ % Test)
-    ),
-    addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch)
+    )
   )
+  .settings(macroSettings)
   .enablePlugins(JmhPlugin)
   .dependsOn(core)
 
 lazy val stress = project.in(file("stress"))
   .settings(name := "choam-stress")
   .settings(commonSettings)
+  .settings(macroSettings)
   .enablePlugins(JCStressPlugin)
   .dependsOn(core)
 
@@ -94,6 +95,10 @@ lazy val commonSettings = Seq[Setting[_]](
   publishArtifact := false, // TODO,
   licenses := Seq("Apache 2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.txt"))
 ) ++ typelevelDefaultSettings
+
+lazy val macroSettings = Seq(
+  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch)
+)
 
 lazy val dependencies = new {
 
