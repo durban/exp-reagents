@@ -424,7 +424,7 @@ abstract class ReactSpec extends BaseSpec {
     val act: IO[String] = for {
       ref <- React.newRef[String]("foo").run[IO]
       _ <- ref.upd { (s, p: String) => (s + p, ()) }[IO]("bar")
-      res <- ref.get.run[IO]
+      res <- ref.getter.run[IO]
     } yield res
 
     act.unsafeRunSync() should === ("foobar")
