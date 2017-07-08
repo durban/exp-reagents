@@ -15,6 +15,7 @@
  */
 
 scalaVersion in ThisBuild := "2.12.2-bin-typelevel-4"
+// TODO: this doesn't work (no 2.11):
 crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value, "2.11.11-bin-typelevel-4")
 scalaOrganization in ThisBuild := "org.typelevel"
 
@@ -43,6 +44,15 @@ lazy val stress = project.in(file("stress"))
   .settings(macroSettings)
   .enablePlugins(JCStressPlugin)
   .dependsOn(core)
+
+lazy val layout = project.in(file("layout"))
+  .settings(name := "choam-layout")
+  .settings(commonSettings)
+  .settings(
+    libraryDependencies += dependencies.jol % Test,
+    fork in Test := true // JOL doesn't like sbt classpath
+  )
+  .dependsOn(core % "compile->compile;test->test")
 
 lazy val commonSettings = Seq[Setting[_]](
   scalacOptions ++= Seq(
@@ -149,6 +159,8 @@ lazy val dependencies = new {
   val scalaz = "org.scalaz" %% "scalaz-effect" % "7.2.8"
 
   val scalaStm = "org.scala-stm" %% "scala-stm" % "0.8"
+
+  val jol = "org.openjdk.jol" % "jol-core" % "0.8"
 }
 
 addCommandAlias("measurePerformance", "bench/jmh:run -t max -foe true -rf json -rff results.json .*")
