@@ -153,3 +153,4 @@ lazy val dependencies = new {
 
 addCommandAlias("measurePerformance", "bench/jmh:run -t max -foe true -rf json -rff results.json .*")
 addCommandAlias("measureKCAS", "bench/jmh:run -t max -foe true -rf json -rff results_kcas.json .*ResourceAllocation")
+addCommandAlias("measureFS", "bench/jmh:run -t max -foe true -rf json -rff results_fs.json .*FalseSharing")

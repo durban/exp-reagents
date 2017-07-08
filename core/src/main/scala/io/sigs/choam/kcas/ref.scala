@@ -44,10 +44,20 @@ sealed trait Ref[A] {
 object Ref {
 
   private[choam] def mk[A](a: A): Ref[A] =
-    new RefImpl(a)
+    new PaddedRefImpl(a)
+
+  /**
+   * Only for testing
+   *
+   * TODO: provide unpadded groups of refs
+   * (e.g., Ref2, Ref3) which still have
+   * padding at the end.
+   */
+  private[kcas] def mkUnpadded[A](a: A): Ref[A] =
+    new UnpaddedRefImpl(a)
 }
 
-private class RefImpl[A](initial: A) extends AtomicReference[A](initial) with Ref[A] {
+private class UnpaddedRefImpl[A](initial: A) extends AtomicReference[A](initial) with Ref[A] {
 
   private[kcas] final override def unsafeTryRead(): A =
     this.get()
@@ -60,6 +70,12 @@ private class RefImpl[A](initial: A) extends AtomicReference[A](initial) with Re
 
   private[kcas] final override def unsafeTryPerformCas(ov: A, nv: A): Boolean =
     this.compareAndSet(ov, nv)
+
+  private[kcas] override def dummy(v: Long): Long =
+    42L
+}
+
+private final class PaddedRefImpl[A](initial: A) extends UnpaddedRefImpl[A](initial) {
 
   @volatile private[this] var p00: Long = 42L
   @volatile private[this] var p01: Long = 42L
