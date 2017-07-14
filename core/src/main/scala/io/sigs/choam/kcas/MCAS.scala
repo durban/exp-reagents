@@ -262,6 +262,7 @@ private[kcas] object MCAS extends KCAS { self =>
     }
 
     override def tryPerform(): Boolean = {
+      // TODO: maybe fast path for k=0
       sort()
       perform()
     }
@@ -359,7 +360,7 @@ private[kcas] object MCAS extends KCAS { self =>
         }
 
         // Phase 2 (now status is either FAILED or SUCCEEDED):
-        val failOrSucc = status.unsafeTryRead()
+        val failOrSucc = status.unsafeTryRead() // TODO: try to avoid this read
         assert((failOrSucc eq Failed) || (failOrSucc eq Succeeded), s"status is not decided but ${failOrSucc}")
         val succeeded = (failOrSucc eq Succeeded)
 

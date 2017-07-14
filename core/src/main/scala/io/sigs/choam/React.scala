@@ -178,8 +178,8 @@ object React {
   }
 
   protected[React] sealed trait TentativeResult[+A]
-  protected[React]  final case object Retry extends TentativeResult[Nothing]
-  protected[React]  final case class Success[A](value: A, reaction: Reaction) extends  TentativeResult[A]
+  protected[React] final case object Retry extends TentativeResult[Nothing]
+  protected[React] final case class Success[A](value: A, reaction: Reaction) extends  TentativeResult[A]
 
   private final class Commit[A]
       extends React[A, A] {
