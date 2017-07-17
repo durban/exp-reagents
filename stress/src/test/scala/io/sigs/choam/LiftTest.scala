@@ -16,9 +16,6 @@ import kcas._
 ))
 abstract class LiftTest(impl: KCAS) {
 
-  protected implicit final val kcasImpl: KCAS =
-    impl
-
   private[this] val ref =
     Ref.mk("foo")
 

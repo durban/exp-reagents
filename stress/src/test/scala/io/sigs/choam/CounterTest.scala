@@ -14,9 +14,6 @@ import kcas._
 ))
 abstract class CounterTest(impl: KCAS) {
 
-  protected implicit final val kcasImpl: KCAS =
-    impl
-
   private[this] val ctr =
     new Counter()
 

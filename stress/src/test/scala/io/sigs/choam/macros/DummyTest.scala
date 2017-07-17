@@ -15,7 +15,7 @@ import kcas.KCAS
 ))
 abstract class DummyTest(impl: KCAS) {
 
-  final val kcasImpl = impl
+  final def kcasImplPublic = kcasImpl
 
   def foo(i: Int): Unit = {
     println(i)

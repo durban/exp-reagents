@@ -14,9 +14,6 @@ import kcas._
 ))
 abstract class TreiberStackTest(impl: KCAS) {
 
-  protected implicit final val kcasImpl: KCAS =
-    impl
-
   private[this] val stack =
     new TreiberStack[String](List("z"))
 

@@ -103,10 +103,35 @@ object JcStressMacros {
       }
     }
 
+    def transformBaseClass(cls: ClassDef): ClassDef = {
+      val paramName: TermName = cls match {
+        case q"$_ class $_[..$_] $_(...$paramss) extends { ..$_ } with ..$_ { $_ => ..$_ }" =>
+          paramss match {
+            case (ValDef(_, paramName, _, _) :: _) :: _ =>
+              paramName
+            case _ =>
+              c.abort(c.enclosingPosition, s"Expected at least one constructor parameter")
+          }
+        case _ =>
+          c.abort(c.enclosingPosition, s"Expected a class definition, got ${showRaw(cls)}")
+      }
+      val kcasImplDef: Tree = q"""
+        protected implicit final val kcasImpl: _root_.io.sigs.choam.kcas.KCAS =
+          ${paramName}
+      """
+      cls match {
+        case ClassDef(mods, name, tparams, Template(parents, self, body)) =>
+          val newBody = body :+ kcasImplDef
+          ClassDef(mods, name, tparams, Template(parents, self, newBody))
+        case _ =>
+          c.abort(c.enclosingPosition, s"Expected a class definition, got ${showRaw(cls)}")
+      }
+    }
+
     annottees.map(_.tree).toList match {
       case List(cls @ ClassDef(_, name, _, Template(_, _, body))) =>
         q"""
-          ${cls}
+          ${transformBaseClass(cls)}
 
           object ${name.toTermName} {
             ..${mkSubs(name, body)}
@@ -117,7 +142,7 @@ object JcStressMacros {
         val newTemplate = Template(ps, slf, bdy ++ mkSubs(name, body))
         val newMod = ModuleDef(mds, nme, newTemplate)
         q"""
-          ${cls}
+          ${transformBaseClass(cls)}
           ${newMod}
         """
 

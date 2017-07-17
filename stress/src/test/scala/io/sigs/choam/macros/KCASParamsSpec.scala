@@ -13,11 +13,11 @@ class KCASParamsSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals
 
   "KCASParams macro" should "generate the parameterized subclasses" in {
     val sub1 = new DummyTest.DummyTestCASN
-    sub1.kcasImpl shouldBe theSameInstanceAs (KCAS.CASN)
+    sub1.kcasImplPublic shouldBe theSameInstanceAs (KCAS.CASN)
     val sub2 = new DummyTest.DummyTestMCAS
-    sub2.kcasImpl shouldBe theSameInstanceAs (KCAS.MCAS)
+    sub2.kcasImplPublic shouldBe theSameInstanceAs (KCAS.MCAS)
     val sub3 = new DummyTest.DummyTestNaiveKCAS
-    sub3.kcasImpl shouldBe theSameInstanceAs (KCAS.NaiveKCAS)
+    sub3.kcasImplPublic shouldBe theSameInstanceAs (KCAS.NaiveKCAS)
     for (sub <- List(sub1, sub2, sub3)) {
       sub
         .getClass()

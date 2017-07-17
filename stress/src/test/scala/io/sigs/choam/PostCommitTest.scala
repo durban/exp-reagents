@@ -16,9 +16,6 @@ import kcas._
 ))
 abstract class PostCommitTest(impl: KCAS) {
 
-  protected implicit final val kcasImpl: KCAS =
-    impl
-
   private[this] val r1 =
     Ref.mk("foo")
 

@@ -16,9 +16,6 @@ import kcas.KCAS
 ))
 abstract class MichaelScottQueueTest(impl: KCAS) {
 
-  protected implicit final val kcasImpl: KCAS =
-    impl
-
   private[this] val queue =
     new MichaelScottQueue[String](List("z"))
 
