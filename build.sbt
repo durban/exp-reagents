@@ -114,13 +114,13 @@ lazy val dependencies = new {
 
   val catsVersion = "0.9.0"
   val circeVersion = "0.8.0"
-  val iterateeVersion = "0.11.0"
-  val fs2Version = "0.10.0-M2"
+  val iterateeVersion = "0.12.0"
+  val fs2Version = "0.10.0-M3"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.2"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
   val catsFree = "org.typelevel" %% "cats-free" % catsVersion
-  val catsEffect = "org.typelevel" %% "cats-effect" % "0.4-c257223"
+  val catsEffect = "org.typelevel" %% "cats-effect" % "0.4-09e64a7"
 
   val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,
