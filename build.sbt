@@ -115,7 +115,7 @@ lazy val dependencies = new {
   val catsVersion = "0.9.0"
   val circeVersion = "0.8.0"
   val iterateeVersion = "0.12.0"
-  val fs2Version = "0.10.0-M3"
+  val fs2Version = "0.10.0-M4"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.2"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
