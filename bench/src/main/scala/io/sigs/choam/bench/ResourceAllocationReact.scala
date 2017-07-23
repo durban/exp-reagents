@@ -26,28 +26,31 @@ class ResourceAllocationReact {
     val rss = t.selectResources(s.rss)
 
     @tailrec
-    def read(i: Int, react: React[Unit, Vector[String]]): React[Unit, Vector[String]] = {
+    def read(i: Int, react: React[Unit, Array[String]]): React[Unit, Array[String]] = {
       if (i >= n) {
         react
       } else {
         val r = rss(i).read
-        read(i + 1, react.map2(r)(_ :+ _))
+        read(i + 1, react.map2(r) { (arr, s) =>
+          arr(i) = s
+          arr
+        })
       }
     }
 
     @tailrec
-    def write(i: Int, react: React[Vector[String], Unit]): React[Vector[String], Unit] = {
+    def write(i: Int, react: React[Array[String], Unit]): React[Array[String], Unit] = {
       if (i >= n) {
         react
       } else {
-        val r = React.computed[Vector[String], Unit] { ovs =>
+        val r = React.computed[Array[String], Unit] { ovs =>
           rss(i).cas(ovs(i), ovs((i + 1) % n))
         }
         write(i + 1, (react * r).discard)
       }
     }
 
-    val r = read(0, React.ret(Vector.empty))
+    val r = read(0, React.ret(t.ovs))
     val w = write(0, React.unit)
     (r >>> w).unsafeRun
 
@@ -90,6 +93,8 @@ object ResourceAllocationReact {
 
     private[this] var selectedRss: Array[Ref[String]] = _
 
+    var ovs: Array[String] = _
+
     @Param(Array("2", "4", "6"))
     private[this] var dAllocSize: Int = _
 
@@ -99,6 +104,7 @@ object ResourceAllocationReact {
     @Setup
     def setupSelRes(): Unit = {
       selectedRss = Array.ofDim(allocSize)
+      ovs = Array.ofDim(allocSize)
     }
 
     /** Select `allocSize` refs randomly */
