@@ -81,6 +81,12 @@ sealed abstract class React[-A, +B] {
   final def map[C](f: B => C): React[A, C] =
     rmap(f)
 
+  final def map2[X <: A, C, D](that: React[X, C])(f: (B, C) => D): React[X, D] =
+    (this * that).map(f.tupled)
+
+  final def discard: React[A, Unit] =
+    this.rmap(_ => ()) // TODO: optimize
+
   final def flatMap[X <: A, C](f: B => React[X, C]): React[X, C] = {
     val self: React[X, (X, B)] = arrowInstance.second[X, B, X](this).lmap[X](x => (x, x))
     val comp: React[(X, B), C] = computed[(X, B), C](xb => f(xb._2).lmap[Unit](_ => xb._1))
@@ -122,6 +128,12 @@ object React {
   def identity[A]: React[A, A] =
     new Commit[A]
 
+  private[this] val _unit =
+    React.lift[Any, Unit] { _ => () }
+
+  def unit[A]: React[A, Unit] =
+    _unit
+
   def ret[A](a: A): React[Unit, A] =
     lift[Unit, A](_ => a)
 
@@ -148,6 +160,8 @@ object React {
     override def rmap[A, B, C](fa: React[A, B])(f: B => C): React[A, C] =
       fa.rmap(f)
   }
+
+  // TODO: monad instance
 
   implicit final class InvariantReactSyntax[A, B](private val self: React[A, B]) extends AnyVal {
     final def apply[F[_]](a: A)(implicit kcas: KCAS, F: Sync[F]): F[B] =

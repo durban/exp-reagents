@@ -6,25 +6,25 @@ package kcas
 // TODO: think about exception safety (e.g., leaving behind descriptors)
 
 /** Common interface for k-CAS implementations */
-private[choam] abstract class KCAS { self =>
+abstract class KCAS { self =>
 
-  trait Desc {
+  private[choam] trait Desc {
     final def impl: KCAS = self
     def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc
     def snapshot(): Snap
     def tryPerform(): Boolean
   }
 
-  trait Snap {
+  private[choam] trait Snap {
     def load(): Desc
   }
 
-  def start(): Desc
+  private[choam] def start(): Desc
 
-  def tryReadOne[A](ref: Ref[A]): A
+  private[choam] def tryReadOne[A](ref: Ref[A]): A
 
   @tailrec
-  final def read[A](ref: Ref[A]): A = {
+  private[choam] final def read[A](ref: Ref[A]): A = {
     tryReadOne(ref) match {
       case null =>
         read(ref)

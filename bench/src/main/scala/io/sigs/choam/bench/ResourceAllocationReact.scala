@@ -1,70 +1,66 @@
-package io.sigs.choam
-package kcas
-package bench
+package io.sigs.choam.bench
 
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import io.sigs.choam.bench.util.{ CommonThreadState, RandomState, KCASImplState }
 
+import io.sigs.choam._
+import io.sigs.choam.kcas.{ Ref, KCAS }
+
 /**
- * Resource allocation scenario, described in [Software transactional memory](
- * https://pdfs.semanticscholar.org/846e/87f6c8b9d8909d678b5c668cfe46cf40a348.pdf)
- * by Nir Shavit and Dan Touitou.
+ * A variant of `io.sigs.choam.kcas.bench.ResourceAllocation`,
+ * implemented with reagents.
  */
 @Fork(2)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
-class ResourceAllocation {
+class ResourceAllocationReact {
 
-  import ResourceAllocation._
+  import ResourceAllocationReact._
 
   @Benchmark
-  def bench(s: RaSt, t: ThSt): Unit = {
+  def bench(s: ResAllocSt, t: ThreadSt): Unit = {
     val n = t.allocSize
-    val impl = t.kcasImpl
+    implicit val kcas: KCAS = t.kcasImpl
     val rss = t.selectResources(s.rss)
-    val ovs = t.ovs
 
     @tailrec
-    def read(i: Int): Unit = {
+    def read(i: Int, react: React[Unit, Vector[String]]): React[Unit, Vector[String]] = {
       if (i >= n) {
-        ()
+        react
       } else {
-        ovs(i) = impl.read(rss(i))
-        read(i + 1)
+        val r = rss(i).read
+        read(i + 1, react.map2(r)(_ :+ _))
       }
     }
 
     @tailrec
-    def prepare(i: Int, d: impl.Desc): impl.Desc = {
+    def write(i: Int, react: React[Vector[String], Unit]): React[Vector[String], Unit] = {
       if (i >= n) {
-        d
+        react
       } else {
-        val nd = d.withCAS(rss(i), ovs(i), ovs((i + 1) % n))
-        prepare(i + 1, nd)
+        val r = React.computed[Vector[String], Unit] { ovs =>
+          rss(i).cas(ovs(i), ovs((i + 1) % n))
+        }
+        write(i + 1, (react * r).discard)
       }
     }
 
-    @tailrec
-    def go(): Unit = {
-      read(0)
-      val d = prepare(0, impl.start())
-      if (d.tryPerform()) ()
-      else go()
-    }
+    val r = read(0, React.ret(Vector.empty))
+    val w = write(0, React.unit)
+    (r >>> w).unsafeRun
 
-    go()
     Blackhole.consumeCPU(t.tokens)
   }
 }
 
-object ResourceAllocation {
+object ResourceAllocationReact {
 
   private[this] final val nRes = 60
 
   @State(Scope.Benchmark)
-  class RaSt {
+  class ResAllocSt {
 
     private[this] val initialValues =
       Vector.fill(nRes)(scala.util.Random.nextString(10))
@@ -74,7 +70,7 @@ object ResourceAllocation {
 
     @TearDown
     def checkResults(): Unit = {
-      val currentValues = rss.map(_.unsafeTryRead()).toVector
+      val currentValues = rss.map(_.read.unsafeRun(KCAS.NaiveKCAS)).toVector
       if (currentValues == initialValues) {
         throw new Exception(s"Unchanged results")
       }
@@ -87,14 +83,12 @@ object ResourceAllocation {
   }
 
   @State(Scope.Thread)
-  class ThSt extends RandomState with KCASImplState {
+  class ThreadSt extends RandomState with KCASImplState {
 
     val tokens: Long =
       CommonThreadState.BaseTokens << CommonThreadState.LowContention
 
     private[this] var selectedRss: Array[Ref[String]] = _
-
-    var ovs: Array[String] = _
 
     @Param(Array("2", "4", "6"))
     private[this] var dAllocSize: Int = _
@@ -105,7 +99,6 @@ object ResourceAllocation {
     @Setup
     def setupSelRes(): Unit = {
       selectedRss = Array.ofDim(allocSize)
-      ovs = Array.ofDim(allocSize)
     }
 
     /** Select `allocSize` refs randomly */
