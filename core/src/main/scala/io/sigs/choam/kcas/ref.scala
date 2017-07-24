@@ -12,14 +12,14 @@ sealed trait Ref[A] {
   final def modify(f: A => A): React[Unit, A] =
     upd[Unit, A] { (a, _) => (f(a), a) }
 
+  private[choam] final val read: React[Unit, A] =
+    React.read(this)
+
   final val getter: React[Unit, A] =
     upd[Unit, A] { (a, _) => (a, a) }
 
   private[choam] def cas(ov: A, nv: A): React[Unit, Unit] =
     React.cas(this, ov, nv)
-
-  private[choam] def read: React[Unit, A] =
-    React.read(this)
 
   private[kcas] def unsafeTryRead(): A
 

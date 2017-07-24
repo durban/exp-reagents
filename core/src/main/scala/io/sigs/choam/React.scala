@@ -111,22 +111,22 @@ object React {
   }
 
   def computed[A, B](f: A => React[Unit, B]): React[A, B] =
-    new Computed[A, B, B](f, new Commit[B])
+    new Computed[A, B, B](f, Commit[B]())
 
   private[choam] def cas[A](r: Ref[A], ov: A, nv: A): React[Unit, Unit] =
     new Cas[A, Unit](r, ov, nv, lift(_ => ()))
 
   private[choam] def read[A](r: Ref[A]): React[Unit, A] =
-    new Read(r, new Commit[A])
+    new Read(r, Commit[A]())
 
   private[choam] def postCommit[A](pc: React[A, Unit]): React[A, A] =
-    new PostCommit[A, A](pc, new Commit[A])
+    new PostCommit[A, A](pc, Commit[A]())
 
   def lift[A, B](f: A => B): React[A, B] =
-    new Lift(f, new Commit[B])
+    new Lift(f, Commit[B]())
 
   def identity[A]: React[A, A] =
-    new Commit[A]
+    Commit[A]()
 
   private[this] val _unit =
     React.lift[Any, Unit] { _ => () }
@@ -195,7 +195,7 @@ object React {
   protected[React] final case object Retry extends TentativeResult[Nothing]
   protected[React] final case class Success[A](value: A, reaction: Reaction) extends  TentativeResult[A]
 
-  private final class Commit[A]
+  private final class Commit[A] private ()
       extends React[A, A] {
 
     protected def tryPerform(a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[A] = {
@@ -216,6 +216,16 @@ object React {
 
     override def toString =
       "Commit"
+  }
+
+  private object Commit {
+
+    private[choam] val instance =
+      new Commit[Any]
+
+    @inline
+    def apply[A](): Commit[A] =
+      instance.asInstanceOf[Commit[A]]
   }
 
   private final class PostCommit[A, B](pc: React[A, Unit], k: React[A, B])
