@@ -52,7 +52,7 @@ sealed abstract class React[-A, +B] {
     new Choice[X, Y](this, that)
 
   final def >>> [C](that: React[B, C]): React[A, C] = that match {
-    case _: Commit[_] => this
+    case _: Commit.type => this
     case _ => this.andThenImpl(that)
   }
 
@@ -195,7 +195,7 @@ object React {
   protected[React] final case object Retry extends TentativeResult[Nothing]
   protected[React] final case class Success[A](value: A, reaction: Reaction) extends  TentativeResult[A]
 
-  private final class Commit[A] private ()
+  private sealed abstract class Commit[A]()
       extends React[A, A] {
 
     protected def tryPerform(a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[A] = {
@@ -207,25 +207,22 @@ object React {
       that
 
     protected def productImpl[C, D](that: React[C, D]): React[(A, C), (A, D)] = that match {
-      case _: Commit[_] => new Commit[(A, C)]
-      case _ => arrowInstance.second(that)
+      case _: Commit.type => Commit[(A, C)]()
+      case _ => arrowInstance.second(that) // TODO: optimize
     }
 
     def firstImpl[C]: React[(A, C), (A, C)] =
-      new Commit[(A, C)]
+      Commit[(A, C)]()
 
     override def toString =
       "Commit"
   }
 
-  private object Commit {
-
-    private[choam] val instance =
-      new Commit[Any]
+  private object Commit extends Commit[Any] {
 
     @inline
     def apply[A](): Commit[A] =
-      instance.asInstanceOf[Commit[A]]
+      this.asInstanceOf[Commit[A]]
   }
 
   private final class PostCommit[A, B](pc: React[A, Unit], k: React[A, B])
