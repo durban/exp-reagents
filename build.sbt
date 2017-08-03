@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-scalaVersion in ThisBuild := "2.12.2-bin-typelevel-4"
+scalaVersion in ThisBuild := "2.12.3-bin-typelevel-4"
 // TODO: this doesn't work (no 2.11):
 crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value, "2.11.11-bin-typelevel-4")
 scalaOrganization in ThisBuild := "org.typelevel"
@@ -61,7 +61,8 @@ lazy val commonSettings = Seq[Setting[_]](
     "-unchecked",
     "-encoding", "UTF-8",
     "-language:higherKinds,experimental.macros",
-    "-opt:l:project",
+    "-opt:l:inline",
+    "-opt-inline-from:<sources>",
     "-Xlint:_",
     "-Xfuture",
     "-Xfatal-warnings",
@@ -87,7 +88,7 @@ lazy val commonSettings = Seq[Setting[_]](
   },
   scalacOptions in (Compile, console) ~= { _.filterNot("-Ywarn-unused:imports" == _) },
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
-  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.3" cross CrossVersion.binary),
+  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.4" cross CrossVersion.binary),
   parallelExecution in Test := false,
 
   libraryDependencies ++= Seq(
