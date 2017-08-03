@@ -19,6 +19,9 @@ private[kcas] object NaiveKCAS extends KCAS { self =>
     override def tryPerform(): Boolean =
       perform(ops.sorted)
 
+    override def cancel(): Unit =
+      ()
+
     override def withCAS[A](ref: Ref[A], ov: A, nv: A): self.Desc =
       copy(ops = CASD(ref, ov, nv) :: ops)
 

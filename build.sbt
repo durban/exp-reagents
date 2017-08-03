@@ -112,7 +112,7 @@ lazy val macroSettings = Seq(
 
 lazy val dependencies = new {
 
-  val catsVersion = "0.9.0"
+  val catsVersion = "1.0.0-MF"
   val circeVersion = "0.8.0"
   val iterateeVersion = "0.12.0"
   val fs2Version = "0.10.0-M4"
@@ -120,7 +120,7 @@ lazy val dependencies = new {
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.2"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
   val catsFree = "org.typelevel" %% "cats-free" % catsVersion
-  val catsEffect = "org.typelevel" %% "cats-effect" % "0.4-09e64a7"
+  val catsEffect = "org.typelevel" %% "cats-effect" % "0.4"
 
   val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,
@@ -164,6 +164,9 @@ lazy val dependencies = new {
 }
 
 addCommandAlias("measurePerformance", "bench/jmh:run -t max -foe true -rf json -rff results.json .*")
-addCommandAlias("measureKCAS", "bench/jmh:run -t max -foe true -rf json -rff results_kcas.json .*ResourceAllocation")
-addCommandAlias("measureReact", "bench/jmh:run -t max -foe true -rf json -rff results_react.json .*ResourceAllocationReact")
 addCommandAlias("measureFS", "bench/jmh:run -t max -foe true -rf json -rff results_fs.json .*FalseSharing")
+addCommandAlias("measureKCAS", "bench/jmh:run -t max -foe true -rf json -rff results_kcas.json .*ResourceAllocationKCAS")
+addCommandAlias("measureReact", "bench/jmh:run -t max -foe true -rf json -rff results_react.json .*ResourceAllocationReact")
+addCommandAlias("measureCombinators", "bench/jmh:run -t max -foe true -rf json -rff results_combinators.json .*CombinatorsBench")
+addCommandAlias("profileReact", "bench/jmh:run -t max -foe true -prof stack:lines=3 -rf text -rff profile_react.txt .*ResourceAllocationReact")
+

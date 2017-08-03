@@ -15,9 +15,9 @@ import io.sigs.choam.bench.util.{ CommonThreadState, RandomState, KCASImplState 
 @Fork(2)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
-class ResourceAllocation {
+class ResourceAllocationKCAS {
 
-  import ResourceAllocation._
+  import ResourceAllocationKCAS._
 
   @Benchmark
   def bench(s: RaSt, t: ThSt): Unit = {
@@ -59,7 +59,7 @@ class ResourceAllocation {
   }
 }
 
-object ResourceAllocation {
+object ResourceAllocationKCAS {
 
   private[this] final val nRes = 60
 

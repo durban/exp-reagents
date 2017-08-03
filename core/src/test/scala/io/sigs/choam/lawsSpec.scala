@@ -1,7 +1,7 @@
 package io.sigs.choam
 
 import cats.Eq
-import cats.laws.discipline.ArrowTests
+import cats.laws.discipline.{ ArrowTests, MonadTests }
 import cats.implicits._
 
 import org.scalacheck.{ Gen, Arbitrary }
@@ -83,4 +83,5 @@ abstract class LawsSpec extends FunSuite with Discipline with KCASImplSpec {
   }
 
   checkAll("Arrow[React]", ArrowTests[React].arrow[Int, Int, Int, Int, Int, Int])
+  checkAll("Monad[React]", MonadTests[React[String, ?]].monad[Int, String, Int])
 }

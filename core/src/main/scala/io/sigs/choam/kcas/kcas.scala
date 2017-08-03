@@ -13,6 +13,7 @@ abstract class KCAS { self =>
     def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc
     def snapshot(): Snap
     def tryPerform(): Boolean
+    def cancel(): Unit
   }
 
   private[choam] trait Snap {

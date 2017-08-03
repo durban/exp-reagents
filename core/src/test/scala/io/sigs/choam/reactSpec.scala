@@ -288,6 +288,19 @@ abstract class ReactSpec extends BaseSpec {
     r3b.read.unsafeRun should === ("zb")
   }
 
+  it should "be stack-safe (even when deeply nested)" ignore {
+    val n = 10 //TODO: React.maxStackDepth + 10
+    val ref = Ref.mk("foo")
+    val successfulCas = ref.cas("foo", "bar")
+    val fails = (1 to n).foldLeft[React[Unit, Unit]](React.retry) { (r, _) =>
+      r + React.retry
+    }
+
+    val r: React[Unit, Unit] = fails + successfulCas
+    r.unsafeRun should === (())
+    ref.getter.unsafeRun should === ("bar")
+  }
+
   "Post-commit actions" should "be executed" in {
     val r1 = Ref.mk("x")
     val r2 = Ref.mk("")

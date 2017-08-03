@@ -1,5 +1,6 @@
 package io.sigs.choam
 
+import cats.Monad
 import cats.arrow.Arrow
 import cats.effect.Sync
 
@@ -27,18 +28,23 @@ sealed abstract class React[-A, +B] {
   import React._
 
   final def unsafePerform(a: A)(implicit kcas: KCAS): B = {
+
     @tailrec
-    def go(): Success[B] = {
-      tryPerform(a, Reaction.empty, kcas.start()) match {
+    def go[C](partialResult: C, cont: React[C, B], rea: Reaction, desc: KCAS#Desc): Success[B] = {
+      cont.tryPerform(maxStackDepth, partialResult, rea, desc) match {
         case Retry =>
           // TODO: implement backoff
-          go()
+          go(partialResult, cont, Reaction.empty, kcas.start())
         case s @ Success(_, _) =>
           s
+        case Jump(pr, k, rea, desc) =>
+          // We're cheating here, to convince scalac
+          // that this really is a tail-call:
+          go(pr.asInstanceOf[C], k, rea, desc)
       }
     }
 
-    val res = go()
+    val res = go(a, this, Reaction.empty, kcas.start())
     res.reaction.postCommit.foreach { pc =>
       pc.unsafePerform(())
     }
@@ -46,7 +52,12 @@ sealed abstract class React[-A, +B] {
     res.value
   }
 
-  protected def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B]
+  protected def tryPerform(n: Int, a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B]
+
+  protected final def maybeJump[C, Y >: B](n: Int, partialResult: C, cont: React[C, Y], ops: Reaction, desc: KCAS#Desc): TentativeResult[Y] = {
+    if (n <= 0) Jump(partialResult, cont, ops, desc)
+    else cont.tryPerform(n - 1, partialResult, ops, desc)
+  }
 
   def + [X <: A, Y >: B](that: React[X, Y]): React[X, Y] =
     new Choice[X, Y](this, that)
@@ -66,7 +77,7 @@ sealed abstract class React[-A, +B] {
     this.productImpl(that)
 
   final def ? : React[A, Option[B]] =
-    this.rmap(Some(_)) + ret[Option[B]](None).lmap(_ => ())
+    this.rmap(Some(_)) + ret[Unit, Option[B]](None).lmap(_ => ())
 
   protected def productImpl[C, D](that: React[C, D]): React[(A, C), (B, D)]
 
@@ -101,6 +112,8 @@ sealed abstract class React[-A, +B] {
 
 object React {
 
+  private[choam] final val maxStackDepth = 1024
+
   def upd[A, B, C](r: Ref[A])(f: (A, B) => (A, C)): React[B, C] = {
     val self: React[B, (A, B)] = r.read.firstImpl[B].lmap[B](b => ((), b))
     val comp: React[(A, B), C] = computed[(A, B), C] { case (oa, b) =>
@@ -134,8 +147,11 @@ object React {
   def unit[A]: React[A, Unit] =
     _unit
 
-  def ret[A](a: A): React[Unit, A] =
-    lift[Unit, A](_ => a)
+  def ret[X, A](a: A): React[X, A] =
+    lift[X, A](_ => a)
+
+  private[choam] def retry[A, B]: React[A, B] =
+    AlwaysRetry()
 
   def newRef[A](initial: A): React[Unit, Ref[A]] =
     lift[Unit, Ref[A]](_ => Ref.mk(initial))
@@ -161,7 +177,22 @@ object React {
       fa.rmap(f)
   }
 
-  // TODO: monad instance
+  // TODO: MonadReader (?)
+  implicit def monadInstance[X]: Monad[React[X, ?]] = new Monad[React[X, ?]] {
+
+    def pure[A](x: A): React[X, A] =
+      React.ret(x)
+
+    def flatMap[A, B](fa: React[X, A])(f: A => React[X, B]): React[X, B] =
+      fa.flatMap(f)
+
+    def tailRecM[A, B](a: A)(f: A => React[X, Either[A, B]]): React[X, B] = {
+      f(a).flatMap {
+        case Left(a) => tailRecM(a)(f)
+        case Right(b) => React.ret(b)
+      }
+    }
+  }
 
   implicit final class InvariantReactSyntax[A, B](private val self: React[A, B]) extends AnyVal {
     final def apply[F[_]](a: A)(implicit kcas: KCAS, F: Sync[F]): F[B] =
@@ -193,12 +224,13 @@ object React {
 
   protected[React] sealed trait TentativeResult[+A]
   protected[React] final case object Retry extends TentativeResult[Nothing]
-  protected[React] final case class Success[A](value: A, reaction: Reaction) extends  TentativeResult[A]
+  protected[React] final case class Success[A](value: A, reaction: Reaction) extends TentativeResult[A]
+  protected[React] final case class Jump[A, B](value: A, react: React[A, B], ops: Reaction, desc: KCAS#Desc) extends TentativeResult[B]
 
   private sealed abstract class Commit[A]()
       extends React[A, A] {
 
-    protected def tryPerform(a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[A] = {
+    protected def tryPerform(n: Int, a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[A] = {
       if (desc.tryPerform()) Success(a, reaction)
       else Retry
     }
@@ -225,11 +257,39 @@ object React {
       this.asInstanceOf[Commit[A]]
   }
 
+  private sealed abstract class AlwaysRetry[A, B]()
+      extends React[A, B] {
+
+    protected def tryPerform(n: Int, a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[B] = {
+      desc.cancel()
+      Retry
+    }
+
+    protected def andThenImpl[C](that: React[B, C]): React[A, C] =
+      AlwaysRetry()
+
+    protected def productImpl[C, D](that: React[C, D]): React[(A, C), (B, D)] =
+      AlwaysRetry()
+
+    def firstImpl[C]: React[(A, C), (B, C)] =
+      AlwaysRetry()
+
+    override def toString =
+      "Retry"
+  }
+
+  private object AlwaysRetry extends AlwaysRetry[Any, Any] {
+
+    @inline
+    def apply[A, B](): AlwaysRetry[A, B] =
+      this.asInstanceOf[AlwaysRetry[A, B]]
+  }
+
   private final class PostCommit[A, B](pc: React[A, Unit], k: React[A, B])
       extends React[A, B] {
 
-    def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B] =
-      k.tryPerform(a, pc.lmap[Unit](_ => a) :: ops, desc)
+    def tryPerform(n: Int, a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B] =
+      maybeJump(n, a, k, pc.lmap[Unit](_ => a) :: ops, desc)
 
     def andThenImpl[C](that: React[B, C]): React[A, C] =
       new PostCommit[A, C](pc, k >>> that)
@@ -247,9 +307,8 @@ object React {
   private final class Lift[A, B, C](private val func: A => B, private val k: React[B, C])
       extends React[A, C] {
 
-    def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[C] = {
-      k.tryPerform(func(a), ops, desc)
-    }
+    def tryPerform(n: Int, a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[C] =
+      maybeJump(n, func(a), k, ops, desc)
 
     def andThenImpl[D](that: React[C, D]): React[A, D] = {
       new Lift[A, B, D](func, k >>> that)
@@ -274,9 +333,8 @@ object React {
   private final class Computed[A, B, C](f: A => React[Unit, B], k: React[B, C])
       extends React[A, C] {
 
-    def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[C] = {
-      (f(a) >>> k).tryPerform((), ops, desc)
-    }
+    def tryPerform(n: Int, a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[C] =
+      maybeJump(n, (), f(a) >>> k, ops, desc)
 
     def andThenImpl[D](that: React[C, D]): React[A, D] = {
       new Computed(f, k >>> that)
@@ -303,13 +361,17 @@ object React {
   private final class Choice[A, B](first: React[A, B], second: React[A, B])
       extends React[A, B] {
 
-    def tryPerform(a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B] = {
-      val snap = desc.snapshot()
-      first.tryPerform(a, ops, desc) match {
-        case Retry =>
-          second.tryPerform(a, ops, snap.load())
-        case ok =>
-          ok
+    def tryPerform(n: Int, a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B] = {
+      if (n <= 0) {
+        Jump(a, this, ops, desc) // FIXME!!!
+      } else {
+        val snap = desc.snapshot()
+        first.tryPerform(n - 1, a, ops, desc) match {
+          case Retry =>
+            second.tryPerform(n - 1, a, ops, snap.load())
+          case ok =>
+            ok
+        }
       }
     }
 
@@ -332,11 +394,14 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(b: B, pc: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
+    protected def tryPerform(n: Int, b: B, pc: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
       desc.impl.tryReadOne(ref) match {
-        case null => Retry
-        case a if equ(a, ov) => k.tryPerform(transform(a, b), pc, desc.withCAS(ref, ov, nv))
-        case _ => Retry
+        case null =>
+          Retry
+        case a if equ(a, ov) =>
+          maybeJump(n, transform(a, b), k, pc, desc.withCAS(ref, ov, nv))
+        case _ =>
+          Retry
       }
     }
 
@@ -378,10 +443,10 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(b: B, ops: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
+    protected def tryPerform(n: Int, b: B, ops: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
       desc.impl.tryReadOne(ref) match {
         case null => Retry
-        case a => k.tryPerform(transform(a, b), ops, desc)
+        case a => maybeJump(n, transform(a, b), k, ops, desc)
       }
     }
 
