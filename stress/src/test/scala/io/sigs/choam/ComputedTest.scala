@@ -41,13 +41,8 @@ abstract class ComputedTest(impl: KCAS) {
     }
   }
 
-  private[this] val consistentRead: React[Unit, (String, String)] = {
-    React.invisibleRead(r1) >>> React.computed[String, (String, String)] { v1 =>
-      React.invisibleRead(r2) >>> React.computed[String, (String, String)] { v2 =>
-        (React.cas(r1, v1, v1) × React.cas(r2, v2, v2)).lmap[Unit] { _ => ((), ()) }.map { _ => (v1, v2) }
-      }
-    }
-  }
+  private[this] val consistentRead: React[Unit, (String, String)] =
+    React.consistentRead(r1, r2)
 
   @Actor
   def writer(): Unit = {

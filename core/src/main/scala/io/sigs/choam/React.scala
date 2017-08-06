@@ -143,6 +143,15 @@ object React {
     self >>> comp
   }
 
+  // TODO: generalize to more than 2
+  def consistentRead[A, B](ra: Ref[A], rb: Ref[B]): React[Unit, (A, B)] = {
+    ra.invisibleRead >>> computed[A, (A, B)] { a =>
+      rb.invisibleRead >>> computed[B, (A, B)] { b =>
+        (ra.cas(a, a) × rb.cas(b, b)).lmap[Unit] { _ => ((), ()) }.map { _ => (a, b) }
+      }
+    }
+  }
+
   def computed[A, B](f: A => React[Unit, B]): React[A, B] =
     new Computed[A, B, B](f, Commit[B]())
 

@@ -78,27 +78,31 @@ abstract class ReactSpec extends BaseSpec {
     }
   }
 
-  "updWith" should "perform the chained action atomically" in {
-    val N = 10000
-    val r1 = Ref.mk("foo")
-    val r2 = Ref.mk("bar")
-    // TODO: maybe add `swap` to `Ref`?
-    val swap = r1.updWith[Unit, Unit] { (o1, _) =>
-      r2.upd[Unit, String] { (o2, _) =>
+  // TODO: maybe add `swap` to `Ref` (or `React`)?
+  def swap[A](r1: Ref[A], r2: Ref[A]): React[Unit, Unit] = {
+    r1.updWith[Unit, Unit] { (o1, _) =>
+      r2.upd[Unit, A] { (o2, _) =>
         (o1, o2)
       }.map { o2 => (o2, ()) }
     }
+  }
 
-    swap.unsafeRun
+  "updWith" should "perform the chained action atomically" in {
+    val N = 100000
+    val r1 = Ref.mk("foo")
+    val r2 = Ref.mk("bar")
+    val sw = swap(r1, r2)
+
+    sw.unsafeRun
     r1.invisibleRead.unsafeRun should === ("bar")
     r2.invisibleRead.unsafeRun should === ("foo")
-    swap.unsafeRun
+    sw.unsafeRun
     r1.invisibleRead.unsafeRun should === ("foo")
     r2.invisibleRead.unsafeRun should === ("bar")
 
     val tsk = for {
-      f1 <- async.start(IO { for (_ <- 1 to N) swap.unsafeRun })
-      f2 <- async.start(IO { for (_ <- 1 to N) swap.unsafeRun })
+      f1 <- async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
+      f2 <- async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
       _ <- f1
       _ <- f2
     } yield ()
@@ -124,6 +128,27 @@ abstract class ReactSpec extends BaseSpec {
     r.unsafeRun
     r1.invisibleRead.unsafeRun should === ("x")
     r2.invisibleRead.unsafeRun should === ("bar")
+  }
+
+  "consistentRead" should "indeed be consistent" in {
+    val N = 100000
+    val r1 = Ref.mk("foo")
+    val r2 = Ref.mk("bar")
+    val cr = React.consistentRead(r1, r2)
+    val sw = swap(r1, r2)
+
+    val tsk = for {
+      f1 <- async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
+      f2 <- async.start(IO {
+        for (_ <- 1 to N) {
+          val (v1, v2) = cr.unsafeRun
+          assert(((v1 eq "foo") && (v2 eq "bar")) || ((v1 eq "bar") && (v2 eq "foo")))
+        }
+      })
+      _ <- f1
+      _ <- f2
+    } yield ()
+    tsk.unsafeRunSync()
   }
 
   def pushAll(r: React[Int, _], count: Int): Unit = {
