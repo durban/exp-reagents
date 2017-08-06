@@ -152,6 +152,14 @@ object React {
     }
   }
 
+  def swap[A](r1: Ref[A], r2: Ref[A]): React[Unit, Unit] = {
+    r1.updWith[Unit, Unit] { (o1, _) =>
+      r2.upd[Unit, A] { (o2, _) =>
+        (o1, o2)
+      }.map { o2 => (o2, ()) }
+    }
+  }
+
   def computed[A, B](f: A => React[Unit, B]): React[A, B] =
     new Computed[A, B, B](f, Commit[B]())
 

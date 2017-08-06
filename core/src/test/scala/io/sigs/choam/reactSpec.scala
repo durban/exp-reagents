@@ -78,20 +78,11 @@ abstract class ReactSpec extends BaseSpec {
     }
   }
 
-  // TODO: maybe add `swap` to `Ref` (or `React`)?
-  def swap[A](r1: Ref[A], r2: Ref[A]): React[Unit, Unit] = {
-    r1.updWith[Unit, Unit] { (o1, _) =>
-      r2.upd[Unit, A] { (o2, _) =>
-        (o1, o2)
-      }.map { o2 => (o2, ()) }
-    }
-  }
-
   "updWith" should "perform the chained action atomically" in {
     val N = 100000
     val r1 = Ref.mk("foo")
     val r2 = Ref.mk("bar")
-    val sw = swap(r1, r2)
+    val sw = React.swap(r1, r2)
 
     sw.unsafeRun
     r1.invisibleRead.unsafeRun should === ("bar")
@@ -135,7 +126,7 @@ abstract class ReactSpec extends BaseSpec {
     val r1 = Ref.mk("foo")
     val r2 = Ref.mk("bar")
     val cr = React.consistentRead(r1, r2)
-    val sw = swap(r1, r2)
+    val sw = React.swap(r1, r2)
 
     val tsk = for {
       f1 <- async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
