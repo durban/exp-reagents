@@ -78,6 +78,54 @@ abstract class ReactSpec extends BaseSpec {
     }
   }
 
+  "updWith" should "perform the chained action atomically" in {
+    val N = 10000
+    val r1 = Ref.mk("foo")
+    val r2 = Ref.mk("bar")
+    // TODO: maybe add `swap` to `Ref`?
+    val swap = r1.updWith[Unit, Unit] { (o1, _) =>
+      r2.upd[Unit, String] { (o2, _) =>
+        (o1, o2)
+      }.map { o2 => (o2, ()) }
+    }
+
+    swap.unsafeRun
+    r1.invisibleRead.unsafeRun should === ("bar")
+    r2.invisibleRead.unsafeRun should === ("foo")
+    swap.unsafeRun
+    r1.invisibleRead.unsafeRun should === ("foo")
+    r2.invisibleRead.unsafeRun should === ("bar")
+
+    val tsk = for {
+      f1 <- async.start(IO { for (_ <- 1 to N) swap.unsafeRun })
+      f2 <- async.start(IO { for (_ <- 1 to N) swap.unsafeRun })
+      _ <- f1
+      _ <- f2
+    } yield ()
+    tsk.unsafeRunSync()
+    r1.invisibleRead.unsafeRun should === ("foo")
+    r2.invisibleRead.unsafeRun should === ("bar")
+  }
+
+  it should "behave correctly when used through modifyWith" in {
+    val r1 = Ref.mk("foo")
+    val r2 = Ref.mk("x")
+    val r = r1.modifyWith { ov =>
+      if (ov eq "foo") React.ret("bar")
+      else r2.upd[Unit, String] { (o2, _) =>
+        (ov, o2)
+      }
+    }
+
+    r.unsafeRun
+    r1.invisibleRead.unsafeRun should === ("bar")
+    r2.invisibleRead.unsafeRun should === ("x")
+
+    r.unsafeRun
+    r1.invisibleRead.unsafeRun should === ("x")
+    r2.invisibleRead.unsafeRun should === ("bar")
+  }
+
   def pushAll(r: React[Int, _], count: Int): Unit = {
     for (_ <- 1 to count) {
       val i = java.util.concurrent.ThreadLocalRandom.current().nextInt()

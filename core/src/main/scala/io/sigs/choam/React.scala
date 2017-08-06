@@ -132,6 +132,17 @@ object React {
     self >>> comp
   }
 
+  def updWith[A, B, C](r: Ref[A])(f: (A, B) => React[Unit, (A, C)]): React[B, C] = {
+    val self: React[B, (A, B)] = r.invisibleRead.firstImpl[B].lmap[B](b => ((), b))
+    val comp: React[(A, B), C] = computed[(A, B), C] { case (oa, b) =>
+      f(oa, b).flatMap {
+        case (na, c) =>
+          r.cas(oa, na).rmap(_ => c)
+      }
+    }
+    self >>> comp
+  }
+
   def computed[A, B](f: A => React[Unit, B]): React[A, B] =
     new Computed[A, B, B](f, Commit[B]())
 
@@ -213,6 +224,7 @@ object React {
     final def run[F[_]](implicit kcas: KCAS, F: Sync[F]): F[A] =
       F.delay { unsafeRun(kcas) }
 
+    // TODO: add ()
     final def unsafeRun(implicit kcas: KCAS): A =
       self.unsafePerform(())
   }

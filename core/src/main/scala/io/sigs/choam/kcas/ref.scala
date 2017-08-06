@@ -9,8 +9,14 @@ sealed trait Ref[A] {
   final def upd[B, C](f: (A, B) => (A, C)): React[B, C] =
     React.upd(this)(f)
 
+  final def updWith[B, C](f: (A, B) => React[Unit, (A, C)]): React[B, C] =
+    React.updWith(this)(f)
+
   final def modify(f: A => A): React[Unit, A] =
     upd[Unit, A] { (a, _) => (f(a), a) }
+
+  final def modifyWith(f: A => React[Unit, A]): React[Unit, A] =
+    updWith[Unit, A] { (oa, _) => f(oa).map(na => (na, oa)) }
 
   private[choam] final val invisibleRead: React[Unit, A] =
     React.invisibleRead(this)
