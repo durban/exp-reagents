@@ -318,47 +318,46 @@ abstract class ReactSpec extends BaseSpec {
     }
   }
 
-  it should "correctly backtrack (no jumps)" in {
-    backtrackTest(2)
+  it should "correctly backtrack (1) (no jumps)" in {
+    backtrackTest1(2)
   }
 
-  it should "correctly backtrack (even with jumps)" in {
-    backtrackTest(React.maxStackDepth + 1)
+  it should "correctly backtrack (1) (even with jumps)" in {
+    backtrackTest1(React.maxStackDepth + 1)
   }
 
-  def backtrackTest(x: Int): Unit = {
-    def mkOkCASes(n: Int, ov: String, nv: String): (Array[Ref[String]], React[Unit, Unit]) = {
-      val refs = Array.fill(n - 1)(Ref.mk(ov))
-      val r = refs.foldLeft(Ref.mk(ov).cas(ov, nv)) { (r, ref) =>
-        (r * ref.cas(ov, nv)).discard
-      }
-      (refs, r)
-    }
+  it should "correctly backtrack (2) (no jumps)" in {
+    backtrackTest2(2)
+  }
 
-    /*                 +
-     *                / \
-     *               /   \
-     *              /     \
-     *             /       \
-     *        [CASx_ok1]  CAS_ok4
-     *            |
-     *            |
-     *            +
-     *           / \
-     *          /   \
-     *         /     \
-     *        /				\
-     *    CASx_ok2  [CAS_ok3]
-     *       |
-     *       |
-     *       +
-     *      / \
-     *     /   \
-     *    /     \
-     *   /       \
-     * CAS_fail  Retry
-     */
+  it should "correctly backtrack (2) (even with jumps)" in {
+    backtrackTest2(React.maxStackDepth / 4)
+  }
 
+  /**                +
+   *                / \
+   *               /   \
+   *              /     \
+   *             /       \
+   *        [CASx_ok1]  CAS_ok4
+   *            |
+   *            |
+   *            +
+   *           / \
+   *          /   \
+   *         /     \
+   *        /				\
+   *    CASx_ok2  [CAS_ok3]
+   *       |
+   *       |
+   *       +
+   *      / \
+   *     /   \
+   *    /     \
+   *   /       \
+   * CAS_fail  Retry
+   */
+  def backtrackTest1(x: Int): Unit = {
     val (okRefs1, ok1) = mkOkCASes(x, "foo1", "bar1")
     val (okRefs2, ok2) = mkOkCASes(x, "foo2", "bar2")
     val okRef3 = Ref.mk("foo3")
@@ -377,6 +376,100 @@ abstract class ReactSpec extends BaseSpec {
     okRef3.getter.unsafeRun should === ("bar3")
     okRef4.getter.unsafeRun should === ("foo4")
     failRef.getter.unsafeRun should === ("fail")
+  }
+
+  /**            +
+   *            / \
+   *           /   \
+   *          /     \
+   *         /       \
+   *     CASx_ok   CASx_ok
+   *        |         |
+   *        |         |
+   *        +         +
+   *       / \       / \
+   *             .
+   *             .
+   *             .
+   *     |              |
+   * CAS_leaf0  ... CAS_leaf15
+   */
+  def backtrackTest2(x: Int): Unit = {
+
+    def oneChoice(leftCont: React[Unit, Unit], rightCont: React[Unit, Unit], x: Int, label: String): (React[Unit, Unit], () => Unit) = {
+      val ol = s"old-${label}-left"
+      val nl = s"new-${label}-left"
+      val (lRefs, left) = mkOkCASes(x, ol, nl)
+      val or = s"old-${label}-right"
+      val nr = s"new-${label}-right"
+      val (rRefs, right) = mkOkCASes(x, or, nr)
+      def reset(): Unit = {
+        lRefs.foreach { ref => ref.modify(_ => ol).unsafeRun }
+        rRefs.foreach { ref => ref.modify(_ => or).unsafeRun }
+      }
+      (((left >>> leftCont) + (right >>> rightCont)).discard, reset _)
+    }
+
+    val leafs = Array.tabulate(16)(idx => Ref.mk(s"foo-${idx}"))
+
+    val (l1, rss1) = leafs.grouped(2).map {
+      case Array(refLeft, refRight) =>
+        val ol = refLeft.read.unsafeRun
+        val or = refRight.read.unsafeRun
+        oneChoice(refLeft.cas(ol, s"${ol}-new"), refRight.cas(or, s"${or}-new"), x, "l1")
+      case _ =>
+        fail
+    }.toList.unzip
+    assert(l1.size == 8)
+
+    val (l2, rss2) = l1.grouped(2).map {
+      case List(rl, rr) =>
+        oneChoice(rl, rr, x, "l2")
+      case _ =>
+        fail
+    }.toList.unzip
+    assert(l2.size == 4)
+
+    val (l3, rss3) = l2.grouped(2).map {
+      case List(rl, rr) =>
+        oneChoice(rl, rr, x, "l3")
+      case _ =>
+        fail
+    }.toList.unzip
+    assert(l3.size == 2)
+
+    val (top, rs) = oneChoice(l3(0), l3(1), x, "top")
+
+    def reset(): Unit = {
+      rss1.foreach(_())
+      rss2.foreach(_())
+      rss3.foreach(_())
+      rs()
+    }
+
+    def checkLeafs(expLastNew: Int): Unit = {
+      for ((ref, idx) <- leafs.zipWithIndex) {
+        val expContents = if (idx <= expLastNew) s"foo-${idx}-new" else s"foo-${idx}"
+        val contents = ref.read.unsafeRun
+        contents should === (expContents)
+      }
+    }
+
+    checkLeafs(-1)
+    for (e <- 0 until leafs.size) {
+      top.unsafeRun
+      checkLeafs(e)
+      reset()
+    }
+  }
+
+  def mkOkCASes(n: Int, ov: String, nv: String): (Array[Ref[String]], React[Unit, Unit]) = {
+    val ref0 = Ref.mk(ov)
+    val refs = Array.fill(n - 1)(Ref.mk(ov))
+    val r = refs.foldLeft(ref0.cas(ov, nv)) { (r, ref) =>
+      (r * ref.cas(ov, nv)).discard
+    }
+    (ref0 +: refs, r)
   }
 
   "Post-commit actions" should "be executed" in {
