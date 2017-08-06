@@ -132,7 +132,7 @@ abstract class ReactSpec extends BaseSpec {
   }
 
   // TODO: figure out how could we actually deadlock
-  "Deadlocks" should "not be possible" ignore {
+  "Deadlocks" should "not be possible (!!!)" ignore {
     val nStacks = 10
     val stacks = List.fill(nStacks)(new TreiberStack[Int])
     val push = stacks.map(_.push).reduceLeft[React[Int, Unit]]{ (a, b) => (a * b).rmap(_ => ()) }
@@ -288,8 +288,8 @@ abstract class ReactSpec extends BaseSpec {
     r3b.read.unsafeRun should === ("zb")
   }
 
-  it should "be stack-safe (even when deeply nested)" ignore {
-    val n = 10 //TODO: React.maxStackDepth + 10
+  it should "be stack-safe (even when deeply nested)" in {
+    val n = 16 * React.maxStackDepth
     val ref = Ref.mk("foo")
     val successfulCas = ref.cas("foo", "bar")
     val fails = (1 to n).foldLeft[React[Unit, Unit]](React.retry) { (r, _) =>
@@ -299,6 +299,84 @@ abstract class ReactSpec extends BaseSpec {
     val r: React[Unit, Unit] = fails + successfulCas
     r.unsafeRun should === (())
     ref.getter.unsafeRun should === ("bar")
+  }
+
+  it should "be stack-safe (even when deeply nested and doing actual CAS-es)" in {
+    val n = 16 * React.maxStackDepth
+    val ref = Ref.mk("foo")
+    val successfulCas = ref.cas("foo", "bar")
+    val refs = Array.fill(n)(Ref.mk("x"))
+    val fails = refs.foldLeft[React[Unit, Unit]](React.retry) { (r, ref) =>
+      r + ref.cas("y", "this will never happen")
+    }
+
+    val r: React[Unit, Unit] = fails + successfulCas
+    r.unsafeRun should === (())
+    ref.getter.unsafeRun should === ("bar")
+    refs.foreach { ref =>
+      ref.getter.unsafeRun should === ("x")
+    }
+  }
+
+  it should "correctly backtrack (no jumps)" in {
+    backtrackTest(2)
+  }
+
+  it should "correctly backtrack (even with jumps)" in {
+    backtrackTest(React.maxStackDepth + 1)
+  }
+
+  def backtrackTest(x: Int): Unit = {
+    def mkOkCASes(n: Int, ov: String, nv: String): (Array[Ref[String]], React[Unit, Unit]) = {
+      val refs = Array.fill(n - 1)(Ref.mk(ov))
+      val r = refs.foldLeft(Ref.mk(ov).cas(ov, nv)) { (r, ref) =>
+        (r * ref.cas(ov, nv)).discard
+      }
+      (refs, r)
+    }
+
+    /*                 +
+     *                / \
+     *               /   \
+     *              /     \
+     *             /       \
+     *        [CASx_ok1]  CAS_ok4
+     *            |
+     *            |
+     *            +
+     *           / \
+     *          /   \
+     *         /     \
+     *        /				\
+     *    CASx_ok2  [CAS_ok3]
+     *       |
+     *       |
+     *       +
+     *      / \
+     *     /   \
+     *    /     \
+     *   /       \
+     * CAS_fail  Retry
+     */
+
+    val (okRefs1, ok1) = mkOkCASes(x, "foo1", "bar1")
+    val (okRefs2, ok2) = mkOkCASes(x, "foo2", "bar2")
+    val okRef3 = Ref.mk("foo3")
+    val okRef4 = Ref.mk("foo4")
+    val failRef = Ref.mk("fail")
+    val left = ok1 >>> ((ok2 >>> (failRef.cas("x_fail", "y_fail") + React.retry)) + okRef3.cas("foo3", "bar3"))
+    val right = okRef4.cas("foo4", "bar4")
+    val r = left + right
+    r.unsafeRun should === (())
+    okRefs1.foreach { ref =>
+      ref.getter.unsafeRun should === ("bar1")
+    }
+    okRefs2.foreach { ref =>
+      ref.getter.unsafeRun should === ("foo2")
+    }
+    okRef3.getter.unsafeRun should === ("bar3")
+    okRef4.getter.unsafeRun should === ("foo4")
+    failRef.getter.unsafeRun should === ("fail")
   }
 
   "Post-commit actions" should "be executed" in {

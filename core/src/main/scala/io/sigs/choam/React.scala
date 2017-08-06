@@ -30,21 +30,30 @@ sealed abstract class React[-A, +B] {
   final def unsafePerform(a: A)(implicit kcas: KCAS): B = {
 
     @tailrec
-    def go[C](partialResult: C, cont: React[C, B], rea: Reaction, desc: KCAS#Desc): Success[B] = {
+    def go[C](partialResult: C, cont: React[C, B], rea: Reaction, desc: KCAS#Desc, alts: List[SnapJump[_, B]]): Success[B] = {
       cont.tryPerform(maxStackDepth, partialResult, rea, desc) match {
         case Retry =>
           // TODO: implement backoff
-          go(partialResult, cont, Reaction.empty, kcas.start())
+          alts match {
+            case _: Nil.type =>
+              go(partialResult, cont, Reaction.empty, kcas.start(), alts)
+            case SnapJump(pr, k, rea, snap) :: t =>
+              // We're cheating here, to convince scalac
+              // that this really is a tail-recursive call:
+              go(pr.asInstanceOf[C], k, rea, snap.load(), t)
+          }
+
         case s @ Success(_, _) =>
           s
-        case Jump(pr, k, rea, desc) =>
+        case Jump(pr, k, rea, desc, alts2) =>
           // We're cheating here, to convince scalac
-          // that this really is a tail-call:
-          go(pr.asInstanceOf[C], k, rea, desc)
+          // that this really is a tail-recursive call:
+          go(pr.asInstanceOf[C], k, rea, desc, alts2 ++ alts)
+          // TODO: optimize concat
       }
     }
 
-    val res = go(a, this, Reaction.empty, kcas.start())
+    val res = go(a, this, Reaction.empty, kcas.start(), Nil)
     res.reaction.postCommit.foreach { pc =>
       pc.unsafePerform(())
     }
@@ -208,7 +217,7 @@ object React {
       self.unsafePerform(())
   }
 
-  // TODO: rename to PostCommit
+  // TODO: rename to PostCommit (?)
   // TODO: optimize building
   private final case class Reaction(
     postCommit: List[React[Unit, Unit]]
@@ -225,7 +234,20 @@ object React {
   protected[React] sealed trait TentativeResult[+A]
   protected[React] final case object Retry extends TentativeResult[Nothing]
   protected[React] final case class Success[A](value: A, reaction: Reaction) extends TentativeResult[A]
-  protected[React] final case class Jump[A, B](value: A, react: React[A, B], ops: Reaction, desc: KCAS#Desc) extends TentativeResult[B]
+  protected[React] final case class Jump[A, B](
+    value: A,
+    react: React[A, B],
+    ops: Reaction,
+    desc: KCAS#Desc,
+    alts: List[SnapJump[_, B]] = Nil,
+  ) extends TentativeResult[B]
+
+  protected[React] final case class SnapJump[A, B](
+    value: A,
+    react: React[A, B],
+    ops: Reaction,
+    snap: KCAS#Snap,
+  )
 
   private sealed abstract class Commit[A]()
       extends React[A, A] {
@@ -369,6 +391,9 @@ object React {
         first.tryPerform(n - 1, a, ops, desc) match {
           case Retry =>
             second.tryPerform(n - 1, a, ops, snap.load())
+          case Jump(x, r, o, d, as) =>
+            // TODO: optimize building `alts`
+            Jump(x, r, o, d, as :+ SnapJump(a, second, ops, snap))
           case ok =>
             ok
         }
@@ -397,10 +422,12 @@ object React {
     protected def tryPerform(n: Int, b: B, pc: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
       desc.impl.tryReadOne(ref) match {
         case null =>
+          desc.cancel()
           Retry
         case a if equ(a, ov) =>
           maybeJump(n, transform(a, b), k, pc, desc.withCAS(ref, ov, nv))
         case _ =>
+          desc.cancel()
           Retry
       }
     }

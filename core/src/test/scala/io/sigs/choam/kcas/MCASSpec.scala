@@ -75,7 +75,7 @@ class MCASSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   }
 
   it should "save the size of the performed CAS to thread-local state" in {
-    val N = 30
+    val N = 17 * React.maxStackDepth
     val refs = List.fill(N)(Ref.mk[String]("s"))
     val desc = MCAS.start().asInstanceOf[MCAS.Desc with Desc]
     for (ref <- refs) {
@@ -100,14 +100,11 @@ class MCASSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     desc.withCAS(refs(3), "s", "t")
     desc.withCAS(refs(4), "s", "t")
     kOf(desc) should === (5)
-    val desc2 = snap.load().asInstanceOf[MCAS.Desc with Desc]
-    kOf(desc) should === (5)
-    kOf(desc2) should === (3)
     assert(desc.tryPerform())
     kOf(desc) should === (0)
+    val desc2 = snap.load().asInstanceOf[MCAS.Desc with Desc]
     kOf(desc2) should === (3)
     assert(!desc2.tryPerform())
-    kOf(desc) should === (0)
     kOf(desc2) should === (0)
   }
 }

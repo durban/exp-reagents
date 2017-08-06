@@ -8,6 +8,11 @@ package kcas
 /** Common interface for k-CAS implementations */
 abstract class KCAS { self =>
 
+  /**
+   * Rules:
+   * - no use after `tryPerform` or `cancel`
+   * - must call `tryPerform` or `cancel` before releasing the reference
+   */
   private[choam] trait Desc {
     final def impl: KCAS = self
     def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc
@@ -16,6 +21,11 @@ abstract class KCAS { self =>
     def cancel(): Unit
   }
 
+  /**
+   * Rules:
+   * - mustn't `load` unless the original (which created the snapshot)
+   *   is already finished (with `tryPerform` or `cancel`)
+   */
   private[choam] trait Snap {
     def load(): Desc
   }

@@ -153,9 +153,6 @@ private[kcas] object MCAS extends KCAS { self =>
     private[this] var k: Int =
       0
 
-    private[this] var lastExported: MCASEntry =
-      _
-
     def rawRefCnt(): Int =
       refcount.get()
 
@@ -191,17 +188,15 @@ private[kcas] object MCAS extends KCAS { self =>
      * Must not be called if `decrementAndTestAndSet` returns `false`.
      */
     private def release(): Unit = {
-      val tlst = TlSt.get()
       // release entries:
-      tlst.saveK(k)
+      val tlst = TlSt.get()
       while (head ne null) {
         val e = head
         head = e.next
         tlst.releaseEntry(e)
         k -= 1
       }
-      assert(k == 0, "k of empty descriptor is not zero")
-      lastExported = null
+      assert(k == 0, s"k of empty descriptor is not zero, but ${k}")
       // release descriptor:
       tlst.releaseDescriptor(this)
     }
@@ -219,7 +214,6 @@ private[kcas] object MCAS extends KCAS { self =>
     def start(): Unit = {
       assert(head eq null, "head of new descriptor is not null")
       assert(k == 0, "k of new descriptor is not zero")
-      assert(lastExported eq null, "lastExported of new descriptor is not null")
       status.unsafeSet(Undecided)
     }
 
@@ -236,107 +230,74 @@ private[kcas] object MCAS extends KCAS { self =>
     }
 
     private[MCAS] def withEntries(head: MCASEntry): Unit = {
-      @tailrec
-      def fix(head: MCASEntry, acc: Int): Int = {
-        if (head ne null) {
-          head.desc = this
-          fix(head.next, acc + 1)
-        } else {
-          acc
-        }
-      }
-
-      assert(this.k == 0, "loading snapshot into non-empty descriptor (k != 0)")
+      assert(this.k == 0, s"loading snapshot into non-empty descriptor (k is ${k})")
       assert(this.head eq null, "loading snapshot into non-empty descriptor (head != null)")
-
-      this.k = fix(head, 0)
       this.head = head
+      this.k = copyIfNeeded()
     }
 
     override def snapshot(): self.Snap = {
       if (head eq null) {
         EmptySnapshot
       } else {
-        lastExported = head
+        head.snaps += 1
         head
       }
     }
 
+    private def copyIfNeeded(): Int = {
+      val tlst = TlSt.get()
+      @tailrec
+      def copyOrPass(curr: MCASEntry, prev: MCASEntry, copyAll: Boolean, count: Int): Int = {
+        if (curr eq null) {
+          count
+        } else {
+          if (copyAll || (curr.snaps > 0)) {
+            val e = curr.copy(tlst)
+            if (prev ne null) {
+              prev.next = e
+            } else {
+              head = e
+            }
+            e.desc = this
+            e.next = curr.next
+            copyOrPass(curr.next, e, true, count + 1)
+          } else {
+            curr.desc = this
+            copyOrPass(curr.next, curr, false, count + 1)
+          }
+        }
+      }
+      copyOrPass(head, null, false, 0)
+    }
+
     override def tryPerform(): Boolean = {
       if (head eq null) {
-        // empty descriptor (k=0)
+        assert(k == 0, s"head is null, but k is ${k}")
         val ok = status.unsafeTryPerformCas(Undecided, Succeeded)
         assert(ok, "couldn't CAS the `status` of an empty descriptor")
         true
       } else {
         // we have entries (k > 0)
-        if (lastExported ne null) {
-          // we've previously taken a snapshot
-          @tailrec
-          def findLastNonExported(head: MCASEntry, lastExported: MCASEntry): MCASEntry = {
-            if (head eq null) {
-              assert(false, "lastExported isn't null, but we didn't find it")
-              // when the assert is optimized away, copy the whole list (to be sure):
-              null
-            } else if (head eq lastExported) {
-              // have to copy the whole list, because it's exported:
-              null
-            } else if (head.next eq lastExported) {
-              // found the last non-exported item:
-              head
-            }
-            else {
-              findLastNonExported(head.next, lastExported)
-            }
-          }
-
-          val tlst = TlSt.get()
-
-          @tailrec
-          def copy(head: MCASEntry, acc: MCASEntry): MCASEntry = {
-            if (head eq null) {
-              // we're done
-              acc
-            } else {
-              val entry = tlst.loanEntry[head.A]()
-              entry.ref = head.ref
-              entry.ov = head.ov
-              entry.nv = head.nv
-              entry.desc = head.desc // NB: we're saving desc
-              entry.next = acc
-              copy(head.next, entry)
-            }
-          }
-
-          findLastNonExported(head, lastExported) match {
-            case null =>
-              head = copy(head, null)
-            case last =>
-              last.next = copy(last.next, null)
-          }
-          lastExported = null
-        }
-
+        copyIfNeeded()
         sort()
         perform()
       }
     }
 
     override def cancel(): Unit = {
-      if (lastExported ne null) {
-        val tlst = TlSt.get()
-        while (head ne null) {
-          if (head eq lastExported) {
-            head = null
-          } else {
-            val e = head
-            head = e.next
-            tlst.releaseEntry(e)
-          }
+      val tlst = TlSt.get()
+      while (head ne null) {
+        if (head.snaps > 0) {
+          head = null
+        } else {
+          val e = head
+          head = e.next
+          tlst.releaseEntry(e)
         }
-        k = 0
-        lastExported = null
       }
+
+      k = 0
 
       if (decrementAndTestAndSet()) {
         // we could release (no one is using the descriptor),
@@ -453,7 +414,9 @@ private[kcas] object MCAS extends KCAS { self =>
             phase2(entry.next)
         }
 
-        phase2(head)
+        val res = phase2(head)
+        TlSt.get().saveK(k)
+        res
       } finally {
         decr()
       }
@@ -542,7 +505,11 @@ private[kcas] object MCAS extends KCAS { self =>
     var desc: MCASDesc = _
     override var next: MCASEntry = _
 
+    // TODO: thread-safety
+    var snaps: Int = 0
+
     override def load(): MCASDesc = {
+      snaps -= 1
       val desc = MCAS.startInternal()
       desc.withEntries(this)
       desc
@@ -558,6 +525,15 @@ private[kcas] object MCAS extends KCAS { self =>
     @inline
     private[MCAS] def cast[A0]: MCASEntry { type A = A0 } =
       this.asInstanceOf[MCASEntry { type A = A0 }]
+
+    private[MCAS] def copy(tlst: TlSt): MCASEntry = {
+      val e = tlst.loanEntry[A]()
+      e.ref = this.ref
+      e.ov = this.ov
+      e.nv = this.nv
+      e.desc = this.desc
+      e
+    }
   }
 
   private final class TlSt {
@@ -613,6 +589,7 @@ private[kcas] object MCAS extends KCAS { self =>
           }
         case entry =>
           freeEntries = entry.next
+          entry.next = null
           decrFreeEntries()
           entry.cast[A0]
       }
@@ -674,6 +651,7 @@ private[kcas] object MCAS extends KCAS { self =>
         }
       } else {
         freeDescriptors = nxt.next
+        nxt.next = null
         decrFreeDesc()
         nxt
       }
