@@ -28,10 +28,9 @@ lazy val bench = project.in(file("bench"))
   .settings(commonSettings)
   .settings(
     libraryDependencies ++= (
-      dependencies.fs2
-      ++ Seq(dependencies.scalaStm)
-      ++ dependencies.circe.map(_ % Test)
-      ++ dependencies.iteratee.map(_ % Test)
+      dependencies.scalaStm
+      +: (dependencies.circe.map(_ % Test)
+      ++ dependencies.iteratee.map(_ % Test))
     )
   )
   .settings(macroSettings)
@@ -116,7 +115,7 @@ lazy val dependencies = new {
   val catsVersion = "1.0.0-MF"
   val circeVersion = "0.8.0"
   val iterateeVersion = "0.12.0"
-  val fs2Version = "0.10.0-M4"
+  val fs2Version = "0.10.0-M5"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.2"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
