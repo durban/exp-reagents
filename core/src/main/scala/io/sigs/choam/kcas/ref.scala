@@ -12,8 +12,8 @@ sealed trait Ref[A] {
   final def modify(f: A => A): React[Unit, A] =
     upd[Unit, A] { (a, _) => (f(a), a) }
 
-  private[choam] final val read: React[Unit, A] =
-    React.read(this)
+  private[choam] final val invisibleRead: React[Unit, A] =
+    React.invisibleRead(this)
 
   final val getter: React[Unit, A] =
     upd[Unit, A] { (a, _) => (a, a) }

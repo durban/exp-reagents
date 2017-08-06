@@ -35,15 +35,15 @@ abstract class ComputedTest(impl: KCAS) {
     r2.upd[Unit, String] { (ov, _) => ("y", ov) }
 
   private[this] val computed: React[Unit, String] = {
-    React.read(r1) >>> React.computed[String, String] { a =>
+    React.invisibleRead(r1) >>> React.computed[String, String] { a =>
       val w = if (a eq "foo") w1 else w2
       (w * React.cas(r1, a, a)).map { _ => a }
     }
   }
 
   private[this] val consistentRead: React[Unit, (String, String)] = {
-    React.read(r1) >>> React.computed[String, (String, String)] { v1 =>
-      React.read(r2) >>> React.computed[String, (String, String)] { v2 =>
+    React.invisibleRead(r1) >>> React.computed[String, (String, String)] { v1 =>
+      React.invisibleRead(r2) >>> React.computed[String, (String, String)] { v2 =>
         (React.cas(r1, v1, v1) × React.cas(r2, v2, v2)).lmap[Unit] { _ => ((), ()) }.map { _ => (v1, v2) }
       }
     }

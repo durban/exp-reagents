@@ -17,8 +17,8 @@ final class MichaelScottQueue[A] private[this] (sentinel: Node[A], els: Iterable
 
   val tryDeque: React[Unit, Option[A]] = {
     for {
-      node <- head.read
-      next <- node.next.read
+      node <- head.invisibleRead
+      next <- node.next.invisibleRead
       res <- next match {
         case n @ Node(a, _) =>
           head.cas(node, n.copy(data = nullOf[A])) >>> React.ret(Some(a))
@@ -33,8 +33,8 @@ final class MichaelScottQueue[A] private[this] (sentinel: Node[A], els: Iterable
   }
 
   private[this] def findAndEnqueue(node: Node[A]): React[Unit, Unit] = {
-    tail.read.postCommit(React.computed { n: Node[A] =>
-      n.next.read.flatMap {
+    tail.invisibleRead.postCommit(React.computed { n: Node[A] =>
+      n.next.invisibleRead.flatMap {
         case e @ End() =>
           // found true tail; CAS, and try to adjust the tail ref:
           n.next.cas(e, node).postCommit(tail.cas(n, node).?.rmap(_ => ()))
@@ -50,14 +50,14 @@ final class MichaelScottQueue[A] private[this] (sentinel: Node[A], els: Iterable
     def go(e: Elem[A], acc: List[A]): List[A] = e match {
       case Node(null, next) =>
         // sentinel
-        go(next.read.unsafeRun, acc)
+        go(next.invisibleRead.unsafeRun, acc)
       case Node(a, next) =>
-        go(next.read.unsafeRun, a :: acc)
+        go(next.invisibleRead.unsafeRun, a :: acc)
       case End() =>
         acc
     }
 
-    go(head.read.unsafeRun, Nil).reverse
+    go(head.invisibleRead.unsafeRun, Nil).reverse
   }
 
   els.foreach { a =>

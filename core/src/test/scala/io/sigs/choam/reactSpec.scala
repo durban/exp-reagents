@@ -33,7 +33,7 @@ abstract class ReactSpec extends BaseSpec {
     val (s1, s2) = rea.unsafePerform((5, ()))
     s1 should === ("5")
     s2 should === ("boo")
-    ref.read.unsafeRun should === ("xyz")
+    ref.invisibleRead.unsafeRun should === ("xyz")
   }
 
   "Combined updates" should "indeed be atomic" in {
@@ -69,8 +69,8 @@ abstract class ReactSpec extends BaseSpec {
     } yield ()
     tsk.unsafeRunSync()
 
-    val l1 = r1.read.unsafeRun
-    val l2 = r2.read.unsafeRun
+    val l1 = r1.invisibleRead.unsafeRun
+    val l2 = r2.invisibleRead.unsafeRun
     l1.length.toLong should === (2 * n + m)
     l2.length.toLong should === (2 * n + m)
     for ((i1, i2) <- l1 zip l2) {
@@ -170,8 +170,8 @@ abstract class ReactSpec extends BaseSpec {
     val rea = r1.cas("r1", "x") + r2.cas("r2", "x")
     val res = rea.unsafeRun
     res should === (())
-    r1.read.unsafeRun should === ("x")
-    r2.read.unsafeRun should === ("r2")
+    r1.invisibleRead.unsafeRun should === ("x")
+    r2.invisibleRead.unsafeRun should === ("r2")
   }
 
   it should "use the second option, if the first is not available" in {
@@ -180,12 +180,12 @@ abstract class ReactSpec extends BaseSpec {
     val rea = r1.cas("r1", "x") + (r2.cas("r2", "x") * r1.cas("z", "r1"))
     // r2: "r2" -> "x" AND r1: "z" -> "r1"
     rea.unsafeRun
-    r2.read.unsafeRun should === ("x")
-    r1.read.unsafeRun should === ("r1")
+    r2.invisibleRead.unsafeRun should === ("x")
+    r1.invisibleRead.unsafeRun should === ("r1")
     // r1: "r1" -> "x"
     rea.unsafeRun
-    r1.read.unsafeRun should === ("x")
-    r2.read.unsafeRun should === ("x")
+    r1.invisibleRead.unsafeRun should === ("x")
+    r2.invisibleRead.unsafeRun should === ("x")
   }
 
   it should "work if it's after some other operation" in {
@@ -205,26 +205,26 @@ abstract class ReactSpec extends BaseSpec {
 
     // 1st choice selected:
     rea.unsafeRun
-    r1a.read.unsafeRun should === ("xa")
-    r1b.read.unsafeRun should === ("xb")
-    r2a.read.unsafeRun should === ("ya")
-    r2b.read.unsafeRun should === ("yb")
-    r3a.read.unsafeRun should === ("3a")
-    r3b.read.unsafeRun should === ("3b")
+    r1a.invisibleRead.unsafeRun should === ("xa")
+    r1b.invisibleRead.unsafeRun should === ("xb")
+    r2a.invisibleRead.unsafeRun should === ("ya")
+    r2b.invisibleRead.unsafeRun should === ("yb")
+    r3a.invisibleRead.unsafeRun should === ("3a")
+    r3b.invisibleRead.unsafeRun should === ("3b")
 
     r1a.cas("xa", "1a").unsafeRun
     r1b.cas("xb", "1b").unsafeRun
-    r1a.read.unsafeRun should === ("1a")
-    r1b.read.unsafeRun should === ("1b")
+    r1a.invisibleRead.unsafeRun should === ("1a")
+    r1b.invisibleRead.unsafeRun should === ("1b")
 
     // 2nd choice selected:
     rea.unsafeRun
-    r1a.read.unsafeRun should === ("xa")
-    r1b.read.unsafeRun should === ("xb")
-    r2a.read.unsafeRun should === ("ya")
-    r2b.read.unsafeRun should === ("yb")
-    r3a.read.unsafeRun should === ("za")
-    r3b.read.unsafeRun should === ("zb")
+    r1a.invisibleRead.unsafeRun should === ("xa")
+    r1b.invisibleRead.unsafeRun should === ("xb")
+    r2a.invisibleRead.unsafeRun should === ("ya")
+    r2b.invisibleRead.unsafeRun should === ("yb")
+    r3a.invisibleRead.unsafeRun should === ("za")
+    r3b.invisibleRead.unsafeRun should === ("zb")
   }
 
   it should "work even if it's computed" in {
@@ -235,7 +235,7 @@ abstract class ReactSpec extends BaseSpec {
     val r3a = Ref.mk("3a")
     val r3b = Ref.mk("3b")
     val rea =
-      r1a.read >>>
+      r1a.invisibleRead >>>
       React.computed { s =>
         if (s eq "1a") {
           r1b.cas("1b", "xb") >>> (r2a.cas("2a", "ya") + r3a.cas("3a", "za"))
@@ -246,46 +246,46 @@ abstract class ReactSpec extends BaseSpec {
 
     // THEN selected, 1st choice selected:
     rea.unsafeRun
-    r1a.read.unsafeRun should === ("1a")
-    r1b.read.unsafeRun should === ("xb")
-    r2a.read.unsafeRun should === ("ya")
-    r2b.read.unsafeRun should === ("2b")
-    r3a.read.unsafeRun should === ("3a")
-    r3b.read.unsafeRun should === ("3b")
+    r1a.invisibleRead.unsafeRun should === ("1a")
+    r1b.invisibleRead.unsafeRun should === ("xb")
+    r2a.invisibleRead.unsafeRun should === ("ya")
+    r2b.invisibleRead.unsafeRun should === ("2b")
+    r3a.invisibleRead.unsafeRun should === ("3a")
+    r3b.invisibleRead.unsafeRun should === ("3b")
 
     r1b.cas("xb", "1b").unsafeRun
 
     // THEN selected, 2nd choice selected:
     rea.unsafeRun
-    r1a.read.unsafeRun should === ("1a")
-    r1b.read.unsafeRun should === ("xb")
-    r2a.read.unsafeRun should === ("ya")
-    r2b.read.unsafeRun should === ("2b")
-    r3a.read.unsafeRun should === ("za")
-    r3b.read.unsafeRun should === ("3b")
+    r1a.invisibleRead.unsafeRun should === ("1a")
+    r1b.invisibleRead.unsafeRun should === ("xb")
+    r2a.invisibleRead.unsafeRun should === ("ya")
+    r2b.invisibleRead.unsafeRun should === ("2b")
+    r3a.invisibleRead.unsafeRun should === ("za")
+    r3b.invisibleRead.unsafeRun should === ("3b")
 
     r1a.cas("1a", "xa").unsafeRun
     r1b.cas("xb", "1b").unsafeRun
 
     // ELSE selected, 1st choice selected:
     rea.unsafeRun
-    r1a.read.unsafeRun should === ("xa")
-    r1b.read.unsafeRun should === ("xx")
-    r2a.read.unsafeRun should === ("ya")
-    r2b.read.unsafeRun should === ("yb")
-    r3a.read.unsafeRun should === ("za")
-    r3b.read.unsafeRun should === ("3b")
+    r1a.invisibleRead.unsafeRun should === ("xa")
+    r1b.invisibleRead.unsafeRun should === ("xx")
+    r2a.invisibleRead.unsafeRun should === ("ya")
+    r2b.invisibleRead.unsafeRun should === ("yb")
+    r3a.invisibleRead.unsafeRun should === ("za")
+    r3b.invisibleRead.unsafeRun should === ("3b")
 
     r1b.cas("xx", "1b").unsafeRun
 
     // ELSE selected, 2nd choice selected:
     rea.unsafeRun
-    r1a.read.unsafeRun should === ("xa")
-    r1b.read.unsafeRun should === ("xx")
-    r2a.read.unsafeRun should === ("ya")
-    r2b.read.unsafeRun should === ("yb")
-    r3a.read.unsafeRun should === ("za")
-    r3b.read.unsafeRun should === ("zb")
+    r1a.invisibleRead.unsafeRun should === ("xa")
+    r1b.invisibleRead.unsafeRun should === ("xx")
+    r2a.invisibleRead.unsafeRun should === ("ya")
+    r2b.invisibleRead.unsafeRun should === ("yb")
+    r3a.invisibleRead.unsafeRun should === ("za")
+    r3b.invisibleRead.unsafeRun should === ("zb")
   }
 
   it should "be stack-safe (even when deeply nested)" in {
@@ -414,8 +414,8 @@ abstract class ReactSpec extends BaseSpec {
 
     val (l1, rss1) = leafs.grouped(2).map {
       case Array(refLeft, refRight) =>
-        val ol = refLeft.read.unsafeRun
-        val or = refRight.read.unsafeRun
+        val ol = refLeft.invisibleRead.unsafeRun
+        val or = refRight.invisibleRead.unsafeRun
         oneChoice(refLeft.cas(ol, s"${ol}-new"), refRight.cas(or, s"${or}-new"), x, "l1")
       case _ =>
         fail
@@ -450,7 +450,7 @@ abstract class ReactSpec extends BaseSpec {
     def checkLeafs(expLastNew: Int): Unit = {
       for ((ref, idx) <- leafs.zipWithIndex) {
         val expContents = if (idx <= expLastNew) s"foo-${idx}-new" else s"foo-${idx}"
-        val contents = ref.read.unsafeRun
+        val contents = ref.invisibleRead.unsafeRun
         contents should === (expContents)
       }
     }
@@ -485,14 +485,14 @@ abstract class ReactSpec extends BaseSpec {
     val pc2 = pc1.postCommit(r3.upd[String, Unit] { case (_, x) => (x, ()) })
 
     pc1.unsafeRun should === ("xx")
-    r1.read.unsafeRun should === ("xx")
-    r2.read.unsafeRun should === ("xx")
-    r3.read.unsafeRun should === ("")
+    r1.invisibleRead.unsafeRun should === ("xx")
+    r2.invisibleRead.unsafeRun should === ("xx")
+    r3.invisibleRead.unsafeRun should === ("")
 
     pc2.unsafeRun should === ("xxx")
-    r1.read.unsafeRun should === ("xxx")
-    r2.read.unsafeRun should === ("xxx")
-    r3.read.unsafeRun should === ("xxx")
+    r1.invisibleRead.unsafeRun should === ("xxx")
+    r2.invisibleRead.unsafeRun should === ("xxx")
+    r3.invisibleRead.unsafeRun should === ("xxx")
   }
 
   // TODO: this is a conflicting CAS
@@ -518,7 +518,7 @@ abstract class ReactSpec extends BaseSpec {
     r.unsafeRun
 
     // FIXME:
-    ref.read.unsafeRun should === ("baz")
+    ref.invisibleRead.unsafeRun should === ("baz")
   }
 
   "Michael-Scott queue" should "work correctly" in {

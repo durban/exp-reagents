@@ -39,7 +39,7 @@ abstract class LawsSpec extends FunSuite with Discipline with KCASImplSpec {
       Gen.lzy {
         arbB.arbitrary.map { b =>
           val ref = Ref.mk(b)
-          ref.read.lmap[A](_ => ())
+          ref.invisibleRead.lmap[A](_ => ())
         }
       },
       Gen.lzy {

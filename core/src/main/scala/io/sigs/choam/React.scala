@@ -124,7 +124,7 @@ object React {
   private[choam] final val maxStackDepth = 1024
 
   def upd[A, B, C](r: Ref[A])(f: (A, B) => (A, C)): React[B, C] = {
-    val self: React[B, (A, B)] = r.read.firstImpl[B].lmap[B](b => ((), b))
+    val self: React[B, (A, B)] = r.invisibleRead.firstImpl[B].lmap[B](b => ((), b))
     val comp: React[(A, B), C] = computed[(A, B), C] { case (oa, b) =>
       val (na, c) = f(oa, b)
       r.cas(oa, na).rmap(_ => c)
@@ -138,7 +138,7 @@ object React {
   private[choam] def cas[A](r: Ref[A], ov: A, nv: A): React[Unit, Unit] =
     new Cas[A, Unit](r, ov, nv, lift(_ => ()))
 
-  private[choam] def read[A](r: Ref[A]): React[Unit, A] =
+  private[choam] def invisibleRead[A](r: Ref[A]): React[Unit, A] =
     new Read(r, Commit[A]())
 
   private[choam] def postCommit[A](pc: React[A, Unit]): React[A, A] =

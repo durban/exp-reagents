@@ -30,7 +30,7 @@ class ResourceAllocationReact {
       if (i >= n) {
         react
       } else {
-        val r = rss(i).read
+        val r = rss(i).invisibleRead
         read(i + 1, react.map2(r) { (arr, s) =>
           arr(i) = s
           arr
@@ -73,7 +73,7 @@ object ResourceAllocationReact {
 
     @TearDown
     def checkResults(): Unit = {
-      val currentValues = rss.map(_.read.unsafeRun(KCAS.NaiveKCAS)).toVector
+      val currentValues = rss.map(_.invisibleRead.unsafeRun(KCAS.NaiveKCAS)).toVector
       if (currentValues == initialValues) {
         throw new Exception(s"Unchanged results")
       }
