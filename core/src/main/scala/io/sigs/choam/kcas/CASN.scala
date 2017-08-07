@@ -34,6 +34,9 @@ private[kcas] object CASN extends KCAS { self =>
 
     override def load(): self.Desc =
       this
+
+    override def discard(): Unit =
+      ()
   }
 
   override def start(): this.Desc =

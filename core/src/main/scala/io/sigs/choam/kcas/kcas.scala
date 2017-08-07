@@ -23,11 +23,13 @@ abstract class KCAS { self =>
 
   /**
    * Rules:
-   * - mustn't `load` unless the original (which created the snapshot)
-   *   is already finished (with `tryPerform` or `cancel`)
+   * - mustn't `load` or `discard`, unless the original (which
+   *   created the snapshot) is already finished (with `tryPerform`
+   *   or `cancel`)
    */
   private[choam] trait Snap {
     def load(): Desc
+    def discard(): Unit
   }
 
   private[choam] def start(): Desc

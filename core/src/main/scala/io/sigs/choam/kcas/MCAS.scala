@@ -44,7 +44,7 @@ private[kcas] object MCAS extends KCAS { self =>
         // help the other op:
         d.incr()
         if (equ(ref.unsafeTryRead(), d.as[A])) {
-          assert(!d.isLsbSet())
+          assert(!d.isLsbSet(), "LSB of descriptor we incr'd is set")
           d.perform()
         } else {
           d.decr()
@@ -68,7 +68,7 @@ private[kcas] object MCAS extends KCAS { self =>
           if (desc ne null) {
             desc.incr()
             if (equ(ref.unsafeTryRead(), r) && (e.desc eq desc)) {
-              assert(!desc.isLsbSet())
+              assert(!desc.isLsbSet(), "LSB of descriptor we incr'd is set")
               try {
                 RDCSSComp(desc.status, e, desc)
               } finally {
@@ -287,16 +287,8 @@ private[kcas] object MCAS extends KCAS { self =>
 
     override def cancel(): Unit = {
       val tlst = TlSt.get()
-      while (head ne null) {
-        if (head.snaps > 0) {
-          head = null
-        } else {
-          val e = head
-          head = e.next
-          tlst.releaseEntry(e)
-        }
-      }
-
+      MCASEntry.releaseUnnededEntries(tlst, head)
+      head = null
       k = 0
 
       if (decrementAndTestAndSet()) {
@@ -486,6 +478,8 @@ private[kcas] object MCAS extends KCAS { self =>
   private final object EmptySnapshot extends Snapshot {
     override def load(): MCASDesc =
       MCAS.startInternal()
+    override def discard(): Unit =
+      ()
   }
 
   private final class MCASEntry extends FreeList[MCASEntry] with Snapshot {
@@ -515,6 +509,11 @@ private[kcas] object MCAS extends KCAS { self =>
       desc
     }
 
+    override def discard(): Unit = {
+      snaps -= 1
+      MCASEntry.releaseUnnededEntries(TlSt.get(), this)
+    }
+
     private[MCAS] def globalRank: Int =
       ref.##
 
@@ -533,6 +532,28 @@ private[kcas] object MCAS extends KCAS { self =>
       e.nv = this.nv
       e.desc = this.desc
       e
+    }
+  }
+
+  private object MCASEntry {
+
+    /**
+     * Releases all entries (starting from `head`) which
+     * are not needed any more (i.e., they're not part of snapshots).
+     */
+    @tailrec
+    private[MCAS] def releaseUnnededEntries(tlst: TlSt, head: MCASEntry): MCASEntry = {
+      if (head eq null) {
+        null
+      } else {
+        if (head.snaps > 0) {
+          head
+        } else {
+          val nxt = head.next
+          tlst.releaseEntry(head)
+          releaseUnnededEntries(tlst, nxt)
+        }
+      }
     }
   }
 
@@ -564,7 +585,7 @@ private[kcas] object MCAS extends KCAS { self =>
     private[this] var weakFreeDescriptors: WeakReference[MCASDesc] =
       _
 
-    @elidable(LEVEL)
+    @elidable(elidable.ASSERTION)
     private[this] var numAllocs: Long =
       0L
 
@@ -603,6 +624,7 @@ private[kcas] object MCAS extends KCAS { self =>
     }
 
     def releaseEntry(e: MCASEntry): Unit = {
+      assert(e.snaps == 0, s"released entry still has ${e.snaps} snapshots")
       e.ref = null
       e.ov = nullOf[e.A]
       e.nv = nullOf[e.A]
@@ -729,7 +751,7 @@ private[kcas] object MCAS extends KCAS { self =>
       }
     }
 
-    @elidable(LEVEL)
+    @elidable(elidable.ASSERTION)
     private def incrAllocs(): Unit = {
       numAllocs += 1L
     }

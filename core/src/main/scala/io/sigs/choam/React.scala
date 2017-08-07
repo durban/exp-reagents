@@ -44,6 +44,10 @@ sealed abstract class React[-A, +B] {
           }
 
         case s @ Success(_, _) =>
+          alts.foreach {
+            case SnapJump(_, _, _, snap) =>
+              snap.discard()
+          }
           s
         case Jump(pr, k, rea, desc, alts2) =>
           // We're cheating here, to convince scalac
@@ -424,6 +428,7 @@ object React {
             // TODO: optimize building `alts`
             Jump(x, r, o, d, as :+ SnapJump(a, second, ops, snap))
           case ok =>
+            snap.discard()
             ok
         }
       }

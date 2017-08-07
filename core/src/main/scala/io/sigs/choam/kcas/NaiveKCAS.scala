@@ -30,6 +30,9 @@ private[kcas] object NaiveKCAS extends KCAS { self =>
 
     override def load(): self.Desc =
       this
+
+    override def discard(): Unit =
+      ()
   }
 
   override def start(): self.Desc =
