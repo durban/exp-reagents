@@ -69,3 +69,6 @@ trait KCASImplState {
 
 @State(Scope.Thread)
 class KCASThreadState extends CommonThreadState with KCASImplState
+
+@State(Scope.Thread)
+class KCASImplStateImpl extends KCASImplState

@@ -4,43 +4,44 @@ package bench
 import org.openjdk.jmh.annotations._
 
 import kcas._
+import kcas.bench.Reset
 import util._
 
 @Fork(2)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
-class CombinatorsBench {
+class ChoiceCombinatorBench {
 
-  import CombinatorsBench._
+  import ChoiceCombinatorBench._
 
   @Benchmark
-  def dummyChoice(s: DummyChoice, k: KCASImplStateImpl): Unit = {
+  def choiceDummy(s: DummyChoice, k: KCASImplStateImpl): Unit = {
     import k.kcasImpl
     s.choice.unsafeRun
     s.reset.unsafeRun
   }
 
   @Benchmark
-  def casChoice(s: CASChoice, k: KCASImplStateImpl): Unit = {
+  def choiceCAS(s: CASChoice, k: KCASImplStateImpl): Unit = {
     import k.kcasImpl
     s.choice.unsafeRun
-    s.reset.unsafeRun
+    s.reset.reset()
   }
 }
 
-object CombinatorsBench {
+object ChoiceCombinatorBench {
 
   @State(Scope.Thread)
-  class KCASImplStateImpl extends KCASImplState
+  abstract class BaseState {
+    @Param(Array("8", "16", "32"))
+    var size: Int = _
+  }
 
   @State(Scope.Thread)
-  class DummyChoice {
+  class DummyChoice extends BaseState {
 
     private[this] val ref =
       Ref.mk("foo")
-
-    @Param(Array("8", "16", "32"/*, "64", "128"*/))
-    var size: Int = _
 
     val reset: React[Unit, Unit] =
       ref.modify(_ => "foo").discard
@@ -62,7 +63,7 @@ object CombinatorsBench {
   }
 
   @State(Scope.Thread)
-  class CASChoice {
+  class CASChoice extends BaseState {
 
     private[this] val ref =
       Ref.mk("foo")
@@ -70,11 +71,8 @@ object CombinatorsBench {
     private[this] var refs: Array[Ref[String]] =
       _
 
-    @Param(Array("8", "16", "32"/*, "64", "128"*/))
-    var size: Int = _
-
-    val reset: React[Unit, Unit] =
-      ref.modify(_ => "foo").discard
+    val reset: Reset[String] =
+      new Reset("foo", ref)
 
     var choice: React[Unit, Unit] = _
 
