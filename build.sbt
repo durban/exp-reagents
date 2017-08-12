@@ -60,8 +60,6 @@ lazy val commonSettings = Seq[Setting[_]](
     "-unchecked",
     "-encoding", "UTF-8",
     "-language:higherKinds,experimental.macros",
-    "-opt:l:inline",
-    "-opt-inline-from:<sources>",
     "-Xlint:_",
     "-Xfuture",
     "-Xfatal-warnings",
@@ -70,20 +68,37 @@ lazy val commonSettings = Seq[Setting[_]](
     "-Yno-adapted-args",
     "-Ywarn-numeric-widen",
     "-Ywarn-dead-code",
-    "-Ypartial-unification",
-    "-Ywarn-unused:implicits",
-    "-Ywarn-unused:imports",
-    "-Ywarn-unused:locals",
-    "-Ywarn-unused:patvars",
-    "-Ywarn-unused:params",
-    "-Ywarn-unused:privates"
+    "-Ywarn-value-discard",
+    "-Ypartial-unification"
   ),
-  scalacOptions := scalacOptions.value.flatMap {
-    case opt @ "-Ywarn-unused:_" =>
-      if (scalaVersion.value.startsWith("2.12")) opt :: Nil
-      else Nil
-    case opt =>
-      opt :: Nil
+  scalacOptions ++= {
+    if (scalaVersion.value.startsWith("2.11")) {
+      Seq(
+        "-Ywarn-unused",
+        "-Ywarn-unused-import"
+      )
+    } else {
+      Seq(
+        "-Ywarn-unused:implicits",
+        "-Ywarn-unused:imports",
+        "-Ywarn-unused:locals",
+        "-Ywarn-unused:patvars",
+        "-Ywarn-unused:params",
+        "-Ywarn-unused:privates"
+      )
+    }
+  },
+  scalacOptions ++= {
+    if (scalaVersion.value.startsWith("2.11")) {
+      Seq(
+        "-Yopt:l:project"
+      )
+    } else {
+      Seq(
+        "-opt:l:inline",
+        "-opt-inline-from:<sources>"
+      )
+    }
   },
   scalacOptions in (Compile, console) ~= { _.filterNot("-Ywarn-unused:imports" == _) },
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
@@ -104,7 +119,7 @@ lazy val commonSettings = Seq[Setting[_]](
   publishMavenStyle := true,
   publishArtifact := false, // TODO,
   licenses := Seq("Apache 2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.txt"))
-) ++ typelevelDefaultSettings
+)
 
 lazy val macroSettings = Seq(
   addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch)
@@ -134,29 +149,15 @@ lazy val dependencies = new {
     "io.iteratee" %% "iteratee-files" % iterateeVersion
   )
 
-  val scodec = Seq(
-    "org.scodec" %% "scodec-bits" % "1.1.2",
-    "org.scodec" %% "scodec-core" % "1.10.3",
-    "org.scodec" %% "scodec-stream" % "1.0.1",
-    "org.scodec" %% "scodec-cats" % "0.3.0"
-  )
-
   val fs2 = Seq(
     "co.fs2" %% "fs2-core" % fs2Version,
     "co.fs2" %% "fs2-io" % fs2Version
   )
 
-  val laws = Seq(
-    "org.typelevel" %% "cats-laws" % catsVersion,
-    "com.github.alexarchambault" %% "scalacheck-shapeless_1.13" % "1.1.4"
-  )
-
   val test = Seq(
-    "org.scalatest" %% "scalatest" % "3.0.2",
+    "org.scalatest" %% "scalatest" % "3.0.3",
     "org.typelevel" %% "cats-laws" % catsVersion
   )
-
-  val scalaz = "org.scalaz" %% "scalaz-effect" % "7.2.8"
 
   val scalaStm = "org.scala-stm" %% "scala-stm" % "0.8"
 

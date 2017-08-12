@@ -33,6 +33,7 @@ abstract class PostCommitTest(impl: KCAS) {
       ()
     })
     u1.unsafePerform("x")
+    ()
   }
 
   @Actor
@@ -43,6 +44,7 @@ abstract class PostCommitTest(impl: KCAS) {
       ()
     })
     u2.unsafePerform("y")
+    ()
   }
 
   @Arbiter

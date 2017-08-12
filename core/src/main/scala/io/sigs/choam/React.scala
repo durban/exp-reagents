@@ -37,10 +37,10 @@ sealed abstract class React[-A, +B] {
           alts match {
             case _: Nil.type =>
               go(partialResult, cont, Reaction.empty, kcas.start(), alts)
-            case SnapJump(pr, k, rea, snap) :: t =>
+            case h :: t =>
               // We're cheating here, to convince scalac
               // that this really is a tail-recursive call:
-              go(pr.asInstanceOf[C], k, rea, snap.load(), t)
+              go(h.value.asInstanceOf[C], h.react.asInstanceOf[React[C, B]], h.ops, h.snap.load(), t)
           }
 
         case s @ Success(_, _) =>

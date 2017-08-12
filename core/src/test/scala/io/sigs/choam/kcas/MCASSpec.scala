@@ -21,7 +21,12 @@ class MCASSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
   }
 
   def kOf(d: Desc): Int = {
-    val f = d.getClass.getDeclaredField("k")
+    val f = try {
+      d.getClass.getDeclaredField("k")
+    } catch {
+      case _: NoSuchFieldException =>
+        d.getClass.getDeclaredField("io$sigs$choam$kcas$MCAS$MCASDesc$$k")
+    }
     f.setAccessible(true)
     f.getInt(d)
   }

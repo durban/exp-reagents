@@ -53,6 +53,7 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
     val json = rrs.asJson
     val bs = json.spaces2.getBytes(UTF_8)
     Files.write(Paths.get(file.getPath), bs)
+    ()
   }
 
   def beWithin(multiplier: Double, of: BenchmarkResult = baseline): Matcher[BenchmarkResult] = {

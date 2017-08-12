@@ -99,6 +99,11 @@ private[kcas] object MCAS extends KCAS { self =>
     } else {
       CAS1fromEntry(entry.ref, entry, entry.ov)
     }
+    // We don't care whether the CAS succeeded,
+    // since it's possible that another thread
+    // helped us, and completed the operation
+    // before us.
+    ()
   }
 
   private def CAS1toEntry[A](ref: Ref[A], ov: A, nv: MCASEntry): Boolean =
@@ -156,8 +161,10 @@ private[kcas] object MCAS extends KCAS { self =>
     def rawRefCnt(): Int =
       refcount.get()
 
-    def incr(): Unit =
+    def incr(): Unit = {
       refcount.addAndGet(2)
+      ()
+    }
 
     def decr(): Unit = {
       if (decrementAndTestAndSet()) {
@@ -512,6 +519,7 @@ private[kcas] object MCAS extends KCAS { self =>
     override def discard(): Unit = {
       snaps -= 1
       MCASEntry.releaseUnnededEntries(TlSt.get(), this)
+      ()
     }
 
     private[MCAS] def globalRank: Int =

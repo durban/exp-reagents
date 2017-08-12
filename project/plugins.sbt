@@ -14,14 +14,10 @@
  * limitations under the License.
  */
 
-addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-RC3")
-addSbtPlugin("org.tpolecat" % "tut-plugin" % "0.5.2")
-addSbtPlugin("org.typelevel" % "sbt-typelevel" % "0.3.2")
-addSbtPlugin("org.scalastyle" % "scalastyle-sbt-plugin" % "0.8.0")
-addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.25")
+addSbtPlugin("io.get-coursier" % "sbt-coursier" % "1.0.0-RC10")
+addSbtPlugin("pl.project13.scala" % "sbt-jmh" % "0.2.27")
 addSbtPlugin("pl.project13.sbt" % "sbt-jcstress" % "0.1.0")
 addSbtPlugin("pl.project13.sbt" % "sbt-jol" % "0.1.2")
-addSbtPlugin("com.geirsson" % "sbt-scalafmt" % "0.6.8")
 
 resolvers += Resolver.url(
   "sbt-jcstress-repo",

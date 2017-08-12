@@ -106,7 +106,7 @@ class CASNSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
       }
     }
 
-    def stop(): Unit = {
+    def stop() = {
       assert(r1.unsafeTryPerformCas("go", "stop"))
     }
 

@@ -133,6 +133,11 @@ private[kcas] object CASN extends KCAS { self =>
     } else {
       CAS1fromDesc(d.a2, d, d.o2)
     }
+    // We don't care whether the CAS succeeded,
+    // since it's possible that another thread
+    // helped us, and completed the operation
+    // before us.
+    ()
   }
 
   private sealed trait CASNStatus

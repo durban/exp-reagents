@@ -48,6 +48,7 @@ abstract class ReactSpec extends BaseSpec {
       }
       val r = push(r1, i) * push(r2, i)
       r.unsafeRun
+      ()
     }
 
     def pushAll(maxSize: Long): Unit = {
@@ -421,7 +422,7 @@ abstract class ReactSpec extends BaseSpec {
    *   /       \
    * CAS_fail  Retry
    */
-  def backtrackTest1(x: Int): Unit = {
+  def backtrackTest1(x: Int) = {
     val (okRefs1, ok1) = mkOkCASes(x, "foo1", "bar1")
     val (okRefs2, ok2) = mkOkCASes(x, "foo2", "bar2")
     val okRef3 = Ref.mk("foo3")

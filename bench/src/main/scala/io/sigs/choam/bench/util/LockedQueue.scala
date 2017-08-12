@@ -23,6 +23,7 @@ final class LockedQueue[A](els: Iterable[A]) {
 
   def unlockedEnqueue(a: A): Unit = {
     q.offer(a)
+    ()
   }
 
   def tryDequeue(): Option[A] = {

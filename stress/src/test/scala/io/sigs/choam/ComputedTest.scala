@@ -47,6 +47,7 @@ abstract class ComputedTest(impl: KCAS) {
   @Actor
   def writer(): Unit = {
     write.unsafePerform("www")
+    ()
   }
 
   @Actor
