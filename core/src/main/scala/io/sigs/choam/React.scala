@@ -68,7 +68,7 @@ sealed abstract class React[-A, +B] {
   protected def tryPerform(n: Int, a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B]
 
   protected final def maybeJump[C, Y >: B](n: Int, partialResult: C, cont: React[C, Y], ops: Reaction, desc: KCAS#Desc): TentativeResult[Y] = {
-    if (n <= 0) Jump(partialResult, cont, ops, desc)
+    if (n <= 0) Jump(partialResult, cont, ops, desc, Nil)
     else cont.tryPerform(n - 1, partialResult, ops, desc)
   }
 
@@ -272,8 +272,13 @@ object React {
     react: React[A, B],
     ops: Reaction,
     desc: KCAS#Desc,
-    alts: List[SnapJump[_, B]] = Nil,
-  ) extends TentativeResult[B]
+    alts: List[SnapJump[_, B]],
+  ) extends TentativeResult[B] {
+
+    def withAlt[X](alt: SnapJump[X, B]): Jump[A, B] = {
+      this.copy(alts = alts :+ alt)
+    }
+  }
 
   protected[React] final case class SnapJump[A, B](
     value: A,
@@ -418,15 +423,15 @@ object React {
 
     def tryPerform(n: Int, a: A, ops: Reaction, desc: KCAS#Desc): TentativeResult[B] = {
       if (n <= 0) {
-        Jump(a, this, ops, desc) // FIXME!!!
+        Jump(a, this, ops, desc, Nil)
       } else {
         val snap = desc.snapshot()
         first.tryPerform(n - 1, a, ops, desc) match {
-          case Retry =>
+          case _: Retry.type =>
             second.tryPerform(n - 1, a, ops, snap.load())
-          case Jump(x, r, o, d, as) =>
+          case jmp: Jump[a, B] =>
             // TODO: optimize building `alts`
-            Jump(x, r, o, d, as :+ SnapJump(a, second, ops, snap))
+            jmp.withAlt(SnapJump(a, second, ops, snap))
           case ok =>
             snap.discard()
             ok

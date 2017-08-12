@@ -149,7 +149,7 @@ private[kcas] object MCAS extends KCAS { self =>
     private[this] var head: MCASEntry =
       _
 
-    /** Number of entries currently in this descriptor (the length of the lit at `head`) */
+    /** Number of entries currently in this descriptor (the length of the list at `head`) */
     private[this] var k: Int =
       0
 
