@@ -1,8 +1,9 @@
 package io.sigs.choam
 
-import cats.Eq
+import cats.{ Eq, Traverse }
+import cats.instances.list._
 
-import kcas.Ref
+import kcas.{ Ref, KCAS }
 
 /**
  * Concurrent hash trie, described in [Concurrent Tries with Efficient
@@ -10,6 +11,8 @@ import kcas.Ref
  * by Aleksandar Prokopec, Nathan G. Bronson, Phil Bagwell and Martin Odersky.
  */
 final class Ctrie[K, V](hs: K => Int, eq: Eq[K]) {
+
+  //TODO: optimize (only compute hash code once, store hash code in trie)
 
   import Ctrie._
 
@@ -106,6 +109,18 @@ final class Ctrie[K, V](hs: K => Int, eq: Eq[K]) {
     val pos = Integer.bitCount((flag - 1) & bmp)
     (flag, pos)
   }
+
+  /** Only call in quiescent states! */
+  private[choam] def debugStr(implicit kcas: KCAS): String = {
+    debug.unsafePerform(0)
+  }
+
+  private[this] def debug: React[Int, String] = React.computed { level =>
+    for {
+      r <- root.invisibleRead
+      rs <- r.debug.lmap[Unit](_ => level)
+    } yield rs
+  }
 }
 
 object Ctrie {
@@ -113,6 +128,8 @@ object Ctrie {
   private final val W = 5
   private final val wMask = 0x1f // 0b11111
   private final val maxLevel = 30
+
+  private final val indent = "  "
 
   private object NOTFOUND {
     def as[A]: A = this.asInstanceOf[A]
@@ -123,12 +140,25 @@ object Ctrie {
     ((wMask << sh) & hash) >>> sh
   }
 
-  final class Gen
+  final class Gen {
+    override def toString: String =
+      s"Gen(${this.##.toHexString})"
+  }
 
   final class INode[K, V](val main: Ref[MainNode[K, V]], val gen: Ref[Gen])
-    extends Branch[K, V]
+    extends Branch[K, V] {
 
-  sealed abstract class MainNode[K, V]
+    private[choam] override def debug: React[Int, String] = React.computed { level =>
+      for {
+        m <- main.invisibleRead
+        ms <- m.debug.lmap[Unit](_ => level)
+      } yield (indent * level) + s"INode -> ${ms}"
+    }
+  }
+
+  sealed abstract class MainNode[K, V] {
+    private[choam] def debug: React[Int, String]
+  }
 
   /** Ctrie node */
   final class CNode[K, V](val bmp: Int, arr: Array[Branch[K, V]]) extends MainNode[K, V] {
@@ -149,6 +179,13 @@ object Ctrie {
       newArr(pos) = value
       Array.copy(arr, pos, newArr, pos + 1, arr.length - pos)
       new CNode(bmp | flag, newArr)
+    }
+
+    private[choam] override def debug: React[Int, String] = React.computed { level =>
+      val els = Traverse[List].traverse(arr.toList)(_.debug.lmap[Unit](_ => level + 1))
+      els.map { els =>
+        s"CNode ${bmp.toHexString}\n" + els.mkString("\n")
+      }
     }
   }
 
@@ -177,7 +214,11 @@ object Ctrie {
   }
 
   /** Tomb node */
-  final class TNode[K, V](val sn: Ref[SNode[K, V]]) extends MainNode[K, V]
+  final class TNode[K, V](val sn: Ref[SNode[K, V]]) extends MainNode[K, V] {
+    private[choam] def debug: React[Int, String] = React.computed { level =>
+      sn.invisibleRead.flatMap(_.debug.lmap[Unit](_ => 0)).map(s => (indent * level) + s"TNode(${s})")
+    }
+  }
 
   final class LNode[K, V](key: K, value: V, next: LNode[K, V]) extends MainNode[K, V] {
 
@@ -210,9 +251,27 @@ object Ctrie {
         else new LNode(key, value, nn)
       }
     }
+
+    private[choam] def debug: React[Int, String] = React.computed { level =>
+      val lst = this.dbg(Nil).reverse
+      React.ret(s"LNode(${lst.mkString(", ")})")
+    }
+
+    @tailrec
+    private def dbg(acc: List[String]): List[String] = {
+      val lst = s"${key} -> ${value}" :: acc
+      if (next eq null) lst
+      else next.dbg(lst)
+    }
   }
 
-  sealed abstract class Branch[K, V]
+  sealed abstract class Branch[K, V] {
+    private[choam] def debug: React[Int, String]
+  }
 
-  final class SNode[K, V](val k: K, val v: V) extends Branch[K, V]
+  final class SNode[K, V](val k: K, val v: V) extends Branch[K, V] {
+    private[choam] override def debug: React[Int, String] = React.computed { level =>
+      React.ret((indent * level) + s"SNode(${k} -> ${v})")
+    }
+  }
 }

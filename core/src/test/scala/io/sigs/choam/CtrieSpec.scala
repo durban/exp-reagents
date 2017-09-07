@@ -93,6 +93,33 @@ abstract class CtrieSpec extends BaseSpec with GeneratorDrivenPropertyChecks {
       ct.lookup.unsafePerform(x + 17) should === (Some((x + 17).toString))
     }
   }
+
+  "Ctrie#debugStr" should "pretty print the trie structure" in {
+    val ct = new Ctrie[Int, String](_ % 4, Eq.instance(_ % 8 == _ % 8))
+    ct.insert.unsafePerform(0 -> "0")
+    ct.insert.unsafePerform(1 -> "1")
+    ct.insert.unsafePerform(4 -> "4")
+    ct.insert.unsafePerform(5 -> "5")
+    ct.insert.unsafePerform(8 -> "8") // overwrites 0
+    ct.insert.unsafePerform(9 -> "9") // overwrites 1
+    val expStr = """INode -> CNode 3
+    |  INode -> CNode 1
+    |    INode -> CNode 1
+    |      INode -> CNode 1
+    |        INode -> CNode 1
+    |          INode -> CNode 1
+    |            INode -> CNode 1
+    |              INode -> LNode(8 -> 8, 4 -> 4)
+    |  INode -> CNode 1
+    |    INode -> CNode 1
+    |      INode -> CNode 1
+    |        INode -> CNode 1
+    |          INode -> CNode 1
+    |            INode -> CNode 1
+    |              INode -> LNode(9 -> 9, 5 -> 5)""".stripMargin
+
+    ct.debugStr should === (expStr)
+  }
 }
 
 class CtrieSpecNaiveKCAS
