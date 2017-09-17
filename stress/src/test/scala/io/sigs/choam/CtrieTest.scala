@@ -9,7 +9,7 @@ import org.openjdk.jcstress.infra.results.LL_Result
 
 import kcas.KCAS
 
-@KCASParams("Ctrie insert/lookup should be atomic") // TODO: even when composed
+@KCASParams("Ctrie insert/lookup should be atomic")
 @Outcomes(Array(
   new Outcome(id = Array("Some(0), Some(x)", "Some(0), Some(y)"), expect = ACCEPTABLE, desc = "get first"),
   new Outcome(id = Array("Some(x), Some(y)"), expect = ACCEPTABLE, desc = "ins1, get, ins2"),
@@ -18,18 +18,8 @@ import kcas.KCAS
 ))
 abstract class CtrieTest(impl: KCAS) {
 
-  private[this] val ctrie = {
-    val ct = new Ctrie[Int, String](_ % 7, Eq.instance(_ % 14 == _ % 14))
-    ct.insert.unsafePerform(0 -> "0")(impl)
-    ct.insert.unsafePerform(1 -> "1")(impl)
-    ct.insert.unsafePerform(2 -> "2")(impl)
-    ct.insert.unsafePerform(3 -> "3")(impl)
-    ct.insert.unsafePerform(4 -> "4")(impl)
-    ct.insert.unsafePerform(7 -> "7")(impl)
-    ct.insert.unsafePerform(8 -> "8")(impl)
-    ct.insert.unsafePerform(9 -> "9")(impl)
-    ct
-  }
+  private[this] val ctrie =
+    CtrieTest.newCtrie714()
 
   private[this] val insert =
     ctrie.insert
@@ -62,5 +52,21 @@ abstract class CtrieTest(impl: KCAS) {
     assert(lookup.unsafePerform(7).get eq "7")
     assert(lookup.unsafePerform(8).get eq "8")
     assert(lookup.unsafePerform(9).get eq "9")
+  }
+}
+
+object CtrieTest {
+
+  def newCtrie714(): Ctrie[Int, String] = {
+    val ct = new Ctrie[Int, String](_ % 7, Eq.instance(_ % 14 == _ % 14))
+    ct.insert.unsafePerform(0 -> "0")(KCAS.NaiveKCAS)
+    ct.insert.unsafePerform(1 -> "1")(KCAS.NaiveKCAS)
+    ct.insert.unsafePerform(2 -> "2")(KCAS.NaiveKCAS)
+    ct.insert.unsafePerform(3 -> "3")(KCAS.NaiveKCAS)
+    ct.insert.unsafePerform(4 -> "4")(KCAS.NaiveKCAS)
+    ct.insert.unsafePerform(7 -> "7")(KCAS.NaiveKCAS)
+    ct.insert.unsafePerform(8 -> "8")(KCAS.NaiveKCAS)
+    ct.insert.unsafePerform(9 -> "9")(KCAS.NaiveKCAS)
+    ct
   }
 }
