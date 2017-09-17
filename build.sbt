@@ -15,7 +15,6 @@
  */
 
 scalaVersion in ThisBuild := "2.12.3-bin-typelevel-4"
-// TODO: this doesn't work (no 2.11):
 crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value, "2.11.11-bin-typelevel-4")
 scalaOrganization in ThisBuild := "org.typelevel"
 
@@ -128,9 +127,9 @@ lazy val macroSettings = Seq(
 lazy val dependencies = new {
 
   val catsVersion = "1.0.0-MF"
-  val circeVersion = "0.8.0"
-  val iterateeVersion = "0.12.0"
-  val fs2Version = "0.10.0-M5"
+  val circeVersion = "0.9.0-M1"
+  val iterateeVersion = "0.13.0"
+  val fs2Version = "0.10.0-M6"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.2"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
@@ -170,4 +169,3 @@ addCommandAlias("measureKCAS", "bench/jmh:run -t max -foe true -rf json -rff res
 addCommandAlias("measureReact", "bench/jmh:run -t max -foe true -rf json -rff results_react.json .*ResourceAllocationReact")
 addCommandAlias("measureCombinators", "bench/jmh:run -t max -foe true -rf json -rff results_combinators.json .*CombinatorBench")
 addCommandAlias("profileReact", "bench/jmh:run -t max -foe true -prof stack:lines=3 -rf text -rff profile_react.txt .*ResourceAllocationReact")
-

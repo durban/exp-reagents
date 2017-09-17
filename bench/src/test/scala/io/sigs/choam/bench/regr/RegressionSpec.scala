@@ -14,7 +14,7 @@ import io.iteratee._
 import io.iteratee.files.either
 
 import io.circe.syntax._
-import io.circe.streaming.{ byteParser, decoder }
+import io.circe.streaming.{ byteArrayParser, decoder }
 
 import org.scalatest.{ FreeSpec, Matchers }
 import org.scalatest.matchers.Matcher
@@ -40,7 +40,7 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
   def load(file: File): Results = {
     val src = either.readBytes(file)
     val results = src
-      .through(byteParser)
+      .through(byteArrayParser)
       .through(decoder[Either[Throwable, ?], BenchmarkResult])
     results.into(Iteratee.consume) match {
       case Left(ex) => throw ex
