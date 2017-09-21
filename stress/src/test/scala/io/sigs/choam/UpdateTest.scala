@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.sigs.choam
 
 import org.openjdk.jcstress.annotations.{ Actor, Arbiter, Outcome }
@@ -10,7 +26,7 @@ import kcas._
 @KCASParams("updateWith and consistentRead should both execute atomically")
 @Outcomes(Array(
   new Outcome(id = Array("(foo,bar), (bar,foo)"), expect = ACCEPTABLE, desc = "read before swap"),
-  new Outcome(id = Array("(bar,foo), (bar,foo)"), expect = ACCEPTABLE, desc = "read after swap"),
+  new Outcome(id = Array("(bar,foo), (bar,foo)"), expect = ACCEPTABLE, desc = "read after swap")
 ))
 abstract class UpdateTest(impl: KCAS) {
 

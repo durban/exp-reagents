@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.sigs.choam
 
 import scala.annotation.StaticAnnotation
@@ -16,7 +32,7 @@ object JcStressMacros {
     val impls = List(
       "CASN" -> q"_root_.io.sigs.choam.kcas.KCAS.CASN",
       "MCAS" -> q"_root_.io.sigs.choam.kcas.KCAS.MCAS",
-      "NaiveKCAS" -> q"_root_.io.sigs.choam.kcas.KCAS.NaiveKCAS",
+      "NaiveKCAS" -> q"_root_.io.sigs.choam.kcas.KCAS.NaiveKCAS"
     )
 
     val (baseDesc, disable) = c.prefix.tree match {
@@ -98,7 +114,7 @@ object JcStressMacros {
             base,
             overrides,
             kcasImpl,
-            kcasName,
+            kcasName
           )
       }
     }

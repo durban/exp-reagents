@@ -1,3 +1,19 @@
+/*
+ * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package io.sigs.choam
 package kcas
 
@@ -91,7 +107,7 @@ private[kcas] object MCAS extends KCAS { self =>
   private def RDCSSComp[A](
     status: Ref[MCASStatus],
     entry: MCASEntry,
-    nv: MCASDesc,
+    nv: MCASDesc
   ): Unit = {
     val s: MCASStatus = status.unsafeTryRead()
     if (s eq Undecided) {
@@ -424,7 +440,7 @@ private[kcas] object MCAS extends KCAS { self =>
     private def RDCSStoDesc[A](
       status: Ref[MCASStatus],
       entry: MCASEntry,
-      nv: MCASDesc,
+      nv: MCASDesc
     ): RDCSSResult = {
       @tailrec
       def acquire(): RDCSSResult = {
@@ -714,7 +730,7 @@ private[kcas] object MCAS extends KCAS { self =>
     def loanWeakDescriptor(): MCASDesc =
       loanWeak(weakFreeDescriptors)
 
-    def releaseDescriptor(d: MCASDesc) = {
+    def releaseDescriptor(d: MCASDesc): Unit = {
       if (numFreeDescriptors >= DescriptorMultiplier) {
         releaseWeakDescriptor(d)
       } else {
@@ -770,7 +786,7 @@ private[kcas] object MCAS extends KCAS { self =>
 
     @elidable(LEVEL)
     private def log(msg: String): Unit =
-      System.out.println(s"[Thread ${threadId}] ${msg}")
+      System.out.print(s"[Thread ${threadId}] ${msg}\n")
   }
 
   private final object TlSt {
