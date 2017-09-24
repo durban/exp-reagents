@@ -60,6 +60,7 @@ final class Ctrie[K, V](hs: K => Int, eq: Eq[K]) {
           case ln: LNode[K, V] =>
             ln.lookup.lmap[Unit](_ => (k, eq))
         }
+        _ <- i.main.cas(im, im) // FIXME: this is only to be composable
       } yield v
     }
 

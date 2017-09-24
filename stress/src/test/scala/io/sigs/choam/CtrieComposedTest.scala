@@ -23,8 +23,7 @@ import org.openjdk.jcstress.infra.results.LL_Result
 
 import kcas.KCAS
 
-// TODO: enable this test, and fix the failure!
-@KCASParams("Composed Ctrie insert/lookup should be atomic", true)
+@KCASParams("Composed Ctrie insert/lookup should be atomic")
 @Outcomes(Array(
   new Outcome(id = Array("(Some(0),Some(1)), (Some(x),Some(y))"), expect = ACCEPTABLE, desc = "get first"),
   new Outcome(id = Array("(Some(x),Some(y)), (Some(x),Some(y))"), expect = ACCEPTABLE, desc = "ins first")
