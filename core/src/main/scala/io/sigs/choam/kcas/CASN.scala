@@ -37,7 +37,7 @@ private[kcas] object CASN extends KCAS { self =>
   final case class DescRepr(ops: List[CASD[_]]) extends self.Desc with self.Snap {
 
     override def tryPerform(): Boolean =
-      CASN(CASNDesc(ops.sorted))
+      CASN(CASNDesc(CASD.sortDescriptors(ops)))
 
     override def cancel(): Unit =
       ()

@@ -77,6 +77,16 @@ object Ref {
    */
   private[kcas] def mkUnpadded[A](a: A): Ref[A] =
     new UnpaddedRefImpl(a)
+
+  // TODO: make it more robust (implement total global order to avoid deadlocks)
+  private[kcas] def globalCompare(a: Ref[_], b: Ref[_]): Int = {
+    val ah: Int = a.hashCode
+    val bh: Int = b.hashCode
+    if (ah > bh) 1
+    else if (ah < bh) -1
+    else if (a eq b) 0
+    else throw new IllegalStateException(s"[globalCompare] ref collision: ${a} and ${b}")
+  }
 }
 
 private class UnpaddedRefImpl[A](initial: A) extends AtomicReference[A](initial) with Ref[A] {

@@ -75,6 +75,12 @@ private[choam] object KCAS {
   private[choam] lazy val MCAS: KCAS =
     kcas.MCAS
 
+  private[kcas] def impossibleKCAS[A, B](ref: Ref[_], ova: A, nva: A, ovb: B, nvb: B): Nothing = {
+    throw new IllegalArgumentException(
+      s"Impossible k-CAS for ${ref}: ${ova} -> ${nva} and ${ovb} -> ${nvb}"
+    )
+  }
+
   def unsafeLookup(fqn: String): KCAS = fqn match {
     case fqns.NaiveKCAS =>
       NaiveKCAS
@@ -113,21 +119,27 @@ private[choam] sealed case class CASD[A](ref: Ref[A], ov: A, nv: A) {
 
   final override def hashCode: Int =
     ref.## ^ System.identityHashCode(ov) ^ System.identityHashCode(nv)
-
-  // TODO: implement total global order (to avoid deadlocks)
-  private[kcas] final def globalRank: Int =
-    ref.##
 }
 
 private[choam] object CASD {
 
-  implicit val ordering: Ordering[CASD[_]] = new Ordering[CASD[_]] {
-    override def compare(cx: CASD[_], cy: CASD[_]): Int = {
-      val x = cx.globalRank
-      val y = cy.globalRank
-      if (x < y) -1
-      else if (x > y) +1
-      else 0
+  val refOrdering: Ordering[Ref[_]] = new Ordering[Ref[_]] {
+    override def compare(x: Ref[_], y: Ref[_]): Int = {
+      Ref.globalCompare(x, y)
     }
+  }
+
+  def sortDescriptors(ds: List[CASD[_]]): List[CASD[_]] = {
+    val s = new scala.collection.mutable.TreeMap[Ref[_], CASD[_]]()(refOrdering)
+    for (d <- ds) {
+      s.get(d.ref) match {
+        case Some(other) =>
+          assert(d.ref eq other.ref)
+          KCAS.impossibleKCAS(d.ref, d.ov, d.nv, other.ov, other.nv)
+        case None =>
+          s.put(d.ref, d)
+      }
+    }
+    s.values.toList
   }
 }

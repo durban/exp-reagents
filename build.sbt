@@ -99,7 +99,7 @@ lazy val commonSettings = Seq[Setting[_]](
       )
     }
   },
-  scalacOptions in (Compile, console) ~= { _.filterNot("-Ywarn-unused:imports" == _) },
+  scalacOptions in (Compile, console) ~= { _.filterNot("-Ywarn-unused-import" == _).filterNot("-Ywarn-unused:imports" == _) },
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
   addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.4" cross CrossVersion.binary),
   parallelExecution in Test := false,

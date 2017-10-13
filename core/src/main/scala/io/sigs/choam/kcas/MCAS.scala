@@ -355,14 +355,19 @@ private[kcas] object MCAS extends KCAS { self =>
             if (a eq null) b
             else if (b eq null) a
             else {
-              if (a.globalRank <= b.globalRank) {
+              val cmp: Int = Ref.globalCompare(a.ref, b.ref)
+              if (cmp < 0) {
                 val res = a
                 res.next = merge(a.next, b)
                 res
-              } else {
+              } else if (cmp > 0) {
                 val res = b
                 res.next = merge(a, b.next)
                 res
+              } else {
+                // conflicting entries
+                assert(a.ref eq b.ref)
+                KCAS.impossibleKCAS[a.A, b.A](a.ref, a.ov, a.nv, b.ov, b.nv)
               }
             }
           }
