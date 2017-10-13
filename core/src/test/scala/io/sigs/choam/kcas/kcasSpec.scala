@@ -83,6 +83,21 @@ abstract class KCASSpec extends BaseSpec {
     r2.unsafeTryRead() shouldBe theSameInstanceAs ("y")
     r3.unsafeTryRead() shouldBe theSameInstanceAs ("z")
   }
+
+  it should "not accept more than one CAS for the same ref" in {
+    val r1 = Ref.mk("r1")
+    val r2 = Ref.mk("r2")
+    val exc = intercept[Exception] {
+      tryPerformBatch(List(
+        CASD(r1, "r1", "x"),
+        CASD(r2, "r2", "y"),
+        CASD(r1, "r1", "x") // this is a duplicate
+      ))
+    }
+    exc.getMessage should include ("Impossible k-CAS")
+    r1.unsafeTryRead() shouldBe theSameInstanceAs ("r1")
+    r2.unsafeTryRead() shouldBe theSameInstanceAs ("r2")
+  }
 }
 
 class KCASSpecNaiveKCAS
