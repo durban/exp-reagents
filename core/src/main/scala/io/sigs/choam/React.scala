@@ -88,7 +88,7 @@ sealed abstract class React[-A, +B] {
     else cont.tryPerform(n - 1, partialResult, ops, desc)
   }
 
-  def + [X <: A, Y >: B](that: React[X, Y]): React[X, Y] =
+  final def + [X <: A, Y >: B](that: React[X, Y]): React[X, Y] =
     new Choice[X, Y](this, that)
 
   final def >>> [C](that: React[B, C]): React[A, C] = that match {
@@ -106,7 +106,7 @@ sealed abstract class React[-A, +B] {
     this.productImpl(that)
 
   final def ? : React[A, Option[B]] =
-    this.rmap(Some(_)) + ret[Unit, Option[B]](None).lmap(_ => ())
+    this.rmap(Some(_)) + ret[A, Option[B]](None)
 
   protected def productImpl[C, D](that: React[C, D]): React[(A, C), (B, D)]
 
@@ -133,7 +133,7 @@ sealed abstract class React[-A, +B] {
     self >>> comp
   }
 
-  private[choam] def postCommit(pc: React[B, Unit]): React[A, B] =
+  private[choam] final def postCommit(pc: React[B, Unit]): React[A, B] =
     this >>> React.postCommit(pc)
 
   override def toString: String
@@ -276,7 +276,7 @@ object React {
       this.copy(postCommit = act :: postCommit)
   }
 
-  private object Reaction {
+  private final object Reaction {
     val empty: Reaction = Reaction(Nil)
   }
 
@@ -306,27 +306,27 @@ object React {
   private sealed abstract class Commit[A]()
       extends React[A, A] {
 
-    protected def tryPerform(n: Int, a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[A] = {
+    protected final def tryPerform(n: Int, a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[A] = {
       if (desc.tryPerform()) Success(a, reaction)
       else Retry
     }
 
-    protected def andThenImpl[C](that: React[A, C]): React[A, C] =
+    protected final def andThenImpl[C](that: React[A, C]): React[A, C] =
       that
 
-    protected def productImpl[C, D](that: React[C, D]): React[(A, C), (A, D)] = that match {
+    protected final def productImpl[C, D](that: React[C, D]): React[(A, C), (A, D)] = that match {
       case _: Commit.type => Commit[(A, C)]()
       case _ => arrowInstance.second(that) // TODO: optimize
     }
 
-    def firstImpl[C]: React[(A, C), (A, C)] =
+    final override def firstImpl[C]: React[(A, C), (A, C)] =
       Commit[(A, C)]()
 
-    override def toString =
+    final override def toString =
       "Commit"
   }
 
-  private object Commit extends Commit[Any] {
+  private final object Commit extends Commit[Any] {
 
     @inline
     def apply[A](): Commit[A] =
@@ -336,25 +336,25 @@ object React {
   private sealed abstract class AlwaysRetry[A, B]()
       extends React[A, B] {
 
-    protected def tryPerform(n: Int, a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[B] = {
+    protected final def tryPerform(n: Int, a: A, reaction: Reaction, desc: KCAS#Desc): TentativeResult[B] = {
       desc.cancel()
       Retry
     }
 
-    protected def andThenImpl[C](that: React[B, C]): React[A, C] =
+    protected final def andThenImpl[C](that: React[B, C]): React[A, C] =
       AlwaysRetry()
 
-    protected def productImpl[C, D](that: React[C, D]): React[(A, C), (B, D)] =
+    protected final def productImpl[C, D](that: React[C, D]): React[(A, C), (B, D)] =
       AlwaysRetry()
 
-    def firstImpl[C]: React[(A, C), (B, C)] =
+    final def firstImpl[C]: React[(A, C), (B, C)] =
       AlwaysRetry()
 
-    override def toString =
+    final override def toString =
       "Retry"
   }
 
-  private object AlwaysRetry extends AlwaysRetry[Any, Any] {
+  private final object AlwaysRetry extends AlwaysRetry[Any, Any] {
 
     @inline
     def apply[A, B](): AlwaysRetry[A, B] =
@@ -474,7 +474,7 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(n: Int, b: B, pc: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
+    protected final def tryPerform(n: Int, b: B, pc: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
       desc.impl.tryReadOne(ref) match {
         case null =>
           desc.cancel()
@@ -487,28 +487,28 @@ object React {
       }
     }
 
-    def andThenImpl[E](that: React[D, E]): React[B, E] = {
+    final def andThenImpl[E](that: React[D, E]): React[B, E] = {
       new GenCas[A, B, C, E](ref, ov, nv, k >>> that) {
         protected def transform(a: A, b: B): C =
           self.transform(a, b)
       }
     }
 
-    def productImpl[E, F](that: React[E, F]): React[(B, E), (D, F)] = {
+    final def productImpl[E, F](that: React[E, F]): React[(B, E), (D, F)] = {
       new GenCas[A, (B, E), (C, E), (D, F)](ref, ov, nv, k × that) {
         protected def transform(a: A, be: (B, E)): (C, E) =
           (self.transform(a, be._1), be._2)
       }
     }
 
-    def firstImpl[E]: React[(B, E), (D, E)] = {
+    final def firstImpl[E]: React[(B, E), (D, E)] = {
       new GenCas[A, (B, E), (C, E), (D, E)](ref, ov, nv, k.firstImpl[E]) {
         protected def transform(a: A, be: (B, E)): (C, E) =
           (self.transform(a, be._1), be._2)
       }
     }
 
-    override def toString =
+    final override def toString =
       s"GenCas(${ref}, ${ov}, ${nv}, ${k})"
   }
 
@@ -525,35 +525,35 @@ object React {
     /** Must be pure */
     protected def transform(a: A, b: B): C
 
-    protected def tryPerform(n: Int, b: B, ops: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
+    protected final def tryPerform(n: Int, b: B, ops: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
       desc.impl.tryReadOne(ref) match {
         case null => Retry
         case a => maybeJump(n, transform(a, b), k, ops, desc)
       }
     }
 
-    def andThenImpl[E](that: React[D, E]): React[B, E] = {
+    final def andThenImpl[E](that: React[D, E]): React[B, E] = {
       new GenRead[A, B, C, E](ref, k >>> that) {
         protected def transform(a: A, b: B): C =
           self.transform(a, b)
       }
     }
 
-    def productImpl[E, F](that: React[E, F]): React[(B, E), (D, F)] = {
+    final def productImpl[E, F](that: React[E, F]): React[(B, E), (D, F)] = {
       new GenRead[A, (B, E), (C, E), (D, F)](ref, k × that) {
         protected def transform(a: A, be: (B, E)): (C, E) =
           (self.transform(a, be._1), be._2)
       }
     }
 
-    def firstImpl[E]: React[(B, E), (D, E)] = {
+    final def firstImpl[E]: React[(B, E), (D, E)] = {
       new GenRead[A, (B, E), (C, E), (D, E)](ref, k.firstImpl[E]) {
         protected def transform(a: A, be: (B, E)): (C, E) =
           (self.transform(a, be._1), be._2)
       }
     }
 
-    override def toString =
+    final override def toString =
       s"GenRead(${ref}, ${k})"
   }
 
