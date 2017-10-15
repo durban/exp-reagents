@@ -23,9 +23,10 @@ import org.openjdk.jol.info.ClassLayout
 
 object RefSpec {
   final val fieldName = "value"
-  final val targetSize = 128L
+  final val targetSize = 160L
 }
 
+@deprecated("so that we can test deprecated methods", since = "we need it")
 class RefSpec extends BaseSpec {
 
   import RefSpec._
@@ -55,10 +56,28 @@ class RefSpec extends BaseSpec {
     info(s"size is ${size} bytes")
   }
 
+
+  it should "compute `bigId` correctly" in {
+    val ref = new PaddedRefImpl[String]("foo")(
+      0xffffffffffffffffL,
+      0xaaaaaaaaaaaaaaaaL,
+      0xccccccccccccccccL,
+      0xdbdbdbdbdbdbdbdbL
+    )
+    ref.bigId should === (BigInt(
+      (
+        Vector.fill(8)(0xff.toByte) ++
+        Vector.fill(8)(0xaa.toByte) ++
+        Vector.fill(8)(0xcc.toByte) ++
+        Vector.fill(8)(0xdb.toByte)
+      ).toArray
+    ))
+  }
+
   "Unpadded Ref" should "not be padded (sanity check)" in {
     val ref = Ref.mkUnpadded("bar")
     val size = getRightPaddedSize(ref, fieldName)
-    size should be <= 16L
+    size should be <= 48L
     info(s"size is ${size} bytes")
   }
 }

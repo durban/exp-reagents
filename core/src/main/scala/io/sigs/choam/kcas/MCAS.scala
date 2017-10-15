@@ -351,19 +351,21 @@ private[kcas] object MCAS extends KCAS { self =>
           var b: MCASEntry = split(h)
           a = mergeSort(a)
           b = mergeSort(b)
-          def merge(a: MCASEntry, b: MCASEntry): MCASEntry = {
-            if (a eq null) b
-            else if (b eq null) a
-            else {
+
+          @tailrec
+          def merge(a: MCASEntry, b: MCASEntry, prev: MCASEntry): Unit = {
+            if (a eq null) {
+              prev.next = b
+            } else if (b eq null) {
+              prev.next = a
+            } else {
               val cmp: Int = Ref.globalCompare(a.ref, b.ref)
               if (cmp < 0) {
-                val res = a
-                res.next = merge(a.next, b)
-                res
+                prev.next = a
+                merge(a.next, b, prev = a)
               } else if (cmp > 0) {
-                val res = b
-                res.next = merge(a, b.next)
-                res
+                prev.next = b
+                merge(a, b.next, prev = b)
               } else {
                 // conflicting entries
                 assert(a.ref eq b.ref)
@@ -371,7 +373,25 @@ private[kcas] object MCAS extends KCAS { self =>
               }
             }
           }
-          merge(a, b)
+
+          if (a eq null) b
+          else if (b eq null) a
+          else {
+            val cmp: Int = Ref.globalCompare(a.ref, b.ref)
+            if (cmp < 0) {
+              merge(a.next, b, prev = a)
+              a
+            } else if (cmp > 0) {
+              merge(a, b.next, prev = b)
+              b
+            } else {
+              // conflicting entries
+              val aa = a
+              val bb = b
+              assert(aa.ref eq bb.ref)
+              KCAS.impossibleKCAS[aa.A, bb.A](aa.ref, aa.ov, aa.nv, bb.ov, bb.nv)
+            }
+          }
         }
       }
 

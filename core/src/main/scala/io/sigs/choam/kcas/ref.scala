@@ -18,6 +18,7 @@ package io.sigs.choam
 package kcas
 
 import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.ThreadLocalRandom
 
 /** k-CAS-able atomic reference */
 sealed trait Ref[A] {
@@ -51,6 +52,24 @@ sealed trait Ref[A] {
 
   private[kcas] def unsafeSet(nv: A): Unit
 
+  private[kcas] def id0: Long
+
+  private[kcas] def id1: Long
+
+  private[kcas] def id2: Long
+
+  private[kcas] def id3: Long
+
+  @deprecated("don't use this, since it is terribly slow", since = "forever")
+  private[kcas] final def bigId: BigInt = {
+    val buf = java.nio.ByteBuffer.allocate(8 * 4)
+    buf.putLong(this.id0)
+    buf.putLong(this.id1)
+    buf.putLong(this.id2)
+    buf.putLong(this.id3)
+    BigInt(buf.array())
+  }
+
   private[kcas] def dummy(v: Long): Long
 
   final override def toString: String =
@@ -65,8 +84,10 @@ sealed trait Ref[A] {
 
 object Ref {
 
-  private[choam] def mk[A](a: A): Ref[A] =
-    new PaddedRefImpl(a)
+  private[choam] def mk[A](a: A): Ref[A] = {
+    val tlr = ThreadLocalRandom.current()
+    new PaddedRefImpl(a)(tlr.nextLong(), tlr.nextLong(), tlr.nextLong(), tlr.nextLong())
+  }
 
   /**
    * Only for testing
@@ -75,21 +96,33 @@ object Ref {
    * (e.g., Ref2, Ref3) which still have
    * padding at the end.
    */
-  private[kcas] def mkUnpadded[A](a: A): Ref[A] =
-    new UnpaddedRefImpl(a)
+  private[kcas] def mkUnpadded[A](a: A): Ref[A] = {
+    val tlr = ThreadLocalRandom.current()
+    new UnpaddedRefImpl(a)(tlr.nextLong(), tlr.nextLong(), tlr.nextLong(), tlr.nextLong())
+  }
 
-  // TODO: make it more robust (implement total global order to avoid deadlocks)
   private[kcas] def globalCompare(a: Ref[_], b: Ref[_]): Int = {
-    val ah: Int = a.hashCode
-    val bh: Int = b.hashCode
-    if (ah > bh) 1
-    else if (ah < bh) -1
-    else if (a eq b) 0
+    // TODO: try to optimize this comparison
+    if (a eq b) 0
+    else if (a.id0 > b.id0) 1
+    else if (a.id0 < b.id0) -1
+    else if (a.id1 > b.id1) 1
+    else if (a.id1 < b.id1) -1
+    else if (a.id2 > b.id2) 1
+    else if (a.id2 < b.id2) -1
+    else if (a.id3 > b.id3) 1
+    else if (a.id3 < b.id3) -1
     else throw new IllegalStateException(s"[globalCompare] ref collision: ${a} and ${b}")
   }
 }
 
-private class UnpaddedRefImpl[A](initial: A) extends AtomicReference[A](initial) with Ref[A] {
+private class UnpaddedRefImpl[A](initial: A)(i0: Long, i1: Long, i2: Long, i3: Long)
+    extends AtomicReference[A](initial) with Ref[A] {
+
+  private[kcas] final override val id0: Long = i0
+  private[kcas] final override val id1: Long = i1
+  private[kcas] final override val id2: Long = i2
+  private[kcas] final override val id3: Long = i3
 
   private[kcas] final override def unsafeTryRead(): A =
     this.get()
@@ -107,7 +140,8 @@ private class UnpaddedRefImpl[A](initial: A) extends AtomicReference[A](initial)
     42L
 }
 
-private final class PaddedRefImpl[A](initial: A) extends UnpaddedRefImpl[A](initial) {
+private final class PaddedRefImpl[A](initial: A)(i0: Long, i1: Long, i2: Long, i3: Long)
+    extends UnpaddedRefImpl[A](initial)(i0, i1, i2, i3) {
 
   @volatile private[this] var p00: Long = 42L
   @volatile private[this] var p01: Long = 42L

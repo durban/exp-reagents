@@ -20,6 +20,7 @@ package kcas
 import org.scalatest.{ FlatSpec, Matchers }
 import org.scalactic.TypeCheckedTripleEquals
 
+@deprecated("so that we can test deprecated methods", since = "we need it")
 class MCASSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
 
   // We need this here to access internals:
@@ -109,7 +110,7 @@ class MCASSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     }
 
     val sortedRefs = extract(headOf(desc), Nil)
-    sortedRefs should === (refs.sortBy(_.##).reverse)
+    sortedRefs should === (refs.sortBy(_.bigId).reverse)
 
     desc.decr()
     kOf(desc) should === (0)
