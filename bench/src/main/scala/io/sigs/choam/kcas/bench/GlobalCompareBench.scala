@@ -18,27 +18,72 @@ package io.sigs.choam
 package kcas
 package bench
 
+import java.util.concurrent.ThreadLocalRandom
+
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-@Fork(2)
+@Fork(4)
 @Warmup(iterations = 10)
 @Measurement(iterations = 10)
 class GlobalCompareBench {
 
-  import GlobalCompareBench._
-
   @Benchmark
-  def bench(b: BeSt, bh: Blackhole): Unit = {
-    bh.consume(Ref.globalCompare(b.r1, b.r2))
-  }
-}
-
-object GlobalCompareBench {
-
-  @State(Scope.Benchmark)
-  class BeSt {
+  def baseline(bh: Blackhole): Unit = {
     val r1 = Ref.mk("a")
     val r2 = Ref.mk("a")
+    bh.consume(r1)
+    bh.consume(r2)
+  }
+
+  @Benchmark
+  def bench0(bh: Blackhole): Unit = {
+    val r1 = Ref.mk("a")
+    val r2 = Ref.mk("a")
+    bh.consume(r1)
+    bh.consume(r2)
+    bh.consume(Ref.globalCompare(r1, r2))
+  }
+
+  @Benchmark
+  def bench1(bh: Blackhole): Unit = {
+    val tlr = ThreadLocalRandom.current()
+    val i0 = tlr.nextLong()
+    bh.consume(tlr.nextLong())
+    val r1 = Ref.mkWithId("a")(i0, tlr.nextLong(), tlr.nextLong(), tlr.nextLong())
+    val r2 = Ref.mkWithId("a")(i0, tlr.nextLong(), tlr.nextLong(), tlr.nextLong())
+    bh.consume(r1)
+    bh.consume(r2)
+    bh.consume(Ref.globalCompare(r1, r2))
+  }
+
+  @Benchmark
+  def bench2(bh: Blackhole): Unit = {
+    val tlr = ThreadLocalRandom.current()
+    val i0 = tlr.nextLong()
+    bh.consume(tlr.nextLong())
+    val i1 = tlr.nextLong()
+    bh.consume(tlr.nextLong())
+    val r1 = Ref.mkWithId("a")(i0, i1, tlr.nextLong(), tlr.nextLong())
+    val r2 = Ref.mkWithId("a")(i0, i1, tlr.nextLong(), tlr.nextLong())
+    bh.consume(r1)
+    bh.consume(r2)
+    bh.consume(Ref.globalCompare(r1, r2))
+  }
+
+  @Benchmark
+  def bench3(bh: Blackhole): Unit = {
+    val tlr = ThreadLocalRandom.current()
+    val i0 = tlr.nextLong()
+    bh.consume(tlr.nextLong())
+    val i1 = tlr.nextLong()
+    bh.consume(tlr.nextLong())
+    val i2 = tlr.nextLong()
+    bh.consume(tlr.nextLong())
+    val r1 = Ref.mkWithId("a")(i0, i1, i2, tlr.nextLong())
+    val r2 = Ref.mkWithId("a")(i0, i1, i2, tlr.nextLong())
+    bh.consume(r1)
+    bh.consume(r2)
+    bh.consume(Ref.globalCompare(r1, r2))
   }
 }
