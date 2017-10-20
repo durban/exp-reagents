@@ -89,6 +89,11 @@ object Ref {
     new PaddedRefImpl(a)(tlr.nextLong(), tlr.nextLong(), tlr.nextLong(), tlr.nextLong())
   }
 
+  /** Only for testing */
+  private[kcas] def mkWithId[A](a: A)(i0: Long, i1: Long, i2: Long, i3: Long): Ref[A] = {
+    new PaddedRefImpl(a)(i0, i1, i2, i3)
+  }
+
   /**
    * Only for testing
    *
@@ -102,17 +107,27 @@ object Ref {
   }
 
   private[kcas] def globalCompare(a: Ref[_], b: Ref[_]): Int = {
-    // TODO: try to optimize this comparison
+    import java.lang.Long.compare
     if (a eq b) 0
-    else if (a.id0 > b.id0) 1
-    else if (a.id0 < b.id0) -1
-    else if (a.id1 > b.id1) 1
-    else if (a.id1 < b.id1) -1
-    else if (a.id2 > b.id2) 1
-    else if (a.id2 < b.id2) -1
-    else if (a.id3 > b.id3) 1
-    else if (a.id3 < b.id3) -1
-    else throw new IllegalStateException(s"[globalCompare] ref collision: ${a} and ${b}")
+    else {
+      val i0 = compare(a.id0, b.id0)
+      if (i0 != 0) i0
+      else {
+        val i1 = compare(a.id1, b.id1)
+        if (i1 != 0) i1
+        else {
+          val i2 = compare(a.id2, b.id2)
+          if (i2 != 0) i2
+          else {
+            val i3 = compare(a.id3, b.id3)
+            if (i3 != 0) i3
+            else {
+              throw new IllegalStateException(s"[globalCompare] ref collision: ${a} and ${b}")
+            }
+          }
+        }
+      }
+    }
   }
 }
 
