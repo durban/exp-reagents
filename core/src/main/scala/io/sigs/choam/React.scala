@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -207,6 +207,9 @@ object React {
   def ret[X, A](a: A): React[X, A] =
     lift[X, A](_ => a)
 
+  def pure[A](a: A): React[Unit, A] =
+    ret(a)
+
   private[choam] def retry[A, B]: React[A, B] =
     AlwaysRetry()
 
@@ -264,6 +267,14 @@ object React {
     // TODO: add ()
     final def unsafeRun(implicit kcas: KCAS): A =
       self.unsafePerform(())
+
+    final def void: React[Unit, Unit] =
+      self.discard
+  }
+
+  implicit final class Tuple2ReactSyntax[A, B, C](private val self: React[A, (B, C)]) extends AnyVal {
+    def left: React[A, B] = self.rmap(_._1)
+    def right: React[A, C] = self.rmap(_._2)
   }
 
   // TODO: rename to PostCommit (?)

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,7 +24,6 @@ import scala.collection.JavaConverters._
 import cats.implicits._
 import cats.effect.IO
 
-import fs2.async
 import kcas._
 
 class ReactSpecNaiveKCAS
@@ -77,9 +76,9 @@ abstract class ReactSpec extends BaseSpec {
     val n = 80000L
     val m = 50000L
     val tsk = for {
-      f1a <- async.start(IO { pushAll(n) })
-      f1b <- async.start(IO { pushAll(n) })
-      f2 <- async.start(IO { pushAll(m) })
+      f1a <- fs2.async.start(IO { pushAll(n) })
+      f1b <- fs2.async.start(IO { pushAll(n) })
+      f2 <- fs2.async.start(IO { pushAll(m) })
       _ <- f1a
       _ <- f1b
       _ <- f2
@@ -109,8 +108,8 @@ abstract class ReactSpec extends BaseSpec {
     r2.invisibleRead.unsafeRun should === ("bar")
 
     val tsk = for {
-      f1 <- async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
-      f2 <- async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
+      f1 <- fs2.async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
+      f2 <- fs2.async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
       _ <- f1
       _ <- f2
     } yield ()
@@ -146,8 +145,8 @@ abstract class ReactSpec extends BaseSpec {
     val sw = React.swap(r1, r2)
 
     val tsk = for {
-      f1 <- async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
-      f2 <- async.start(IO {
+      f1 <- fs2.async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
+      f2 <- fs2.async.start(IO {
         for (_ <- 1 to N) {
           val (v1, v2) = cr.unsafeRun
           assert(((v1 eq "foo") && (v2 eq "bar")) || ((v1 eq "bar") && (v2 eq "foo")))
@@ -190,10 +189,10 @@ abstract class ReactSpec extends BaseSpec {
     val n = 8000000
     val m = 7000000
     val tsk = for {
-      push1 <- async.start(IO { pushAll(push.rmap(_ => ()), n) })
-      push2 <- async.start(IO { pushAll(push, n) })
-      pop1 <- async.start(IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
-      pop2 <- async.start(IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
+      push1 <- fs2.async.start(IO { pushAll(push.rmap(_ => ()), n) })
+      push2 <- fs2.async.start(IO { pushAll(push, n) })
+      pop1 <- fs2.async.start(IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
+      pop2 <- fs2.async.start(IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
       _ <- push1
       _ <- push2
       _ <- pop1
@@ -224,10 +223,10 @@ abstract class ReactSpec extends BaseSpec {
     val n = 8000000
     val m = 7500000
     val tsk = for {
-      push1 <- async.start(IO { pushAll(push, n) })
-      push2 <- async.start(IO { pushAll(pushFlipped, n) })
-      pop1 <- async.start(IO { popAll(pop, expLen = nStacks, count = m, errors) })
-      pop2 <- async.start(IO { popAll(popFlipped, expLen = nStacks, count = m, errors) })
+      push1 <- fs2.async.start(IO { pushAll(push, n) })
+      push2 <- fs2.async.start(IO { pushAll(pushFlipped, n) })
+      pop1 <- fs2.async.start(IO { popAll(pop, expLen = nStacks, count = m, errors) })
+      pop2 <- fs2.async.start(IO { popAll(popFlipped, expLen = nStacks, count = m, errors) })
       _ <- push1
       _ <- push2
       _ <- pop1
@@ -664,10 +663,10 @@ abstract class ReactSpec extends BaseSpec {
       go()
     }
     val tsk = for {
-      p1 <- async.start(produce)
-      c1 <- async.start(consume)
-      p2 <- async.start(produce)
-      c2 <- async.start(consume)
+      p1 <- fs2.async.start(produce)
+      c1 <- fs2.async.start(consume)
+      p2 <- fs2.async.start(produce)
+      c2 <- fs2.async.start(consume)
       _ <- p1
       _ <- p2
       _ <- IO { stop.set(true) }
@@ -695,5 +694,15 @@ abstract class ReactSpec extends BaseSpec {
 
     act.unsafeRunSync() should === ("foobar")
     act.unsafeRunSync() should === ("foobar")
+  }
+
+  "BooleanRefOps" should "provide guard/guardNot" in {
+    val trueRef = Ref.mk(true)
+    val falseRef = Ref.mk(false)
+    val ft = React.ret(42)
+    trueRef.guard(ft).unsafeRun should === (Some(42))
+    trueRef.guardNot(ft).unsafeRun should === (None)
+    falseRef.guard(ft).unsafeRun should === (None)
+    falseRef.guardNot(ft).unsafeRun should === (Some(42))
   }
 }

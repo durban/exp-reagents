@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,6 +28,7 @@ import kcas.{ Ref, KCAS }
  */
 final class Ctrie[K, V](hs: K => Int, eq: Eq[K]) {
 
+  // TODO: use Hash
   // TODO: optimize (only compute hash code once, store hash code in trie)
 
   import Ctrie._

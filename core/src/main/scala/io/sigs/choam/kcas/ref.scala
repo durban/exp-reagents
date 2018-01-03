@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -83,6 +83,26 @@ sealed trait Ref[A] {
 }
 
 object Ref {
+
+  implicit final class BooleanRefOps(private val self: Ref[Boolean]) extends AnyVal {
+
+    def guard[A, B](guarded: React[A, B]): React[A, Option[B]] =
+      guardImpl(guarded, negate = false)
+
+    def guardNot[A, B](guarded: React[A, B]): React[A, Option[B]] =
+      guardImpl(guarded, negate = true)
+
+    private def guardImpl[A, B](guarded: React[A, B], negate: Boolean): React[A, Option[B]] = {
+      (self.invisibleRead × React.identity[A]).flatMap {
+        case (guard, _) =>
+          if (guard ^ negate) {
+            (self.cas(guard, guard) × guarded.rmap(Some(_))).rmap(_._2)
+          } else {
+            self.cas(guard, guard).lmap[(Unit, A)](_ => ()).rmap(_ => None)
+          }
+      }.lmap[A](a => ((), a))
+    }
+  }
 
   private[choam] def mk[A](a: A): Ref[A] = {
     val tlr = ThreadLocalRandom.current()
