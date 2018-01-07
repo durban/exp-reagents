@@ -221,7 +221,7 @@ object React {
     def lift[A, B](f: A => B): React[A, B] =
       React.lift(f)
 
-    def id[A]: React[A, A] =
+    override def id[A]: React[A, A] =
       React.lift(a => a)
 
     def compose[A, B, C](f: React[B, C], g: React[A, B]): React[A, C] =

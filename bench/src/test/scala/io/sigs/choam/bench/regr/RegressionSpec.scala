@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@ import io.iteratee._
 import io.iteratee.files.either
 
 import io.circe.syntax._
-import io.circe.streaming.{ byteArrayParser, decoder }
+import io.circe.iteratee.{ byteArrayParser, decoder }
 
 import org.scalatest.{ FreeSpec, Matchers }
 import org.scalatest.matchers.Matcher

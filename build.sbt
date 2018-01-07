@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2016-2018 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-scalaVersion in ThisBuild := "2.12.3-bin-typelevel-4"
+scalaVersion in ThisBuild := "2.12.4-bin-typelevel-4"
 crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value, "2.11.11-bin-typelevel-4")
 scalaOrganization in ThisBuild := "org.typelevel"
 
@@ -40,6 +40,7 @@ lazy val stress = project.in(file("stress"))
   .settings(name := "choam-stress")
   .settings(commonSettings)
   .settings(macroSettings)
+  .settings(scalacOptions -= "-Ywarn-unused:patvars") // false positives
   .enablePlugins(JCStressPlugin)
   .dependsOn(core)
 
@@ -101,7 +102,7 @@ lazy val commonSettings = Seq[Setting[_]](
   },
   scalacOptions in (Compile, console) ~= { _.filterNot("-Ywarn-unused-import" == _).filterNot("-Ywarn-unused:imports" == _) },
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
-  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.4" cross CrossVersion.binary),
+  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.5" cross CrossVersion.binary),
   parallelExecution in Test := false,
 
   libraryDependencies ++= Seq(
@@ -126,21 +127,21 @@ lazy val macroSettings = Seq(
 
 lazy val dependencies = new {
 
-  val catsVersion = "1.0.0-MF"
-  val circeVersion = "0.9.0-M1"
-  val iterateeVersion = "0.13.0"
-  val fs2Version = "0.10.0-M6"
+  val catsVersion = "1.0.1"
+  val circeVersion = "0.9.0"
+  val iterateeVersion = "0.17.0"
+  val fs2Version = "0.10.0-M11"
 
-  val shapeless = "com.chuusai" %% "shapeless" % "2.3.2"
+  val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
   val catsFree = "org.typelevel" %% "cats-free" % catsVersion
-  val catsEffect = "org.typelevel" %% "cats-effect" % "0.4"
+  val catsEffect = "org.typelevel" %% "cats-effect" % "0.8"
 
   val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,
     "io.circe" %% "circe-generic" % circeVersion,
     "io.circe" %% "circe-parser" % circeVersion,
-    "io.circe" %% "circe-streaming" % circeVersion
+    "io.circe" %% "circe-iteratee" % circeVersion
   )
 
   val iteratee = Seq(
@@ -163,6 +164,7 @@ lazy val dependencies = new {
   val jol = "org.openjdk.jol" % "jol-core" % "0.8"
 }
 
+addCommandAlias("validate", ";scalastyle;test:scalastyle;test;stress/jcstress:run")
 addCommandAlias("measurePerformance", "bench/jmh:run -t max -foe true -rf json -rff results.json .*")
 addCommandAlias("measureFS", "bench/jmh:run -t max -foe true -rf json -rff results_fs.json .*FalseSharing")
 addCommandAlias("measureKCAS", "bench/jmh:run -t max -foe true -rf json -rff results_kcas.json .*ResourceAllocationKCAS")

@@ -132,7 +132,7 @@ object AsyncReact {
   private def isCancelled[F[_]](implicit kcas: KCAS, F: Sync[F]): OptionT[Kleisli[F, CancelRef, ?], Boolean] = {
     for {
       cancelRef <- OptionT.liftF(Kleisli.ask[F, CancelRef])
-      cancelled <- OptionT.liftF[Kleisli[F, CancelRef, ?], Boolean](Kleisli.lift(F.delay { cancelRef.isCancelled.unsafeRun }))
+      cancelled <- OptionT.liftF[Kleisli[F, CancelRef, ?], Boolean](Kleisli.liftF(F.delay { cancelRef.isCancelled.unsafeRun }))
     } yield cancelled
   }
 
@@ -141,7 +141,7 @@ object AsyncReact {
     maybeA <- if (cancelled) {
       OptionT.none[Kleisli[F, CancelRef, ?], A]
     } else {
-      OptionT.liftF[Kleisli[F, CancelRef, ?], A](Kleisli.lift[F, CancelRef, A](act))
+      OptionT.liftF[Kleisli[F, CancelRef, ?], A](Kleisli.liftF[F, CancelRef, A](act))
     }
   } yield maybeA
 
@@ -159,7 +159,7 @@ object AsyncReact {
             a <- if (cancelled) {
               OptionT.none[Kleisli[F, CancelRef, ?], A]
             } else {
-              OptionT[Kleisli[F, CancelRef, ?], A](Kleisli.lift[F, CancelRef, Option[A]](F.async[Option[A]] { cb =>
+              OptionT[Kleisli[F, CancelRef, ?], A](Kleisli.liftF[F, CancelRef, Option[A]](F.async[Option[A]] { cb =>
                 val id = new Id
                 cancelRef.addStub.unsafePerform(id) match {
                   case AlreadyCancelled =>
