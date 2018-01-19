@@ -128,9 +128,9 @@ lazy val macroSettings = Seq(
 lazy val dependencies = new {
 
   val catsVersion = "1.0.1"
-  val circeVersion = "0.9.0"
+  val circeVersion = "0.9.1"
   val iterateeVersion = "0.17.0"
-  val fs2Version = "0.10.0-M11"
+  val fs2Version = "0.10.0-RC1"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
@@ -141,7 +141,7 @@ lazy val dependencies = new {
     "io.circe" %% "circe-core" % circeVersion,
     "io.circe" %% "circe-generic" % circeVersion,
     "io.circe" %% "circe-parser" % circeVersion,
-    "io.circe" %% "circe-iteratee" % circeVersion
+    "io.circe" %% "circe-iteratee" % "0.9.0"
   )
 
   val iteratee = Seq(
