@@ -17,7 +17,10 @@
 package io.sigs.choam
 package async
 
+import scala.concurrent.ExecutionContext
+
 import cats.{ ~>, Monad }
+import cats.implicits._
 import cats.free._
 import cats.data.{ Kleisli, OptionT }
 import cats.effect._
@@ -59,14 +62,12 @@ object AsyncReact {
 
   implicit final class AsyncReactOps[A](private val self: Type[A]) extends AnyVal {
 
-    def runCancellable[F[_]](implicit kcas: KCAS, F: Async[F]): F[(F[Option[A]], F[Unit])] = {
+    def runCancellable[F[_]](implicit kcas: KCAS, ec: ExecutionContext, F: Effect[F]): F[(F[Option[A]], F[Unit])] = {
       val k = unwrap(self).foldMap(interpreterCancellable[F])
-      F.delay {
-        val cancelRef = CancelRef.mk()
-        val fma = k.value.run(cancelRef)
-        val cancel = F.delay { cancelRef.cancel.unsafeRun }
-        (fma, cancel)
-      }
+      for {
+        cancelRef <- F.delay { CancelRef.mk() }
+        join <- fs2.async.start(k.value.run(cancelRef))
+      } yield (join, F.delay { cancelRef.cancel.unsafeRun })
     }
 
     def run[F[_]](implicit kcas: KCAS, F: Async[F]): F[A] =

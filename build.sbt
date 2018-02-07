@@ -110,9 +110,9 @@ lazy val commonSettings = Seq[Setting[_]](
       dependencies.cats,
       dependencies.catsFree,
       dependencies.catsEffect,
+      dependencies.fs2,
       dependencies.shapeless
     ),
-    dependencies.fs2.map(_ % "test-internal"),
     dependencies.test.map(_ % "test-internal")
   ).flatten,
   organization := "io.sigs",
@@ -130,7 +130,7 @@ lazy val dependencies = new {
   val catsVersion = "1.0.1"
   val circeVersion = "0.9.1"
   val iterateeVersion = "0.17.0"
-  val fs2Version = "0.10.0-RC1"
+  val fs2Version = "0.10.0"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
@@ -149,10 +149,7 @@ lazy val dependencies = new {
     "io.iteratee" %% "iteratee-files" % iterateeVersion
   )
 
-  val fs2 = Seq(
-    "co.fs2" %% "fs2-core" % fs2Version,
-    "co.fs2" %% "fs2-io" % fs2Version
-  )
+  val fs2 = "co.fs2" %% "fs2-core" % fs2Version
 
   val test = Seq(
     "org.scalatest" %% "scalatest" % "3.0.3",

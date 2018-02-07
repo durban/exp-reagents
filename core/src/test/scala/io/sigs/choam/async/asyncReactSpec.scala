@@ -213,6 +213,70 @@ abstract class AsyncReactSpec extends BaseSpec {
     cancelled.get() should === (true)
   }
 
+  it should "handle multiple blocks correctly" in {
+    val ph = new AtomicReference[scala.concurrent.Promise[Int]](null)
+    val latch = new CountDownLatch(1)
+    val cancelled = new AtomicBoolean(false)
+    val cnt = new AtomicLong(0L)
+    val act = async[Int] { cb =>
+      cnt.incrementAndGet()
+      val promise = scala.concurrent.Promise[Int]()
+      promise.future.foreach(cb)
+      ph.set(promise)
+      latch.countDown()
+      _ => { cancelled.set(true) }
+    }
+    val task = for {
+      tc <- act.runCancellable[IO]
+      (block, _) = tc
+      _ <- IO { latch.await() }
+      fut1 <- fs2.async.start(block)
+      _ <- IO { ph.get().complete(scala.util.Success(42)) }
+      r1 <- fut1
+      r2 <- block
+      r3 <- block
+    } yield (r1, r2, r3)
+    task.unsafeRunSync() should === ((Some(42), Some(42), Some(42)))
+    cancelled.get() should === (false)
+    cnt.get() should === (1L)
+  }
+
+  it should "handle multiple cancels correctly" in {
+    val ph = new AtomicReference[scala.concurrent.Promise[Int]](null)
+    val latch = new CountDownLatch(1)
+    val cancelled = new AtomicLong(0L)
+    val cnt = new AtomicLong(0L)
+    val act = async[Int] { cb =>
+      cnt.incrementAndGet()
+      val promise = scala.concurrent.Promise[Int]()
+      promise.future.foreach(cb)
+      ph.set(promise)
+      latch.countDown()
+      _ => {
+        cancelled.incrementAndGet()
+        ()
+      }
+    }
+    val task = for {
+      tc <- act.runCancellable[IO]
+      (block, cancel) = tc
+      _ <- IO { latch.await() }
+      fut1 <- fs2.async.start(block)
+      fut2 <- fs2.async.start(block)
+      c1 <- fs2.async.start(cancel)
+      c2 <- fs2.async.start(cancel)
+      _ <- c1
+      _ <- c2
+      r1 <- fut1
+      r2 <- fut2
+      r3 <- block
+      r4 <- block
+    } yield (r1, r2, r3, r4)
+    task.unsafeRunSync() should === ((None, None, None, None))
+    cancelled.get() should === (1L)
+    cnt.get() should === (1L)
+  }
+
   "running lift" should "perform the reaction" in {
     val ref = Ref.mk(42L)
     val r = ref.modify(_ + 1L)
