@@ -49,9 +49,9 @@ final class TreiberStack[A](els: Iterable[A]) {
   }
 }
 
-private object TreiberStack {
+private[choam] object TreiberStack {
 
-  private sealed trait Lst[+A] {
+  private[choam] sealed trait Lst[+A] {
 
     def length: Int = {
       @tailrec
@@ -77,7 +77,7 @@ private object TreiberStack {
     }
   }
 
-  private final case class Cons[A](h: A, t: Lst[A]) extends Lst[A]
+  private[choam] final case class Cons[A](h: A, t: Lst[A]) extends Lst[A]
 
-  private final case object End extends Lst[Nothing]
+  private[choam] final case object End extends Lst[Nothing]
 }

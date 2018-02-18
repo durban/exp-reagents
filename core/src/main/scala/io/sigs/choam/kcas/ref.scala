@@ -32,6 +32,9 @@ sealed trait Ref[A] {
   final def modify(f: A => A): React[Unit, A] =
     upd[Unit, A] { (a, _) => (f(a), a) }
 
+  final def modify2[B](f: A => (A, B)): React[Unit, B] =
+    upd[Unit, B] { (a, _) => f(a) }
+
   final def modifyWith(f: A => React[Unit, A]): React[Unit, A] =
     updWith[Unit, A] { (oa, _) => f(oa).map(na => (na, oa)) }
 
