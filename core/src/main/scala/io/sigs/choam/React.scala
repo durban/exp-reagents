@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -184,7 +184,7 @@ object React {
     new Computed[A, B, B](f, Commit[B]())
 
   private[choam] def cas[A](r: Ref[A], ov: A, nv: A): React[Unit, Unit] =
-    new Cas[A, Unit](r, ov, nv, lift(_ => ()))
+    new Cas[A, Unit](r, ov, nv, React.unit)
 
   private[choam] def invisibleRead[A](r: Ref[A]): React[Unit, A] =
     new Read(r, Commit[A]())
@@ -194,6 +194,9 @@ object React {
 
   def lift[A, B](f: A => B): React[A, B] =
     new Lift(f, Commit[B]())
+
+  private[choam] def delay[A, B](uf: A => B): React[A, B] =
+    lift(uf)
 
   def identity[A]: React[A, A] =
     Commit[A]()
@@ -214,7 +217,7 @@ object React {
     AlwaysRetry()
 
   def newRef[A](initial: A): React[Unit, Ref[A]] =
-    lift[Unit, Ref[A]](_ => Ref.mk(initial))
+    delay[Unit, Ref[A]](_ => Ref.mk(initial))
 
   implicit val arrowInstance: Arrow[React] = new Arrow[React] {
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +21,15 @@ import scala.concurrent.ExecutionContext
 
 import cats.effect.IO
 
-import fs2.async
-
-import org.scalatest.{ FlatSpec, Matchers }
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalactic.TypeCheckedTripleEquals
 
-class CASNSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
+class CASNSpec
+  extends AnyFlatSpec
+  with Matchers
+  with TypeCheckedTripleEquals
+  with IOSpec {
 
   import CASN._
 
@@ -128,10 +131,10 @@ class CASNSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
     }
 
     val tsk = for {
-      f1 <- async.start(IO(repeat(10000)(modify(_ + 1))))
-      f2 <- async.start(IO(repeat(10000)(modify(_ - 1))))
-      _ <- f1
-      _ <- f2
+      f1 <- IO(repeat(10000)(modify(_ + 1))).start
+      f2 <- IO(repeat(10000)(modify(_ - 1))).start
+      _ <- f1.join
+      _ <- f2.join
       _ = assert(RDCSSRead(r2).intValue === 0)
       _ <- IO(stop())
       _ <- IO(repeat(10000)(modify(_ + 1)))

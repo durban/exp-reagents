@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -35,7 +35,7 @@ trait Map[K, V] {
 
 final object Map {
 
-  def naive[K, V]: React[Unit, Map[K, V]] = React.lift { _ =>
+  def naive[K, V]: React[Unit, Map[K, V]] = React.delay { _ =>
     new Map[K, V] {
 
       private[this] val repr: Ref[immutable.Map[K, V]] =

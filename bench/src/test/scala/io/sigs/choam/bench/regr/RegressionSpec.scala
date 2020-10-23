@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,26 +19,28 @@ package bench
 package regr
 
 import java.io.File
-import java.nio.file.{ Paths, Files }
+import java.nio.file.{ Path, Paths, Files }
 import java.nio.charset.StandardCharsets.UTF_8
 
 import scala.reflect.ClassTag
 
 import cats.implicits._
-
-import io.iteratee._
-import io.iteratee.files.either
+import cats.effect.{ IO, Timer }
 
 import io.circe.syntax._
-import io.circe.iteratee.{ byteArrayParser, decoder }
 
-import org.scalatest.{ FreeSpec, Matchers }
+import org.scalatest.freespec.AnyFreeSpec
 import org.scalatest.matchers.Matcher
+import org.scalatest.matchers.should.Matchers
 import org.scalactic.TypeCheckedTripleEquals
 
 import kcas.bench._
 
-class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals {
+class RegressionSpec
+  extends AnyFreeSpec
+  with Matchers
+  with TypeCheckedTripleEquals
+  with IOSpec {
 
   final val expThreads = 4
   final val maxRelativeError = 0.08
@@ -50,17 +52,23 @@ class RegressionSpec extends FreeSpec with Matchers with TypeCheckedTripleEquals
   final val casn = ("kcasName", kcas.KCAS.fqns.CASN)
   final val mcas = ("kcasName", kcas.KCAS.fqns.MCAS)
 
-  val results = load(new File(resultsFile))
+  implicit val timer: Timer[IO] =
+    IO.timer(scala.concurrent.ExecutionContext.global)
+
+  val results = load(Paths.get(resultsFile))
   val baseline = results.byClass[BaselineBench]("baseline", "contention" -> "0")
 
-  def load(file: File): Results = {
-    val src = either.readBytes(file)
-    val results = src
-      .through(byteArrayParser)
-      .through(decoder[Either[Throwable, ?], BenchmarkResult])
-    results.into(Iteratee.consume) match {
+  def load(file: Path): Results = {
+    val src = fs2.io.file
+      .readAll[IO](file, this.blocker, chunkSize = 1024)
+      .through(fs2.text.utf8Decode)
+    val results = src.compile.toVector.map { vec =>
+      io.circe.parser.decode[Vector[BenchmarkResult]](vec.mkString)
+    }
+    results.attempt.unsafeRunSync() match {
       case Left(ex) => throw ex
-      case Right(rss) => Results(rss)
+      case Right(Left(err)) => throw err
+      case Right(Right(rss)) => Results(rss)
     }
   }
 

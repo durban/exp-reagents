@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -42,7 +42,7 @@ abstract class LiftTest(impl: KCAS) {
     (nv, ov)
   }
 
-  private[this] val readAndUpd: React[String, (String, String)] = React.lift[String, String] { s =>
+  private[this] val readAndUpd: React[String, (String, String)] = React.lift[String, String] { _ =>
     this.notReallyRef
   } * upd
 

@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -634,12 +634,10 @@ private[kcas] object MCAS extends KCAS { self =>
     private[this] var weakFreeDescriptors: WeakReference[MCASDesc] =
       _
 
-    @elidable(elidable.ASSERTION)
     private[this] var numAllocs: Long =
       0L
 
     /** Counter of operations (for reporting statistics) */
-    @elidable(LEVEL)
     private[this] var numOps: Long =
       Long.MinValue
 

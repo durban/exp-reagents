@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,8 +21,6 @@ package util
 import java.util.concurrent.ThreadLocalRandom
 
 import cats.effect.IO
-
-import fs2.async
 
 import scala.concurrent.stm._
 
@@ -76,14 +74,14 @@ class StmQueueSpec extends BaseSpec {
     val seed1 = ThreadLocalRandom.current().nextInt()
     val seed2 = ThreadLocalRandom.current().nextInt()
     val tsk = for {
-      fpu1 <- async.start(IO { enq(XorShift(seed1)) })
-      fpu2 <- async.start(IO { enq(XorShift(seed2)) })
-      fpo1 <- async.start(IO { deq(N) })
-      fpo2 <- async.start(IO { deq(N) })
-      _ <- fpu1
-      _ <- fpu2
-      cs1 <- fpo1
-      cs2 <- fpo2
+      fpu1 <- IO { enq(XorShift(seed1)) }.start
+      fpu2 <- IO { enq(XorShift(seed2)) }.start
+      fpo1 <- IO { deq(N) }.start
+      fpo2 <- IO { deq(N) }.start
+      _ <- fpu1.join
+      _ <- fpu2.join
+      cs1 <- fpo1.join
+      cs2 <- fpo2.join
     } yield cs1 ^ cs2
 
     val cs = tsk.unsafeRunSync()
@@ -129,14 +127,14 @@ class StmQueueSpec extends BaseSpec {
       }
     }
     val tsk = for {
-      fpu1 <- async.start(IO { enq(XorShift()) })
-      fpo1 <- async.start(IO { deq() })
-      fpu2 <- async.start(IO { enq(XorShift()) })
-      fpo2 <- async.start(IO { deq() })
-      _ <- fpu1
-      _ <- fpu2
-      _ <- fpo1
-      _ <- fpo2
+      fpu1 <- IO { enq(XorShift()) }.start
+      fpo1 <- IO { deq() }.start
+      fpu2 <- IO { enq(XorShift()) }.start
+      fpo2 <- IO { deq() }.start
+      _ <- fpu1.join
+      _ <- fpu2.join
+      _ <- fpo1.join
+      _ <- fpo2.join
     } yield ()
 
     tsk.unsafeRunSync()

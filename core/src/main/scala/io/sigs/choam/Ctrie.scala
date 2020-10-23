@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -270,7 +270,7 @@ object Ctrie {
       }
     }
 
-    private[choam] def debug: React[Int, String] = React.computed { level =>
+    private[choam] def debug: React[Int, String] = React.computed { _ =>
       val lst = this.dbg(Nil).reverse
       React.ret(s"LNode(${lst.mkString(", ")})")
     }

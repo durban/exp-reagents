@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +16,6 @@
 
 package io.sigs.choam
 package async
-
-import scala.concurrent.ExecutionContext
 
 import cats.{ ~>, Monad }
 import cats.implicits._
@@ -57,16 +55,21 @@ object AsyncReact {
   def lift[A](r: React[Unit, A]): Type[A] =
     wrap(Free.liftF(Lifted(r)))
 
+  // FIXME: do we need this?
   def kcas: Type[KCAS] =
     wrap(Free.liftF(ProvideKCAS))
 
+  val fromReact: React[Unit, ?] ~> AsyncReact = new ~>[React[Unit, ?], AsyncReact] {
+    override def apply[A](r: React[Unit, A]) = lift(r)
+  }
+
   implicit final class AsyncReactOps[A](private val self: Type[A]) extends AnyVal {
 
-    def runCancellable[F[_]](implicit kcas: KCAS, ec: ExecutionContext, F: Effect[F]): F[(F[Option[A]], F[Unit])] = {
+    def runCancellable[F[_]](implicit kcas: KCAS, F: Concurrent[F]): F[(F[Option[A]], F[Unit])] = {
       val k = unwrap(self).foldMap(interpreterCancellable[F])
       for {
         cancelRef <- F.delay { CancelRef.mk() }
-        join <- fs2.async.start(k.value.run(cancelRef))
+        join <- F.start(k.value.run(cancelRef)).map(_.join)
       } yield (join, F.delay { cancelRef.cancel.unsafeRun })
     }
 
@@ -108,7 +111,7 @@ object AsyncReact {
     val cancel: React[Unit, Unit] = {
       (cancelled.modify(_ => true) × cbs.clear)
         .right
-        .postCommit(React.lift { m => m.values.foreach(_.foreach(_(()))) })
+        .postCommit(React.delay { m => m.values.foreach(_.foreach(_(()))) })
         .discard
         .lmap[Unit](_ => ((), ()))
     }

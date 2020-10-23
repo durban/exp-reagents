@@ -1,5 +1,5 @@
 /*
- * Copyright 2016-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2016-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,9 +14,9 @@
  * limitations under the License.
  */
 
-scalaVersion in ThisBuild := "2.12.4-bin-typelevel-4"
-crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value, "2.11.11-bin-typelevel-4")
-scalaOrganization in ThisBuild := "org.typelevel"
+scalaVersion in ThisBuild := "2.13.3"
+crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value)
+scalaOrganization in ThisBuild := "org.scala-lang"
 
 lazy val core = project.in(file("core"))
   .settings(name := "choam-core")
@@ -29,12 +29,12 @@ lazy val bench = project.in(file("bench"))
     libraryDependencies ++= (
       dependencies.scalaStm
       +: (dependencies.circe.map(_ % Test)
-      ++ dependencies.iteratee.map(_ % Test))
+      :+ dependencies.fs2io % Test)
     )
   )
   .settings(macroSettings)
   .enablePlugins(JmhPlugin)
-  .dependsOn(core)
+  .dependsOn(core % "compile->compile;test->test")
 
 lazy val stress = project.in(file("stress"))
   .settings(name := "choam-stress")
@@ -60,16 +60,21 @@ lazy val commonSettings = Seq[Setting[_]](
     "-unchecked",
     "-encoding", "UTF-8",
     "-language:higherKinds,experimental.macros",
+    // "-Werror", TODO: reënable when possible
+    // TODO: see: https://github.com/scala/bug/issues/12072
+    "-Wconf:any:warning-verbose",
     "-Xlint:_",
-    "-Xfuture",
-    "-Xfatal-warnings",
-    "-Xstrict-patmat-analysis",
+    // "-Xfatal-warnings", TODO: reënable when possible
+    // "-Xstrict-patmat-analysis", TODO: maybe in 2.13.4
     "-Xelide-below", "INFO",
-    "-Yno-adapted-args",
+    "-Xmigration:2.12.0",
+    "-Xsource:3.0",
+    "-Xverify",
     "-Ywarn-numeric-widen",
     "-Ywarn-dead-code",
-    "-Ywarn-value-discard",
-    "-Ypartial-unification"
+    "-Ywarn-value-discard"
+    // TODO: experiment with -Ydelambdafy:inline for performance
+    // TODO: experiment with -Yno-predef and/or -Yno-imports
   ),
   scalacOptions ++= {
     if (scalaVersion.value.startsWith("2.11")) {
@@ -102,7 +107,7 @@ lazy val commonSettings = Seq[Setting[_]](
   },
   scalacOptions in (Compile, console) ~= { _.filterNot("-Ywarn-unused-import" == _).filterNot("-Ywarn-unused:imports" == _) },
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
-  addCompilerPlugin("org.spire-math" % "kind-projector" % "0.9.5" cross CrossVersion.binary),
+  addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full),
   parallelExecution in Test := false,
 
   libraryDependencies ++= Seq(
@@ -122,41 +127,38 @@ lazy val commonSettings = Seq[Setting[_]](
 )
 
 lazy val macroSettings = Seq(
-  addCompilerPlugin("org.scalamacros" % "paradise" % "2.1.0" cross CrossVersion.patch)
+  scalacOptions += "-Ymacro-annotations",
+  libraryDependencies += scalaOrganization.value % "scala-reflect" % scalaVersion.value
 )
 
 lazy val dependencies = new {
 
-  val catsVersion = "1.0.1"
-  val circeVersion = "0.9.1"
-  val iterateeVersion = "0.17.0"
-  val fs2Version = "0.10.0"
+  val catsVersion = "2.2.0"
+  val circeVersion = "0.13.0"
+  val fs2Version = "2.4.4"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
   val catsFree = "org.typelevel" %% "cats-free" % catsVersion
-  val catsEffect = "org.typelevel" %% "cats-effect" % "0.8"
+  val catsEffect = "org.typelevel" %% "cats-effect" % "2.2.0"
 
   val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,
     "io.circe" %% "circe-generic" % circeVersion,
     "io.circe" %% "circe-parser" % circeVersion,
-    "io.circe" %% "circe-iteratee" % "0.9.0"
-  )
-
-  val iteratee = Seq(
-    "io.iteratee" %% "iteratee-core" % iterateeVersion,
-    "io.iteratee" %% "iteratee-files" % iterateeVersion
+    "io.circe" %% "circe-fs2" % "0.13.0"
   )
 
   val fs2 = "co.fs2" %% "fs2-core" % fs2Version
+  val fs2io = "co.fs2" %% "fs2-io" % fs2Version
 
   val test = Seq(
-    "org.scalatest" %% "scalatest" % "3.0.3",
+    "org.scalatest" %% "scalatest" % "3.1.0",
+    "org.typelevel" %% "discipline-scalatest" % "1.0.0-RC4",
     "org.typelevel" %% "cats-laws" % catsVersion
   )
 
-  val scalaStm = "org.scala-stm" %% "scala-stm" % "0.8"
+  val scalaStm = "org.scala-stm" %% "scala-stm" % "0.11.0"
 
   val jol = "org.openjdk.jol" % "jol-core" % "0.8"
 }

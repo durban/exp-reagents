@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +18,9 @@ package io.sigs.choam
 
 import cats.Eq
 import cats.implicits._
-import org.scalatest.prop.GeneratorDrivenPropertyChecks
+import org.scalatestplus.scalacheck.ScalaCheckDrivenPropertyChecks
 
-abstract class CtrieSpec extends BaseSpec with GeneratorDrivenPropertyChecks {
+abstract class CtrieSpec extends BaseSpec with ScalaCheckDrivenPropertyChecks {
 
   val hs: Int => Int = { x => x }
 

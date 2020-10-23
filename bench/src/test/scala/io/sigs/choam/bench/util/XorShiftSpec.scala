@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,14 +25,14 @@ class XorShiftSpec extends BaseSpec {
     val N = 1000000
 
     // check Ints:
-    val ns = Stream.continually(xs.nextInt()).take(N).toVector
+    val ns = Vector.fill(N) { xs.nextInt() }
     ns.toSet.size.toDouble should be >= (0.9 * N)
     val negs = ns.filter(n => n < 0).size.toDouble
     negs should be >= (0.4 * N)
     negs should be <= (0.6 * N)
 
     // check Longs:
-    val ms = Stream.continually(xs.nextLong()).take(N).toVector
+    val ms = Vector.fill(N) { xs.nextLong() }
     ms.toSet.size.toDouble should be >= (0.9 * N)
     val negls = ms.filter(m => m < 0).size.toDouble
     negls should be >= (0.4 * N)

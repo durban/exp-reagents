@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@ package async
 
 import java.util.concurrent.atomic.AtomicLong
 
-import cats.implicits._
 import cats.effect.IO
 
 class PromiseSpecNaiveKCAS
@@ -38,14 +37,14 @@ abstract class PromiseSpec extends BaseSpec {
 
   "Completing an empty promise" should "call all registered callbacks" in {
     val p = Promise[Int].unsafeRun
-    val act = p.get.run[IO]
+    val act = p.get[IO]
     val tsk = for {
-      fut1 <- fs2.async.start(act)
-      fut2 <- fs2.async.start(act)
+      fib1 <- act.start
+      fib2 <- act.start
       _ <- IO { Thread.sleep(100L) }
       b <- AsyncReact.lift(React.ret(42) >>> p.tryComplete).run[IO]
-      res1 <- fut1
-      res2 <- fut2
+      res1 <- fib1.join
+      res2 <- fib2.join
     } yield (b, res1, res2)
     tsk.unsafeRunSync() should === ((true, 42, 42))
   }
@@ -61,10 +60,10 @@ abstract class PromiseSpec extends BaseSpec {
     val p = Promise[Int].unsafeRun
     p.tryComplete.unsafePerform(42) should === (true)
     val cnt = new AtomicLong(0L)
-    val act = p.get.map { x =>
+    val act = p.get[IO].map { x =>
       cnt.incrementAndGet()
       x
-    }.run[IO]
+    }
     val tsk = for {
       res1 <- act
       res2 <- act

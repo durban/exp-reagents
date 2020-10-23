@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -41,6 +41,8 @@ abstract class AsyncReactSpec extends BaseSpec {
 
   import AsyncReact._
 
+  // TODO: migrate these to `PromiseSpec`
+
   "running pure" should "return the pure value" in {
     pure(42).run[IO].unsafeRunSync() should === (42)
   }
@@ -50,9 +52,9 @@ abstract class AsyncReactSpec extends BaseSpec {
     val tsk = for {
       ac <- r.runCancellable[IO]
       (act, cancel) = ac
-      fut <- fs2.async.start(act)
+      fib <- act.start
       _ <- cancel
-      r <- fut
+      r <- fib.join
     } yield r
     tsk.unsafeRunSync() should === (Some(42))
   }
@@ -88,10 +90,10 @@ abstract class AsyncReactSpec extends BaseSpec {
     val tsk = for {
       ac <- r.runCancellable[IO]
       (act, cancel) = ac
-      fut <- fs2.async.start(act)
+      fib <- act.start
       _ <- cancel
       _ <- IO { latch.countDown() }
-      r <- fut
+      r <- fib.join
     } yield r
     tsk.unsafeRunSync() should === (None)
     cnt.get() should === (2L)
@@ -125,10 +127,10 @@ abstract class AsyncReactSpec extends BaseSpec {
     val task = for {
       tc <- act.runCancellable[IO]
       (tsk, cancel) = tc
-      fut <- fs2.async.start(tsk)
+      fib <- tsk.start
       _ <- IO { latch.await() }
       _ <- IO { ph.get().complete(scala.util.Success(42)) }
-      r <- fut
+      r <- fib.join
       _ <- cancel // ineffective
     } yield r
     task.unsafeRunSync() should === (Some(42))
@@ -179,11 +181,11 @@ abstract class AsyncReactSpec extends BaseSpec {
     val task = for {
       tc <- act.runCancellable[IO]
       (tsk, cancel) = tc
-      fut <- fs2.async.start(tsk)
+      fib <- tsk.start
       _ <- IO { latch2.await() }
       _ <- cancel
       _ <- IO { latch1.countDown() }
-      r <- fut
+      r <- fib.join
     } yield r
     task.unsafeRunSync() should === (None)
     cnt.get() should === (1L)
@@ -204,10 +206,10 @@ abstract class AsyncReactSpec extends BaseSpec {
     val task = for {
       tc <- act.runCancellable[IO]
       (tsk, cancel) = tc
-      fut <- fs2.async.start(tsk)
+      fib <- tsk.start
       _ <- IO { latch.await() }
       _ <- cancel
-      r <- fut
+      r <- fib.join
     } yield r
     task.unsafeRunSync() should === (None)
     cancelled.get() should === (true)
@@ -230,9 +232,9 @@ abstract class AsyncReactSpec extends BaseSpec {
       tc <- act.runCancellable[IO]
       (block, _) = tc
       _ <- IO { latch.await() }
-      fut1 <- fs2.async.start(block)
+      fib <- block.start
       _ <- IO { ph.get().complete(scala.util.Success(42)) }
-      r1 <- fut1
+      r1 <- fib.join
       r2 <- block
       r3 <- block
     } yield (r1, r2, r3)
@@ -261,14 +263,14 @@ abstract class AsyncReactSpec extends BaseSpec {
       tc <- act.runCancellable[IO]
       (block, cancel) = tc
       _ <- IO { latch.await() }
-      fut1 <- fs2.async.start(block)
-      fut2 <- fs2.async.start(block)
-      c1 <- fs2.async.start(cancel)
-      c2 <- fs2.async.start(cancel)
-      _ <- c1
-      _ <- c2
-      r1 <- fut1
-      r2 <- fut2
+      fib1 <- block.start
+      fib2 <- block.start
+      c1 <- cancel.start
+      c2 <- cancel.start
+      _ <- c1.join
+      _ <- c2.join
+      r1 <- fib1.join
+      r2 <- fib2.join
       r3 <- block
       r4 <- block
     } yield (r1, r2, r3, r4)

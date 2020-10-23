@@ -1,4 +1,4 @@
-# Copyright 2016-2017 Daniel Urban and contributors listed in AUTHORS
+# Copyright 2016-2020 Daniel Urban and contributors listed in AUTHORS
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -25,6 +25,13 @@ lib_managed/
 src_managed/
 project/boot/
 project/plugins/project/
+
+# Metals/VSCode specific
+.bloop/
+.bsp/
+.metals/
+.vscode/
+metals.sbt
 
 # Scala-IDE specific
 .scala_dependencies

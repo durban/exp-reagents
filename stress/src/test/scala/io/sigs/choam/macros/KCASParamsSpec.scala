@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,7 +17,8 @@
 package io.sigs.choam
 package macros
 
-import org.scalatest.{ FlatSpec, Matchers }
+import org.scalatest.flatspec.AnyFlatSpec
+import org.scalatest.matchers.should.Matchers
 import org.scalactic.TypeCheckedTripleEquals
 
 import org.openjdk.jcstress.annotations._
@@ -25,7 +26,7 @@ import org.openjdk.jcstress.infra.results.ZZZ_Result
 
 import kcas.KCAS
 
-class KCASParamsSpec extends FlatSpec with Matchers with TypeCheckedTripleEquals {
+class KCASParamsSpec extends AnyFlatSpec with Matchers with TypeCheckedTripleEquals {
 
   "KCASParams macro" should "generate the parameterized subclasses" in {
     val sub1 = new DummyTest.DummyTestCASN

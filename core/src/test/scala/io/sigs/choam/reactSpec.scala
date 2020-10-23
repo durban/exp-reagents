@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,7 +19,7 @@ package io.sigs.choam
 import java.util.concurrent.{ LinkedBlockingDeque, ConcurrentLinkedQueue }
 import java.util.concurrent.atomic.AtomicBoolean
 
-import scala.collection.JavaConverters._
+import scala.jdk.CollectionConverters._
 
 import cats.implicits._
 import cats.effect.IO
@@ -76,12 +76,12 @@ abstract class ReactSpec extends BaseSpec {
     val n = 80000L
     val m = 50000L
     val tsk = for {
-      f1a <- fs2.async.start(IO { pushAll(n) })
-      f1b <- fs2.async.start(IO { pushAll(n) })
-      f2 <- fs2.async.start(IO { pushAll(m) })
-      _ <- f1a
-      _ <- f1b
-      _ <- f2
+      f1a <- IO { pushAll(n) }.start
+      f1b <- IO { pushAll(n) }.start
+      f2 <- IO { pushAll(m) }.start
+      _ <- f1a.join
+      _ <- f1b.join
+      _ <- f2.join
     } yield ()
     tsk.unsafeRunSync()
 
@@ -108,10 +108,10 @@ abstract class ReactSpec extends BaseSpec {
     r2.invisibleRead.unsafeRun should === ("bar")
 
     val tsk = for {
-      f1 <- fs2.async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
-      f2 <- fs2.async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
-      _ <- f1
-      _ <- f2
+      f1 <- IO { for (_ <- 1 to N) sw.unsafeRun }.start
+      f2 <- IO { for (_ <- 1 to N) sw.unsafeRun }.start
+      _ <- f1.join
+      _ <- f2.join
     } yield ()
     tsk.unsafeRunSync()
     r1.invisibleRead.unsafeRun should === ("foo")
@@ -145,15 +145,15 @@ abstract class ReactSpec extends BaseSpec {
     val sw = React.swap(r1, r2)
 
     val tsk = for {
-      f1 <- fs2.async.start(IO { for (_ <- 1 to N) sw.unsafeRun })
-      f2 <- fs2.async.start(IO {
+      f1 <- IO { for (_ <- 1 to N) sw.unsafeRun }.start
+      f2 <- IO {
         for (_ <- 1 to N) {
           val (v1, v2) = cr.unsafeRun
           assert(((v1 eq "foo") && (v2 eq "bar")) || ((v1 eq "bar") && (v2 eq "foo")))
         }
-      })
-      _ <- f1
-      _ <- f2
+      }.start
+      _ <- f1.join
+      _ <- f2.join
     } yield ()
     tsk.unsafeRunSync()
   }
@@ -189,14 +189,14 @@ abstract class ReactSpec extends BaseSpec {
     val n = 8000000
     val m = 7000000
     val tsk = for {
-      push1 <- fs2.async.start(IO { pushAll(push.rmap(_ => ()), n) })
-      push2 <- fs2.async.start(IO { pushAll(push, n) })
-      pop1 <- fs2.async.start(IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
-      pop2 <- fs2.async.start(IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) })
-      _ <- push1
-      _ <- push2
-      _ <- pop1
-      _ <- pop2
+      push1 <- IO { pushAll(push.rmap(_ => ()), n) }.start
+      push2 <- IO { pushAll(push, n) }.start
+      pop1 <- IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) }.start
+      pop2 <- IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) }.start
+      _ <- push1.join
+      _ <- push2.join
+      _ <- pop1.join
+      _ <- pop2.join
     } yield ()
     tsk.unsafeRunSync()
 
@@ -223,14 +223,14 @@ abstract class ReactSpec extends BaseSpec {
     val n = 8000000
     val m = 7500000
     val tsk = for {
-      push1 <- fs2.async.start(IO { pushAll(push, n) })
-      push2 <- fs2.async.start(IO { pushAll(pushFlipped, n) })
-      pop1 <- fs2.async.start(IO { popAll(pop, expLen = nStacks, count = m, errors) })
-      pop2 <- fs2.async.start(IO { popAll(popFlipped, expLen = nStacks, count = m, errors) })
-      _ <- push1
-      _ <- push2
-      _ <- pop1
-      _ <- pop2
+      push1 <- IO { pushAll(push, n) }.start
+      push2 <- IO { pushAll(pushFlipped, n) }.start
+      pop1 <- IO { popAll(pop, expLen = nStacks, count = m, errors) }.start
+      pop2 <- IO { popAll(popFlipped, expLen = nStacks, count = m, errors) }.start
+      _ <- push1.join
+      _ <- push2.join
+      _ <- pop1.join
+      _ <- pop2.join
     } yield ()
     tsk.unsafeRunSync()
 
@@ -499,7 +499,7 @@ abstract class ReactSpec extends BaseSpec {
         val or = refRight.invisibleRead.unsafeRun
         oneChoice(refLeft.cas(ol, s"${ol}-new"), refRight.cas(or, s"${or}-new"), x, "l1")
       case _ =>
-        fail
+        fail()
     }.toList.unzip
     assert(l1.size == 8)
 
@@ -507,7 +507,7 @@ abstract class ReactSpec extends BaseSpec {
       case List(rl, rr) =>
         oneChoice(rl, rr, x, "l2")
       case _ =>
-        fail
+        fail()
     }.toList.unzip
     assert(l2.size == 4)
 
@@ -515,7 +515,7 @@ abstract class ReactSpec extends BaseSpec {
       case List(rl, rr) =>
         oneChoice(rl, rr, x, "l3")
       case _ =>
-        fail
+        fail()
     }.toList.unzip
     assert(l3.size == 2)
 
@@ -663,15 +663,15 @@ abstract class ReactSpec extends BaseSpec {
       go()
     }
     val tsk = for {
-      p1 <- fs2.async.start(produce)
-      c1 <- fs2.async.start(consume)
-      p2 <- fs2.async.start(produce)
-      c2 <- fs2.async.start(consume)
-      _ <- p1
-      _ <- p2
+      p1 <- produce.start
+      c1 <- consume.start
+      p2 <- produce.start
+      c2 <- consume.start
+      _ <- p1.join
+      _ <- p2.join
       _ <- IO { stop.set(true) }
-      _ <- c1
-      _ <- c2
+      _ <- c1.join
+      _ <- c2.join
     } yield ()
 
     try {

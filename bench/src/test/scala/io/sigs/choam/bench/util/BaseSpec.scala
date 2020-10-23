@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +20,15 @@ package util
 
 import scala.concurrent.ExecutionContext
 
-import org.scalatest.{ FlatSpecLike, Matchers }
+import org.scalatest.flatspec.AnyFlatSpecLike
+import org.scalatest.matchers.should.Matchers
 import org.scalactic.TypeCheckedTripleEquals
 
-
-trait BaseSpec extends FlatSpecLike with Matchers with TypeCheckedTripleEquals {
+trait BaseSpec
+  extends AnyFlatSpecLike
+  with Matchers
+  with TypeCheckedTripleEquals
+  with IOSpec {
 
   implicit val ec: ExecutionContext =
     ExecutionContext.global

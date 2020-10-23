@@ -1,5 +1,5 @@
 /*
- * Copyright 2017 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +18,8 @@ package io.sigs.choam
 package bench
 
 import org.openjdk.jmh.annotations._
+
+import scala.collection.immutable.ArraySeq
 
 import util._
 import kcas._
@@ -71,7 +73,7 @@ object ProductCombinatorBench {
     @Setup
     def setup(): Unit = {
       this.refs = Array.fill(size)(Ref.mk("foo"))
-      this.reset = new Reset("foo", this.refs: _*)
+      this.reset = new Reset("foo", ArraySeq.unsafeWrapArray(this.refs): _*)
       this.prod = (0 until size).foldLeft[React[Unit, Unit]](React.ret(())) { (r, idx) =>
         (r * refs(idx).cas("foo", "bar")).discard
       }

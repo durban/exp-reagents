@@ -1,5 +1,5 @@
 /*
- * Copyright 2017-2018 Daniel Urban and contributors listed in AUTHORS
+ * Copyright 2017-2020 Daniel Urban and contributors listed in AUTHORS
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +18,9 @@ package io.sigs.choam
 package async
 
 import cats.implicits._
+import cats.effect.{ ConcurrentEffect, IO, ContextShift }
 
+import kcas.KCAS
 import Promise._
 
 final class Promise[A] private (ref: kcas.Ref[State[A]]) {
@@ -26,7 +28,7 @@ final class Promise[A] private (ref: kcas.Ref[State[A]]) {
   val tryComplete: React[A, Boolean] = React.computed { a =>
     ref.invisibleRead.flatMap {
       case w @ Waiting(cbs) =>
-        ref.cas(w, Done(a)).rmap(_ => true).postCommit(React.lift { _ =>
+        ref.cas(w, Done(a)).rmap(_ => true).postCommit(React.delay { _ =>
           cbs.valuesIterator.foreach(_(a))
         })
       case Done(_) =>
@@ -34,36 +36,46 @@ final class Promise[A] private (ref: kcas.Ref[State[A]]) {
     }
   }
 
-  val get: AsyncReact[A] = {
-    AsyncReact.lift(ref.invisibleRead).flatMap {
+  def get[F[_]](
+    implicit
+    F: ConcurrentEffect[F],
+    cs: ContextShift[F],
+    kcas: KCAS
+  ): F[A] = {
+    ref.invisibleRead.run[F].flatMap {
       case Waiting(_) =>
-        AsyncReact.delay(new Id).flatMap { id =>
-          AsyncReact.kcas.flatMap { implicit kcas =>
-            AsyncReact.async[A] { cb =>
-              insertCallback(id, cb).unsafePerform(()) match {
-                case None =>
+        F.delay(new Id).flatMap { id =>
+          val tsk = IO.cancelable[A] { cb =>
+            insertCallback(id, cb).unsafePerform(()) match {
+              case None =>
                   ()
-                case Some(a) =>
-                  cb(a)
-              }
-              (_: Unit) => {
-                ref.modify {
-                  case Waiting(cbs) =>
-                    Waiting(cbs - id)
-                  case d @ Done(_) =>
-                    d
-                }.discard.unsafePerform(())
-              }
+              case Some(a) =>
+                cb(Right(a))
             }
-          }
+            ref.modify {
+              case Waiting(cbs) =>
+                Waiting(cbs - id)
+              case d @ Done(_) =>
+                d
+            }.discard.run[IO]
+          }.flatTap(_ => IO.cancelBoundary)
+          F.liftIO(tsk)
         }
       case Done(a) =>
-        AsyncReact.pure(a)
+        F.pure(a)
     }
   }
 
-  private def insertCallback(id: Id, cb: A => Unit): React[Unit, Option[A]] = {
-    val kv = (id, cb)
+  private def insertCallback[F[_]](id: Id, cb: Either[Throwable, A] => Unit)(
+    implicit
+    F: ConcurrentEffect[F],
+    cs: ContextShift[F]
+  ): React[Unit, Option[A]] = {
+    val kv = (id, { a: A =>
+      F.runAsync(cs.shift *> F.delay {
+        cb(Right(a))
+      }) { IO.pure(_).rethrow }.unsafeRunSync()
+    })
     ref.modify {
       case Waiting(cbs) => Waiting(cbs + kv)
       case d @ Done(_) => d
@@ -83,5 +95,5 @@ object Promise {
   private final case class Done[A](a: A) extends State[A]
 
   def apply[A]: React[Unit, Promise[A]] =
-    React.lift(_ => new Promise[A](kcas.Ref.mk(Waiting(Map.empty))))
+    React.delay(_ => new Promise[A](kcas.Ref.mk(Waiting(Map.empty))))
 }
