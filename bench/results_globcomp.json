@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.GlobalCompareBench.baseline",
+        "benchmark" : "dev.tauri.choam.kcas.bench.GlobalCompareBench.baseline",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 6,
@@ -116,7 +116,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.GlobalCompareBench.bench0",
+        "benchmark" : "dev.tauri.choam.kcas.bench.GlobalCompareBench.bench0",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 6,
@@ -231,7 +231,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.GlobalCompareBench.bench1",
+        "benchmark" : "dev.tauri.choam.kcas.bench.GlobalCompareBench.bench1",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 6,
@@ -346,7 +346,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.GlobalCompareBench.bench2",
+        "benchmark" : "dev.tauri.choam.kcas.bench.GlobalCompareBench.bench2",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 6,
@@ -461,7 +461,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.GlobalCompareBench.bench3",
+        "benchmark" : "dev.tauri.choam.kcas.bench.GlobalCompareBench.bench3",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 6,

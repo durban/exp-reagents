@@ -120,7 +120,7 @@ lazy val commonSettings = Seq[Setting[_]](
     ),
     dependencies.test.map(_ % "test-internal")
   ).flatten,
-  organization := "io.sigs",
+  organization := "dev.tauri",
   publishMavenStyle := true,
   publishArtifact := false, // TODO,
   licenses := Seq("Apache 2.0" -> url("https://www.apache.org/licenses/LICENSE-2.0.txt"))

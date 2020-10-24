@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocationKCAS.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocationKCAS.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -18,7 +18,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "2",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 3507717.905901936,
@@ -72,7 +72,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocationKCAS.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocationKCAS.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -89,7 +89,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "2",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 4653410.208446225,
@@ -143,7 +143,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocationKCAS.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocationKCAS.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -160,7 +160,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "2",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 4983347.075333899,
@@ -214,7 +214,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocationKCAS.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocationKCAS.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -231,7 +231,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 1738136.625842678,
@@ -285,7 +285,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocationKCAS.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocationKCAS.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -302,7 +302,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 2279169.6400727937,
@@ -356,7 +356,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocationKCAS.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocationKCAS.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -373,7 +373,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 2603570.4333216697,
@@ -427,7 +427,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocationKCAS.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocationKCAS.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -444,7 +444,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "6",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 922581.727006829,
@@ -498,7 +498,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocationKCAS.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocationKCAS.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -515,7 +515,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "6",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 1222960.7128023326,
@@ -569,7 +569,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocationKCAS.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocationKCAS.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -586,7 +586,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "6",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 1491806.2365894825,

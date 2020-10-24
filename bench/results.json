@@ -1,7 +1,7 @@
 [
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.BaselineBench.baseline",
+        "benchmark" : "dev.tauri.choam.bench.BaselineBench.baseline",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -71,7 +71,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.BaselineBench.baseline",
+        "benchmark" : "dev.tauri.choam.bench.BaselineBench.baseline",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -141,7 +141,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.locked",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.locked",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -211,7 +211,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.locked",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.locked",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -281,7 +281,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.react",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.react",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -298,7 +298,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 1316514.3364324914,
@@ -352,7 +352,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.react",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.react",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -369,7 +369,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 3246343.349317737,
@@ -423,7 +423,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.react",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.react",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -440,7 +440,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 2096674.083199254,
@@ -494,7 +494,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.react",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.react",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -511,7 +511,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 732121.5637547453,
@@ -565,7 +565,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.react",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.react",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -582,7 +582,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 764453.8991724711,
@@ -636,7 +636,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.react",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.react",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -653,7 +653,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 745334.4539668234,
@@ -707,7 +707,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.reference",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.reference",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -777,7 +777,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBench.reference",
+        "benchmark" : "dev.tauri.choam.bench.CounterBench.reference",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -847,7 +847,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBenchN.lockedN",
+        "benchmark" : "dev.tauri.choam.bench.CounterBenchN.lockedN",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -937,7 +937,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBenchN.lockedN",
+        "benchmark" : "dev.tauri.choam.bench.CounterBenchN.lockedN",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1027,7 +1027,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBenchN.reactN",
+        "benchmark" : "dev.tauri.choam.bench.CounterBenchN.reactN",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1044,7 +1044,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 73397.09528718515,
@@ -1098,7 +1098,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBenchN.reactN",
+        "benchmark" : "dev.tauri.choam.bench.CounterBenchN.reactN",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1115,7 +1115,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 81923.7617706329,
@@ -1169,7 +1169,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBenchN.reactN",
+        "benchmark" : "dev.tauri.choam.bench.CounterBenchN.reactN",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1186,7 +1186,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 67070.93369594138,
@@ -1240,7 +1240,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBenchN.reactN",
+        "benchmark" : "dev.tauri.choam.bench.CounterBenchN.reactN",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1257,7 +1257,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 71699.8864511892,
@@ -1311,7 +1311,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBenchN.reactN",
+        "benchmark" : "dev.tauri.choam.bench.CounterBenchN.reactN",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1328,7 +1328,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 78498.40170742784,
@@ -1382,7 +1382,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.CounterBenchN.reactN",
+        "benchmark" : "dev.tauri.choam.bench.CounterBenchN.reactN",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1399,7 +1399,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 72104.57756618815,
@@ -1453,7 +1453,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.concurrentQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.concurrentQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1523,7 +1523,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.concurrentQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.concurrentQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1593,7 +1593,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.lockedQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.lockedQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1663,7 +1663,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.lockedQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.lockedQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1733,7 +1733,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1750,7 +1750,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 348317.5818827513,
@@ -1804,7 +1804,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1821,7 +1821,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 551884.4786907902,
@@ -1875,7 +1875,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1892,7 +1892,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 411387.2005433601,
@@ -1946,7 +1946,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -1963,7 +1963,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 381767.14564674156,
@@ -2017,7 +2017,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2034,7 +2034,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 422876.6789140642,
@@ -2088,7 +2088,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2105,7 +2105,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 397484.9641992019,
@@ -2159,7 +2159,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.stmQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.stmQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2229,7 +2229,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueBench.stmQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueBench.stmQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2299,7 +2299,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.lockedQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.lockedQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2389,7 +2389,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.lockedQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.lockedQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2479,7 +2479,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2496,7 +2496,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 244955.76547123288,
@@ -2570,7 +2570,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2587,7 +2587,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 301274.2048817517,
@@ -2661,7 +2661,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2678,7 +2678,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 274948.16470824357,
@@ -2752,7 +2752,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2769,7 +2769,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 227564.03048540145,
@@ -2843,7 +2843,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2860,7 +2860,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 261727.6912863652,
@@ -2934,7 +2934,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.michaelScottQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.michaelScottQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -2951,7 +2951,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 244897.73020582442,
@@ -3025,7 +3025,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.stmQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.stmQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3095,7 +3095,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.QueueTransferBench.stmQueue",
+        "benchmark" : "dev.tauri.choam.bench.QueueTransferBench.stmQueue",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3165,7 +3165,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.lockedStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.lockedStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3235,7 +3235,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.lockedStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.lockedStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3305,7 +3305,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.referenceStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.referenceStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3395,7 +3395,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.referenceStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.referenceStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3485,7 +3485,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.stmStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.stmStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3555,7 +3555,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.stmStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.stmStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3625,7 +3625,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3642,7 +3642,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 702142.0683406466,
@@ -3696,7 +3696,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3713,7 +3713,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 1482373.4185900355,
@@ -3767,7 +3767,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3784,7 +3784,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 896464.1654671204,
@@ -3838,7 +3838,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3855,7 +3855,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 647194.4696239274,
@@ -3909,7 +3909,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3926,7 +3926,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 723185.0595459975,
@@ -3980,7 +3980,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -3997,7 +3997,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 678991.5850550522,
@@ -4051,7 +4051,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.lockedStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.lockedStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4121,7 +4121,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.lockedStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.lockedStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4191,7 +4191,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.stmStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.stmStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4261,7 +4261,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.stmStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.stmStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4331,7 +4331,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4348,7 +4348,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 457385.68244964286,
@@ -4422,7 +4422,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4439,7 +4439,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 819323.0832393409,
@@ -4513,7 +4513,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4530,7 +4530,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 541286.9085532628,
@@ -4604,7 +4604,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4621,7 +4621,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 569578.7424978898,
@@ -4695,7 +4695,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4712,7 +4712,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 641483.0637985005,
@@ -4786,7 +4786,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.StackTransferBench.treiberStack",
+        "benchmark" : "dev.tauri.choam.bench.StackTransferBench.treiberStack",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -4803,7 +4803,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 584708.2032899085,
@@ -4877,7 +4877,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FalseSharing.baseline",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FalseSharing.baseline",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 4,
@@ -5230,7 +5230,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FalseSharing.padded",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FalseSharing.padded",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 4,
@@ -5583,7 +5583,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FalseSharing.unpadded",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FalseSharing.unpadded",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 4,
@@ -5936,7 +5936,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocation.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocation.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -5953,7 +5953,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "2",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 3765170.019057405,
@@ -6007,7 +6007,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocation.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocation.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -6024,7 +6024,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "2",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 5930920.203816689,
@@ -6078,7 +6078,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocation.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocation.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -6095,7 +6095,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "2",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 5439502.02636342,
@@ -6149,7 +6149,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocation.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocation.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -6166,7 +6166,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 2170054.0029917355,
@@ -6220,7 +6220,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocation.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocation.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -6237,7 +6237,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 3309833.2532667024,
@@ -6291,7 +6291,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocation.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocation.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -6308,7 +6308,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 2571028.5695177745,
@@ -6362,7 +6362,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocation.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocation.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -6379,7 +6379,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "6",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 1194231.8594134199,
@@ -6433,7 +6433,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocation.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocation.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -6450,7 +6450,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "6",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 1945706.3767331417,
@@ -6504,7 +6504,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.ResourceAllocation.bench",
+        "benchmark" : "dev.tauri.choam.kcas.bench.ResourceAllocation.bench",
         "mode" : "thrpt",
         "threads" : 4,
         "forks" : 2,
@@ -6521,7 +6521,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "dAllocSize" : "6",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 1326005.1203435191,
@@ -6575,7 +6575,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.BackoffBench.backoff",
+        "benchmark" : "dev.tauri.choam.bench.BackoffBench.backoff",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -6645,7 +6645,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.BackoffBench.backoff",
+        "benchmark" : "dev.tauri.choam.bench.BackoffBench.backoff",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -6715,7 +6715,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.BackoffBench.backoff",
+        "benchmark" : "dev.tauri.choam.bench.BackoffBench.backoff",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -6785,7 +6785,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.bench.BackoffBench.backoff",
+        "benchmark" : "dev.tauri.choam.bench.BackoffBench.backoff",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -6855,7 +6855,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
+        "benchmark" : "dev.tauri.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -6872,7 +6872,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 3.6227948867739816E-6,
@@ -6926,7 +6926,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
+        "benchmark" : "dev.tauri.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -6943,7 +6943,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 2.1206876340693065E-6,
@@ -6997,7 +6997,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
+        "benchmark" : "dev.tauri.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7014,7 +7014,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 3.0827909084149487E-6,
@@ -7068,7 +7068,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
+        "benchmark" : "dev.tauri.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7085,7 +7085,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 5.516067995694592E-6,
@@ -7139,7 +7139,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
+        "benchmark" : "dev.tauri.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7156,7 +7156,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 5.254825498464215E-6,
@@ -7210,7 +7210,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
+        "benchmark" : "dev.tauri.choam.kcas.bench.CAS1LoopBench.successfulCAS1Loop",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7227,7 +7227,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 5.408486531204087E-6,
@@ -7281,7 +7281,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.CAS1LoopBench.successfulCAS1LoopReference",
+        "benchmark" : "dev.tauri.choam.kcas.bench.CAS1LoopBench.successfulCAS1LoopReference",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7351,7 +7351,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.CAS1LoopBench.successfulCAS1LoopReference",
+        "benchmark" : "dev.tauri.choam.kcas.bench.CAS1LoopBench.successfulCAS1LoopReference",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7421,7 +7421,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7438,7 +7438,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 8.588924102849206E-7,
@@ -7492,7 +7492,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7509,7 +7509,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 5.84054517659997E-7,
@@ -7563,7 +7563,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7580,7 +7580,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "0",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 6.774791986159507E-7,
@@ -7634,7 +7634,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7651,7 +7651,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.CASN"
+            "kcasName" : "dev.tauri.choam.kcas.CASN"
         },
         "primaryMetric" : {
             "score" : 5.395887265110521E-6,
@@ -7705,7 +7705,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7722,7 +7722,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.NaiveKCAS"
+            "kcasName" : "dev.tauri.choam.kcas.NaiveKCAS"
         },
         "primaryMetric" : {
             "score" : 5.1122624333701455E-6,
@@ -7776,7 +7776,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FailedCAS1Bench.failedCAS1",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7793,7 +7793,7 @@
         "measurementBatchSize" : 1,
         "params" : {
             "contention" : "4",
-            "kcasName" : "io.sigs.choam.kcas.MCAS"
+            "kcasName" : "dev.tauri.choam.kcas.MCAS"
         },
         "primaryMetric" : {
             "score" : 5.200530658343751E-6,
@@ -7847,7 +7847,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FailedCAS1Bench.failedCAS1Reference",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FailedCAS1Bench.failedCAS1Reference",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
@@ -7917,7 +7917,7 @@
     },
     {
         "jmhVersion" : "1.19",
-        "benchmark" : "io.sigs.choam.kcas.bench.FailedCAS1Bench.failedCAS1Reference",
+        "benchmark" : "dev.tauri.choam.kcas.bench.FailedCAS1Bench.failedCAS1Reference",
         "mode" : "avgt",
         "threads" : 4,
         "forks" : 2,
