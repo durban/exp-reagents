@@ -17,7 +17,7 @@
 package dev.tauri.choam
 package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, Measurement, Warmup, Fork, State, Setup, Scope }
+import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
