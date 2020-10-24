@@ -28,6 +28,10 @@ import kcas.{ Ref, KCAS }
  */
 final class Ctrie[K, V](hs: K => Int, eq: Eq[K]) {
 
+  // TODO: Cache-trie:
+  // TODO: http://aleksandar-prokopec.com/resources/docs/p137-prokopec.pdf
+  // TODO: http://aleksandar-prokopec.com/resources/docs/cachetrie-remove.pdf
+
   // TODO: use Hash
   // TODO: optimize (only compute hash code once, store hash code in trie)
 
@@ -38,7 +42,7 @@ final class Ctrie[K, V](hs: K => Int, eq: Eq[K]) {
 
   val lookup: React[K, Option[V]] = {
 
-    def ilookup(i: INode[K, V], k: K, lev: Int, @deprecated("", "")parent: INode[K, V]): React[Unit, V] = {
+    def ilookup(i: INode[K, V], k: K, lev: Int, @deprecated("", "") parent: INode[K, V]): React[Unit, V] = {
       for {
         im <- i.main.invisibleRead
         v <- im match {
@@ -75,7 +79,7 @@ final class Ctrie[K, V](hs: K => Int, eq: Eq[K]) {
 
   val insert: React[(K, V), Unit] = {
 
-    def iinsert(i: INode[K, V], k: K, v: V, lev: Int, @deprecated("", "")parent: INode[K, V]): React[Unit, Unit] = {
+    def iinsert(i: INode[K, V], k: K, v: V, lev: Int, @deprecated("", "") parent: INode[K, V]): React[Unit, Unit] = {
       for {
         im <- i.main.invisibleRead
         gen <- i.gen.invisibleRead
@@ -238,6 +242,7 @@ object Ctrie {
     }
   }
 
+  /** List node */
   final class LNode[K, V](key: K, value: V, next: LNode[K, V]) extends MainNode[K, V] {
 
     def this(k1: K, v1: V, k2: K, v2: V) =
@@ -287,6 +292,7 @@ object Ctrie {
     private[choam] def debug: React[Int, String]
   }
 
+  /** Single node */
   final class SNode[K, V](val k: K, val v: V) extends Branch[K, V] {
     private[choam] override def debug: React[Int, String] = React.computed { level =>
       React.ret((indent * level) + s"SNode(${k} -> ${v})")
