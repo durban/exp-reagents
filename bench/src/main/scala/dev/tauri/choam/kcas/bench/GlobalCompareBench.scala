@@ -24,8 +24,6 @@ import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 @Fork(6)
-@Warmup(iterations = 20)
-@Measurement(iterations = 10)
 class GlobalCompareBench {
 
   @Benchmark

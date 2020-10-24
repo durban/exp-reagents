@@ -17,20 +17,17 @@
 package dev.tauri.choam
 package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Fork, Measurement, State, Scope }
+import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
 
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 class QueueTransferBench {
 
   import QueueTransferBench._
 
   @Benchmark
-  @Measurement(iterations = 20)
   def michaelScottQueue(s: MsSt, bh: Blackhole, ct: KCASThreadState): Unit = {
     import ct.kcasImpl
     bh.consume(s.michaelScottQueue1.enqueue.unsafePerform(ct.nextString()))
@@ -40,7 +37,6 @@ class QueueTransferBench {
   }
 
   @Benchmark
-  @Measurement(iterations = 20)
   def lockedQueue(s: LockedSt, bh: Blackhole, ct: CommonThreadState): Unit = {
     bh.consume(s.lockedQueue1.enqueue(ct.nextString()))
 

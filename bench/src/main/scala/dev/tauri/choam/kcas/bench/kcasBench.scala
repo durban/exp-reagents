@@ -26,8 +26,6 @@ import org.openjdk.jmh.infra.Blackhole
 import dev.tauri.choam.bench.util._
 
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 @BenchmarkMode(Array(Mode.AverageTime))
 class FailedCAS1Bench {
 
@@ -49,8 +47,6 @@ class FailedCAS1Bench {
 }
 
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 @BenchmarkMode(Array(Mode.AverageTime))
 class CAS1LoopBench {
 

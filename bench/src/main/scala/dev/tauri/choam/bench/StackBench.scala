@@ -17,14 +17,12 @@
 package dev.tauri.choam
 package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Fork, Measurement, State, Scope }
+import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
 
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 class StackBench {
 
   import StackBench._
@@ -39,7 +37,6 @@ class StackBench {
   }
 
   @Benchmark
-  @Measurement(iterations = 20)
   def referenceStack(s: ReferenceSt, bh: Blackhole, ct: CommonThreadState): Unit = {
     bh.consume(s.referenceStack.push(ct.nextString()))
     Blackhole.consumeCPU(ct.halfTokens)

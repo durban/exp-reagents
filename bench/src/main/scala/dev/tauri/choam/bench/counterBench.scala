@@ -23,8 +23,6 @@ import org.openjdk.jmh.infra.Blackhole
 import util._
 
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 class CounterBench {
 
   import CounterBench._
@@ -83,14 +81,11 @@ object CounterBench {
 }
 
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 class CounterBenchN {
 
   import CounterBenchN._
 
   @Benchmark
-  @Measurement(iterations = 20)
   def lockedN(s: LockedStN, t: CommonThreadState, bh: Blackhole): Unit = {
     bh.consume(s.lockedCtrN.add(t.nextLong()))
     Blackhole.consumeCPU(t.tokens)

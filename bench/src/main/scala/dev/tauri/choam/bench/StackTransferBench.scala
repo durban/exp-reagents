@@ -17,20 +17,17 @@
 package dev.tauri.choam
 package bench
 
-import org.openjdk.jmh.annotations.{ Benchmark, Warmup, Fork, Measurement, State, Scope }
+import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import util._
 
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 class StackTransferBench {
 
   import StackTransferBench._
 
   @Benchmark
-  @Measurement(iterations = 20)
   def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASThreadState): Unit = {
     import ct.kcasImpl
     bh.consume(s.treiberStack1.push.unsafePerform(ct.nextString()))

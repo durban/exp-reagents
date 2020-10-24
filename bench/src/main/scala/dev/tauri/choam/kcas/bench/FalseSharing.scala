@@ -24,8 +24,6 @@ import org.openjdk.jmh.infra.Blackhole
 import dev.tauri.choam.bench.util.RandomState
 
 @Fork(4)
-@Warmup(iterations = 10)
-@Measurement(iterations = 20)
 class FalseSharing {
 
   import FalseSharing._

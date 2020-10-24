@@ -26,8 +26,6 @@ import kcas._
 import kcas.bench.Reset
 
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 class ProductCombinatorBench {
 
   import ProductCombinatorBench._

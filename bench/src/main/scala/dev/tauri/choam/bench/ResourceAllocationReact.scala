@@ -28,8 +28,6 @@ import kcas.{ Ref, KCAS }
  * implemented with reagents.
  */
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 class ResourceAllocationReact {
 
   import ResourceAllocationReact._

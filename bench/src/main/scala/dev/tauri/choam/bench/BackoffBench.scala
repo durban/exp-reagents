@@ -20,8 +20,6 @@ package bench
 import org.openjdk.jmh.annotations._
 
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 @BenchmarkMode(Array(Mode.AverageTime))
 class BackoffBench {
 

@@ -29,8 +29,6 @@ import dev.tauri.choam.bench.util.{ CommonThreadState, RandomState, KCASImplStat
  * by Nir Shavit and Dan Touitou.
  */
 @Fork(2)
-@Warmup(iterations = 10)
-@Measurement(iterations = 10)
 class ResourceAllocationKCAS {
 
   import ResourceAllocationKCAS._
