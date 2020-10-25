@@ -166,6 +166,7 @@ lazy val dependencies = new {
 addCommandAlias("validate", ";scalastyle;test:scalastyle;test;stress/jcstress:run")
 addCommandAlias("measurePerformance", "bench/jmh:run -t max -foe true -rf json -rff results.json .*")
 addCommandAlias("measureFS", "bench/jmh:run -t max -foe true -rf json -rff results_fs.json .*FalseSharing")
+addCommandAlias("measureBackoff", "bench/jmh:run -t max -foe true -rf json -rff results_backoff.json .*BackoffBench")
 addCommandAlias("measureKCAS", "bench/jmh:run -t max -foe true -rf json -rff results_kcas.json .*ResourceAllocationKCAS")
 addCommandAlias("measureReact", "bench/jmh:run -t max -foe true -rf json -rff results_react.json .*ResourceAllocationReact")
 addCommandAlias("measureCombinators", "bench/jmh:run -t max -foe true -rf json -rff results_combinators.json .*CombinatorBench")

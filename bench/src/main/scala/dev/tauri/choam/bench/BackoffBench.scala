@@ -29,6 +29,19 @@ class BackoffBench {
   def backoff(bo: BoSt): Unit = {
     bo.b.backoffFix(bo.w)
   }
+
+  @Benchmark
+  def onSpinWaitBackoff(bo: BoSt): Unit = {
+    def go(i: Int): Unit = {
+      if (i != 0) {
+        Thread.onSpinWait()
+        go(i - 1)
+      } else {
+        ()
+      }
+    }
+    go(bo.w)
+  }
 }
 
 object BackoffBench {

@@ -26,6 +26,10 @@ import scala.annotation.elidable
 // TODO: Figure out some zero-cost way to safely work
 // TODO: with nullable things (e.g., Nullable[MCASEntry]).
 
+// TODO: elide assertions during benchmarks
+
+// TODO: evaluate new k-CAS algorithm: https://arxiv.org/pdf/2008.02527.pdf
+
 /**
  * An optimized version of `CASN`.
  *
@@ -241,6 +245,7 @@ private[kcas] object MCAS extends KCAS { self =>
     }
 
     override def withCAS[A](ref: Ref[A], ov: A, nv: A): self.Desc = {
+      // TODO: verify if accessing the thread locals is too slow
       val entry = TlSt.get().loanEntry[A]()
       entry.ref = ref
       entry.ov = ov
