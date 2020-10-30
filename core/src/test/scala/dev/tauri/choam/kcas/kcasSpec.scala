@@ -39,9 +39,9 @@ abstract class KCASSpec extends BaseSpec {
       CASD(r3, "r3", "z")
     ))
     assert(succ)
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("x")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("y")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("z")
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("x")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("y")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("z")
   }
 
   it should "fail if any of the old values doesn't match" in {
@@ -59,29 +59,29 @@ abstract class KCASSpec extends BaseSpec {
 
     r1.unsafeSet("x")
     assert(!go())
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("x")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("r2")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("r3")
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("x")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("r2")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("r3")
 
     r1.unsafeSet("r1")
     r2.unsafeSet("x")
     assert(!go())
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("r1")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("x")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("r3")
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("r1")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("x")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("r3")
 
     r2.unsafeSet("r2")
     r3.unsafeSet("x")
     assert(!go())
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("r1")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("r2")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("x")
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("r1")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("r2")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("x")
 
     r3.unsafeSet("r3")
     assert(go())
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("x")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("y")
-    r3.unsafeTryRead() shouldBe theSameInstanceAs ("z")
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("x")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("y")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("z")
   }
 
   it should "not accept more than one CAS for the same ref" in {
@@ -95,8 +95,8 @@ abstract class KCASSpec extends BaseSpec {
       ))
     }
     exc.getMessage should include ("Impossible k-CAS")
-    r1.unsafeTryRead() shouldBe theSameInstanceAs ("r1")
-    r2.unsafeTryRead() shouldBe theSameInstanceAs ("r2")
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("r1")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("r2")
   }
 }
 
@@ -111,3 +111,7 @@ class KCASSpecCASN
 class KCASSpecMCAS
   extends KCASSpec
   with SpecMCAS
+
+final class KCASSpecEMCAS
+  extends KCASSpec
+  with SpecEMCAS

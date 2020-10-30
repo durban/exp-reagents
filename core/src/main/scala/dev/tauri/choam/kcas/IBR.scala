@@ -115,7 +115,8 @@ private[kcas] final object IBR {
 
     // TODO: verify that we really don't need born_before from the paper
 
-    // TODO: could we have these as simple `var`s?
+    // TODO: Could we have these as simple `var`s
+    // TODO: (look into acq/rel modes: http://gee.cs.oswego.edu/dl/html/j9mm.html)?
     private[kcas] val birthEpoch =
       new AtomicLong(Long.MinValue)
 

@@ -47,6 +47,7 @@ sealed trait Ref[A] {
   private[choam] def cas(ov: A, nv: A): React[Unit, Unit] =
     React.cas(this, ov, nv)
 
+  // TODO: this is dangerous, reading should go through the k-CAS implementation!
   private[kcas] def unsafeTryRead(): A
 
   private[kcas] def unsafeTryPerformCas(ov: A, nv: A): Boolean

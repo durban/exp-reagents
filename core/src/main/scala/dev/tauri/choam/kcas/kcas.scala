@@ -75,6 +75,9 @@ private[choam] object KCAS {
   private[choam] lazy val MCAS: KCAS =
     kcas.MCAS
 
+  private[choam] lazy val EMCAS: KCAS =
+    kcas.EMCAS
+
   private[kcas] def impossibleKCAS[A, B](ref: Ref[_], ova: A, nva: A, ovb: B, nvb: B): Nothing = {
     throw new IllegalArgumentException(
       s"Impossible k-CAS for ${ref}: ${ova} -> ${nva} and ${ovb} -> ${nvb}"
