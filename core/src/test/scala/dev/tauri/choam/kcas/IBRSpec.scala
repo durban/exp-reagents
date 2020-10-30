@@ -171,6 +171,51 @@ final class IBRSpec
     val cnt = go(0)
     assert(cnt === IBR.emptyFreq)
   }
+
+  "ThreadContext" should "be collected by the JVM GC if a thread terminates" in {
+    val gc = new GC
+    val tc = gc.threadContext()
+    val firstEpoch = gc.epochNumber
+    val ref = Ref.mk(nullOf[Descriptor])
+    val d = tc.op {
+      val d = tc.alloc(Descriptor("x", _))
+      tc.write(ref, d)
+      d
+    }
+    @volatile var error: Throwable = null
+    val t = new Thread(() => {
+      try {
+        val tc = gc.threadContext()
+        tc.startOp()
+        val d = tc.read(ref)
+        assert(d.freed === 0)
+        // now the thread exits while still "using" the
+        // descriptor, because it doesn't call `endOp`
+        assert(tc.snapshotReservation.lower === firstEpoch)
+        assert(tc.snapshotReservation.upper === firstEpoch)
+        d.foobar()
+      } catch {
+        case ex: Throwable =>
+         error = ex
+         throw ex
+      }
+    })
+    t.start()
+    t.join()
+    assert(!t.isAlive())
+    assert(error eq null, s"error: ${error}")
+    while (gc.snapshotReservations(t.getId()).get() ne null) {
+      System.gc()
+    }
+    // now the `ThreadContext` have been collected by the JVM GC
+    tc.op {
+      tc.cas(ref, d, null)
+      tc.retire(d)
+    }
+    assert(d.retireEpoch.get() === firstEpoch)
+    tc.fullGc() // this should collect `d`
+    assert(d.freed === 1)
+  }
 }
 
 final object IBRSpec {
@@ -179,7 +224,7 @@ final object IBRSpec {
     extends IBR.Managed[Descriptor](epoch) {
 
     var freed = 0
-    
+
     final override def free(): Unit = {
       this.freed += 1
     }

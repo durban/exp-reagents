@@ -31,7 +31,7 @@ import scala.collection.concurrent.TrieMap
  * Type Preserving Allocator").
  *
  * @see https://www.cs.rochester.edu/u/scott/papers/2018_PPoPP_IBR.pdf
- * 
+ *
  * @param `zeroEpoch` is the value of the very first epoch.
 */
 private[kcas] abstract class IBR[M <: IBR.Managed[M]](zeroEpoch: Long) {
@@ -49,20 +49,24 @@ private[kcas] abstract class IBR[M <: IBR.Managed[M]](zeroEpoch: Long) {
 
   /**
    * Reservations of all the (active) threads
-   * 
+   *
    * Threads hold a strong reference to their
    * `ThreadContext` in a thread local. Thus,
    * we only need a weakref here. If a thread
-   * dies, its thread locals are cleared (FIXME),
-   * so the context can be GC'd (by the JVM). Empty
+   * dies, its thread locals are cleared, so
+   * the context can be GC'd (by the JVM). Empty
    * weakrefs are removed in `ThreadContext#empty`.
-   * 
+   *
    * Removing a dead thread's reservation will not
    * affect safety, because a dead thread will never
    * continue its current op (if any).
    */
   private[IBR] val reservations =
     new TrieMap[Long, WeakRef[IBR.ThreadContext[M]]]
+
+  /** For testing */
+  private[kcas] def snapshotReservations: Map[Long, WeakRef[IBR.ThreadContext[M]]] =
+    this.reservations.readOnlySnapshot().toMap
 
   /** Holds the context for each (active) thread */
   private[this] val threadContextKey =
@@ -97,46 +101,49 @@ private[kcas] final object IBR {
 
   /**
    * Base class for objects managed by IBR
-   * 
+   *
    * @param `birthEp` the initial birth epoch of the object.
    */
   abstract class Managed[M](birthEp: Long) { this: M =>
 
-    // TODO: verify that `birthEp` is not stored in a field
-
     /** Intrusive linked list (free/retired list) */
-    var next: M =
+    private[IBR] var next: M =
       _
 
     // TODO: verify that we really don't need born_before from the paper
 
-    val birthEpoch =
+    private[kcas] val birthEpoch =
       new AtomicLong(birthEp)
 
-    val retireEpoch =
+    private[kcas] val retireEpoch =
       new AtomicLong(Long.MaxValue)
 
     /** Hook for subclasses for performing cleanup */
-    def free(): Unit
+    protected[IBR] def free(): Unit
   }
 
   /** The epoch interval reserved by a thread */
-  final class Reservation(initial: Long) {
-    // TODO: verify that `initial` is not stored in a field
+  private final class Reservation(initial: Long) {
     val lower: AtomicLong = new AtomicLong(initial)
     val upper: AtomicLong = new AtomicLong(initial)
   }
 
+  /** For testing */
+  private[kcas] final case class SnapshotReservation(
+    lower: Long,
+    upper: Long
+  )
+
   /**
    * Thread-local context of a thread
-   * 
+   *
    * Note: some fields can be accessed by other threads!
    */
   final class ThreadContext[M <: IBR.Managed[M]](global: IBR[M]) {
 
     /**
      * Allocation counter for incrementing the epoch and running reclamation
-     * 
+     *
      * Overflow doesn't really matter, we only use it modulo `epochFreq` or `emptyFreq`.
      */
     private[this] var counter: Int =
@@ -148,7 +155,7 @@ private[kcas] final object IBR {
 
     /**
      * Intrusive linked list of freed (reusable) objects
-     * 
+     *
      * It contains `freeListSize` items (at most `maxFreeListSize`).
      */
     private[this] var freeList: M =
@@ -159,11 +166,19 @@ private[kcas] final object IBR {
 
     /**
      * Epoch interval reserved by the thread.
-     * 
+     *
      * Note: read by other threads when reclaiming memory!
      */
     private[IBR] val reservation: Reservation =
       new Reservation(Long.MaxValue)
+
+    /** For testing */
+    private[kcas] def snapshotReservation: SnapshotReservation = {
+      SnapshotReservation(
+        lower = this.reservation.lower.get(),
+        upper = this.reservation.upper.get()
+      )
+    }
 
     // FIXME: `makeNew` being here is not really useful,
     // FIXME: since it might not be used, so we can't count on it.
