@@ -104,7 +104,7 @@ private[kcas] final object IBR {
    *
    * @param `birthEp` the initial birth epoch of the object.
    */
-  abstract class Managed[M](birthEp: Long) { this: M =>
+  abstract class Managed[M <: IBR.Managed[M]] { this: M =>
 
     /** Intrusive linked list (free/retired list) */
     private[IBR] var next: M =
@@ -112,14 +112,18 @@ private[kcas] final object IBR {
 
     // TODO: verify that we really don't need born_before from the paper
 
+    // TODO: could we have these as simple `var`s?
     private[kcas] val birthEpoch =
-      new AtomicLong(birthEp)
+      new AtomicLong(Long.MinValue)
 
     private[kcas] val retireEpoch =
       new AtomicLong(Long.MaxValue)
 
     /** Hook for subclasses for performing cleanup */
-    protected[IBR] def free(): Unit
+    protected[IBR] def free(tc: ThreadContext[M]): Unit
+
+    /** Hook for subclasses for performing initialization */
+    protected[IBR] def allocate(tc: ThreadContext[M]): Unit
   }
 
   /** The epoch interval reserved by a thread */
@@ -180,24 +184,36 @@ private[kcas] final object IBR {
       )
     }
 
+    /** For testing */
+    private[kcas] def globalContext: IBR[M] =
+      global
+
+    /** For testing */
+    private[kcas] def op[A](body: => A): A = {
+      this.startOp()
+      try { body } finally { this.endOp() }
+    }
+
     // FIXME: `makeNew` being here is not really useful,
     // FIXME: since it might not be used, so we can't count on it.
-    def alloc(makeNew: Function1[Long, M]): M = {
+    def alloc(makeNew: Function0[M]): M = {
       this.counter += 1
       val epoch = if ((this.counter % epochFreq) == 0) {
         this.global.epoch.incrementAndGet()
       } else {
         this.global.epoch.get()
       }
-      if (this.freeList ne null) {
+      val elem = if (this.freeList ne null) {
         this.freeListSize -= 1
         val elem = this.freeList
         this.freeList = elem.next
-        elem.birthEpoch.set(epoch)
         elem
       } else {
-        makeNew(epoch)
+        makeNew()
       }
+      elem.birthEpoch.set(epoch)
+      elem.allocate(this)
+      elem
     }
 
     def retire(a: M): Unit = {
@@ -319,7 +335,9 @@ private[kcas] final object IBR {
     }
 
     private def free(block: M): Unit = {
-      block.free()
+      block.free(this)
+      block.birthEpoch.set(Long.MinValue) // TODO: not strictly necessary
+      block.retireEpoch.set(Long.MaxValue) // TODO: not strictly necessary
       if (this.freeListSize < maxFreeListSize) {
         this.freeListSize += 1
         block.next = this.freeList

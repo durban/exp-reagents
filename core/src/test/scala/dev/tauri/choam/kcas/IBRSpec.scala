@@ -35,9 +35,9 @@ final class IBRSpec
     val tc = gc.threadContext()
     tc.startOp()
     val ref = try {
-      val d1 = tc.alloc(Descriptor("foo", _))
+      val d1 = tc.alloc(() => Descriptor("foo"))
       val ref = Ref.mk(d1)
-      val d2 = tc.alloc(Descriptor("bar", _))
+      val d2 = tc.alloc(() => Descriptor("bar"))
       assert(tc.cas(ref, d1, d2))
       assert(!tc.cas(ref, d1, d2))
       assert(tc.read(ref) eq d2)
@@ -73,7 +73,7 @@ final class IBRSpec
     val tc = gc.threadContext()
     tc.startOp()
     val d1 = try {
-      val d1 = tc.alloc(Descriptor("x", _))
+      val d1 = tc.alloc(() => Descriptor("x"))
       assert(tc.cas(ref, null, d1))
       t.start()
       latch1.await()
@@ -97,7 +97,7 @@ final class IBRSpec
     val tc = gc.threadContext()
     tc.startOp()
     val d = try {
-      val d = tc.alloc(Descriptor("x", _))
+      val d = tc.alloc(() => Descriptor("x"))
       tc.retire(d)
       d
     } finally tc.endOp()
@@ -105,7 +105,7 @@ final class IBRSpec
     assert(d.freed == 1)
     tc.startOp()
     try {
-      val d2 = tc.alloc(Descriptor("y", _))
+      val d2 = tc.alloc(() => Descriptor("y"))
       assert(d2 eq d)
       tc.retire(d2)
     } finally tc.endOp()
@@ -120,13 +120,13 @@ final class IBRSpec
     val descs = for (i <- 1 until IBR.epochFreq) yield {
       tc.startOp()
       try {
-        tc.alloc(Descriptor(i.toString, _))
+        tc.alloc(() => Descriptor(i.toString))
       } finally tc.endOp()
     }
     // the next allocation triggers the new epoch:
     tc.startOp()
     try {
-      tc.alloc(Descriptor("new epoch", _))
+      tc.alloc(() => Descriptor("new epoch"))
     } finally tc.endOp()
     val newEpoch = gc.epochNumber
     assert(newEpoch === (startEpoch + 1))
@@ -150,7 +150,7 @@ final class IBRSpec
     @tailrec
     def go(cnt: Int): Int = {
       val done = tc.op {
-        val d = tc.alloc(Descriptor(cnt.toString(), _))
+        val d = tc.alloc(() => Descriptor(cnt.toString()))
         if (seen.containsKey(d)) {
           // a descriptor was freed and reused
           assert(d.freed == 1)
@@ -178,7 +178,7 @@ final class IBRSpec
     val firstEpoch = gc.epochNumber
     val ref = Ref.mk(nullOf[Descriptor])
     val d = tc.op {
-      val d = tc.alloc(Descriptor("x", _))
+      val d = tc.alloc(() => Descriptor("x"))
       tc.write(ref, d)
       d
     }
@@ -220,27 +220,15 @@ final class IBRSpec
 
 final object IBRSpec {
 
-  final case class Descriptor(dummy: String, epoch: Long)
-    extends IBR.Managed[Descriptor](epoch) {
+  final case class Descriptor(dummy: String)
+    extends DebugManaged[Descriptor] {
 
-    var freed = 0
-
-    final override def free(): Unit = {
-      this.freed += 1
-    }
-
-    final def foobar(): Unit = ()
+    final def foobar(): Unit =
+      this.checkAccess()
   }
 
   final class GC extends IBR[Descriptor](zeroEpoch = 0L) {
     protected[kcas] override def dynamicTest[A](a: A): Boolean =
       a.isInstanceOf[Descriptor]
-  }
-
-  implicit final class ThreadContextSyntax(private val self: IBR.ThreadContext[_]) extends AnyVal {
-    def op[A](body: => A): A = {
-      self.startOp()
-      try { body } finally { self.endOp() }
-    }
   }
 }

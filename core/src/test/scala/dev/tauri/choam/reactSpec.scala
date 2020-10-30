@@ -201,6 +201,8 @@ abstract class ReactSpec extends BaseSpec {
     tsk.unsafeRunSync()
 
     if (!errors.isEmpty) {
+      // TODO: This sporadically fails with MCAS,
+      // TODO: with the error "not all popped items are equal"
       fail(s"Errors:\n${errors.asScala.mkString("\n")}")
     }
 
