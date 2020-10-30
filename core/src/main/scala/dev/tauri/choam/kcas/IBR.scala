@@ -39,6 +39,9 @@ private[kcas] abstract class IBR[M <: IBR.Managed[M]](zeroEpoch: Long) {
   /** @return `true` iff `a` is really an `M` */
   protected[IBR] def dynamicTest[A](a: A): Boolean
 
+  /** @return a newly allocated object */
+  protected[IBR] def allocateNew(): M
+
   /** Current epoch number, read/written by any thread */
   private[IBR] val epoch =
     new AtomicLong(zeroEpoch) // TODO: check if 64 bits is enough (overflow)
@@ -194,9 +197,7 @@ private[kcas] final object IBR {
       try { body } finally { this.endOp() }
     }
 
-    // FIXME: `makeNew` being here is not really useful,
-    // FIXME: since it might not be used, so we can't count on it.
-    def alloc(makeNew: Function0[M]): M = {
+    def alloc(): M = {
       this.counter += 1
       val epoch = if ((this.counter % epochFreq) == 0) {
         this.global.epoch.incrementAndGet()
@@ -209,7 +210,7 @@ private[kcas] final object IBR {
         this.freeList = elem.next
         elem
       } else {
-        makeNew()
+        global.allocateNew()
       }
       elem.birthEpoch.set(epoch)
       elem.allocate(this)

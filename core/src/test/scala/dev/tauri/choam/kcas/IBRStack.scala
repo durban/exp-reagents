@@ -43,7 +43,7 @@ final class IBRStack[A] {
     tc.startOp()
     val done = try {
       val oldHead = tc.read(this.head)
-      val newHead = tc.alloc(() => new Cons[A](nullOf[A], Ref.mk(nullOf[Node[A]])))
+      val newHead = tc.alloc()
       if (newHead.freed > 0) {
         this._reusedCount.getAndIncrement()
       }
@@ -84,6 +84,8 @@ final class IBRStack[A] {
 final object IBRStack {
 
   private val gc = new IBR[Node[Any]](0L) {
+    final override def allocateNew(): Node[Any] =
+      new Cons[Any](nullOf[Any], Ref.mk(nullOf[Node[Any]]))
     final override def dynamicTest[A](a: A): Boolean =
       a.isInstanceOf[Node[_]]
   }

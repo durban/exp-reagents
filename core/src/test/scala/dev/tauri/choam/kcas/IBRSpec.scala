@@ -35,9 +35,9 @@ final class IBRSpec
     val tc = gc.threadContext()
     tc.startOp()
     val ref = try {
-      val d1 = tc.alloc(() => Descriptor("foo"))
+      val d1 = tc.alloc()
       val ref = Ref.mk(d1)
-      val d2 = tc.alloc(() => Descriptor("bar"))
+      val d2 = tc.alloc()
       assert(tc.cas(ref, d1, d2))
       assert(!tc.cas(ref, d1, d2))
       assert(tc.read(ref) eq d2)
@@ -73,7 +73,7 @@ final class IBRSpec
     val tc = gc.threadContext()
     tc.startOp()
     val d1 = try {
-      val d1 = tc.alloc(() => Descriptor("x"))
+      val d1 = tc.alloc()
       assert(tc.cas(ref, null, d1))
       t.start()
       latch1.await()
@@ -97,7 +97,7 @@ final class IBRSpec
     val tc = gc.threadContext()
     tc.startOp()
     val d = try {
-      val d = tc.alloc(() => Descriptor("x"))
+      val d = tc.alloc()
       tc.retire(d)
       d
     } finally tc.endOp()
@@ -105,7 +105,7 @@ final class IBRSpec
     assert(d.freed == 1)
     tc.startOp()
     try {
-      val d2 = tc.alloc(() => Descriptor("y"))
+      val d2 = tc.alloc()
       assert(d2 eq d)
       tc.retire(d2)
     } finally tc.endOp()
@@ -117,16 +117,16 @@ final class IBRSpec
     val gc = new GC
     val tc = gc.threadContext()
     val startEpoch = gc.epochNumber
-    val descs = for (i <- 1 until IBR.epochFreq) yield {
+    val descs = for (_ <- 1 until IBR.epochFreq) yield {
       tc.startOp()
       try {
-        tc.alloc(() => Descriptor(i.toString))
+        tc.alloc()
       } finally tc.endOp()
     }
     // the next allocation triggers the new epoch:
     tc.startOp()
     try {
-      tc.alloc(() => Descriptor("new epoch"))
+      tc.alloc()
     } finally tc.endOp()
     val newEpoch = gc.epochNumber
     assert(newEpoch === (startEpoch + 1))
@@ -150,7 +150,7 @@ final class IBRSpec
     @tailrec
     def go(cnt: Int): Int = {
       val done = tc.op {
-        val d = tc.alloc(() => Descriptor(cnt.toString()))
+        val d = tc.alloc()
         if (seen.containsKey(d)) {
           // a descriptor was freed and reused
           assert(d.freed == 1)
@@ -178,7 +178,7 @@ final class IBRSpec
     val firstEpoch = gc.epochNumber
     val ref = Ref.mk(nullOf[Descriptor])
     val d = tc.op {
-      val d = tc.alloc(() => Descriptor("x"))
+      val d = tc.alloc()
       tc.write(ref, d)
       d
     }
@@ -228,6 +228,10 @@ final object IBRSpec {
   }
 
   final class GC extends IBR[Descriptor](zeroEpoch = 0L) {
+
+    protected[kcas] override def allocateNew(): Descriptor =
+      Descriptor("dummy")
+
     protected[kcas] override def dynamicTest[A](a: A): Boolean =
       a.isInstanceOf[Descriptor]
   }
