@@ -98,17 +98,45 @@ abstract class KCASSpec extends BaseSpec {
     kcasImpl.read(r1) shouldBe theSameInstanceAs ("r1")
     kcasImpl.read(r2) shouldBe theSameInstanceAs ("r2")
   }
+
+  it should "be able to succeed after one successful operation" in {
+    val r1 = Ref.mk("r1")
+    val r2 = Ref.mk("r2")
+    val r3 = Ref.mk("r3")
+
+    assert(tryPerformBatch(List(
+      CASD(r1, "r1", "x"),
+      CASD(r2, "r2", "y"),
+      CASD(r3, "r3", "z")
+    )))
+
+    assert(tryPerformBatch(List(
+      CASD(r1, "x", "x2"),
+      CASD(r2, "y", "y2"),
+      CASD(r3, "z", "z2")
+    )))
+
+    assert(!tryPerformBatch(List(
+      CASD(r1, "x2", "x3"),
+      CASD(r2, "yyy", "y3"), // this will fail
+      CASD(r3, "z2", "z3")
+    )))
+
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("x2")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("y2")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("z2")
+  }
 }
 
-class KCASSpecNaiveKCAS
+final class KCASSpecNaiveKCAS
   extends KCASSpec
   with SpecNaiveKCAS
 
-class KCASSpecCASN
+final class KCASSpecCASN
   extends KCASSpec
   with SpecCASN
 
-class KCASSpecMCAS
+final class KCASSpecMCAS
   extends KCASSpec
   with SpecMCAS
 

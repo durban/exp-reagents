@@ -138,14 +138,18 @@ abstract class CtrieSpec extends BaseSpec with ScalaCheckDrivenPropertyChecks {
   }
 }
 
-class CtrieSpecNaiveKCAS
+final class CtrieSpecNaiveKCAS
   extends CtrieSpec
   with SpecNaiveKCAS
 
-class CtrieSpecCASN
+final class CtrieSpecCASN
   extends CtrieSpec
   with SpecCASN
 
-class CtrieSpecMCAS
+final class CtrieSpecMCAS
   extends CtrieSpec
   with SpecMCAS
+
+final class CtrieSpecEMCAS
+  extends CtrieSpec
+  with SpecEMCAS

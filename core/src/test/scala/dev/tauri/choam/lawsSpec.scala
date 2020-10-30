@@ -29,17 +29,21 @@ import org.typelevel.discipline.scalatest.FunSuiteDiscipline
 
 import kcas._
 
-class LawsSpecNaiveKCAS
+final class LawsSpecNaiveKCAS
   extends LawsSpec
   with SpecNaiveKCAS
 
-class LawsSpecCASN
+final class LawsSpecCASN
   extends LawsSpec
   with SpecCASN
 
-class LawsSpecMCAS
+final class LawsSpecMCAS
   extends LawsSpec
   with SpecMCAS
+
+final class LawsSpecEMCAS
+  extends LawsSpec
+  with SpecEMCAS
 
 abstract class LawsSpec extends AnyFunSuite with Configuration with FunSuiteDiscipline with KCASImplSpec {
 
