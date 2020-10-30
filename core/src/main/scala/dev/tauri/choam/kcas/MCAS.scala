@@ -28,8 +28,6 @@ import scala.annotation.elidable
 
 // TODO: elide assertions during benchmarks
 
-// TODO: evaluate new k-CAS algorithm: https://arxiv.org/pdf/2008.02527.pdf
-
 /**
  * An optimized version of `CASN`.
  *

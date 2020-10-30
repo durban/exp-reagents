@@ -24,7 +24,7 @@ import kcas._
 
 /**
  * A *partial* implementation of reagents, described in [Reagents: Expressing and
- * Composing Fine-grained Concurrency](https://people.mpi-sws.org/~turon/reagents.pdf)
+ * Composing Fine-grained Concurrency](http://www.ccis.northeastern.edu/home/turon/reagents.pdf)
  * by Aaron Turon; originally implemented at [aturon/ChemistrySet](
  * https://github.com/aturon/ChemistrySet).
  *
