@@ -158,20 +158,22 @@ private[kcas] object EMCAS extends KCAS { self =>
 
   // Listing 2 in the paper:
 
+  // TODO: try to void allocating the return tuple
   @tailrec
   def readInternal[A](ref: Ref[A], self: MCASDescriptor): (DescOr.Type[A], A) = {
     val o = rawRead(ref)
     if (DescOr.isDescriptor(o)) {
       val wd: WordDescriptor[A] = DescOr.asDescriptor(o)
-      val parent = wd.parent
-      val parentStatus = parent.status.get()
-      if ((parent ne self) && (parentStatus eq Active)) {
-        MCAS(parent)
+      val parentStatus = wd.parent.status.get()
+      if ((wd.parent ne self) && (parentStatus eq Active)) {
+        MCAS(wd.parent) // help
         readInternal(ref, self) // retry
-      } else if (parentStatus eq Successful) {
-        (o, wd.nv)
       } else {
-        (o, wd.ov)
+        if (parentStatus eq Successful) {
+          (o, wd.nv)
+        } else { // Failed OR ((parent eq self) AND !Successful)
+          (o, wd.ov)
+        }
       }
     } else {
       (o, DescOr.asData(o))
