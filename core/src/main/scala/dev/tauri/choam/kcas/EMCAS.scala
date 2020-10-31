@@ -123,30 +123,34 @@ private[kcas] object EMCAS extends KCAS { self =>
   final case object Successful extends StatusType
   final case object Failed extends StatusType
 
-  // TODO: verify that this is zero-cost
   final object DescOr {
 
     type _Base
     trait _Tag extends Any
     type Type[A] <: _Base with _Tag
 
+    @inline
     def wrap[A](a: A): Type[A] =
-      a.asInstanceOf[Type[A]]
+      a.asInstanceOf[Type[A]] // NOP
 
+    @inline
     def desc[A](d: WordDescriptor[A]): Type[A] =
-      d.asInstanceOf[Type[A]]
+      d.asInstanceOf[Type[A]] // NOP
 
     def isData[A](t: Type[A]): Boolean =
-      !isDescriptor(t)
+      !isDescriptor(t) // instanceof, negate
 
+    @inline
     def isDescriptor[A](t: Type[A]): Boolean =
-      t.isInstanceOf[WordDescriptor[_]]
+      t.isInstanceOf[WordDescriptor[_]] // instanceof
 
+    @inline
     def asData[A](t: Type[A]): A =
-      t.asInstanceOf[A]
+      t.asInstanceOf[A] // NOP
 
+    @inline
     def asDescriptor[A](t: Type[A]): WordDescriptor[A] =
-      t.asInstanceOf[WordDescriptor[A]]
+      t.asInstanceOf[WordDescriptor[A]] // checkcast
   }
 
   private def rawRead[A](ref: Ref[A]): DescOr.Type[A] =

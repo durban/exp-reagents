@@ -124,6 +124,7 @@ sealed abstract class React[-A, +B] {
   final def map2[X <: A, C, D](that: React[X, C])(f: (B, C) => D): React[X, D] =
     (this * that).map(f.tupled)
 
+  // TODO: maybe rename to `void`
   final def discard: React[A, Unit] =
     this.rmap(_ => ()) // TODO: optimize
 
