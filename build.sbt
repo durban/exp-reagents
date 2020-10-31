@@ -168,6 +168,7 @@ addCommandAlias("measurePerformance", "bench/jmh:run -t max -foe true -rf json -
 addCommandAlias("measureFS", "bench/jmh:run -t max -foe true -rf json -rff results_fs.json .*FalseSharing")
 addCommandAlias("measureBackoff", "bench/jmh:run -t max -foe true -rf json -rff results_backoff.json .*BackoffBench")
 addCommandAlias("measureKCAS", "bench/jmh:run -t 2 -foe true -rf json -rff results_kcas.json .*ResourceAllocationKCAS")
+addCommandAlias("measureKCASRead", "bench/jmh:run -t 2 -foe true -rf json -rff results_read_kcas.json .*ReadKCAS")
 addCommandAlias("measureReact", "bench/jmh:run -t max -foe true -rf json -rff results_react.json .*ResourceAllocationReact")
 addCommandAlias("measureCombinators", "bench/jmh:run -t max -foe true -rf json -rff results_combinators.json .*CombinatorBench")
 addCommandAlias("profileReact", "bench/jmh:run -t max -foe true -prof stack:lines=3 -rf text -rff profile_react.txt .*ResourceAllocationReact")
