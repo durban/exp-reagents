@@ -126,6 +126,44 @@ abstract class KCASSpec extends BaseSpec {
     kcasImpl.read(r2) shouldBe theSameInstanceAs ("y2")
     kcasImpl.read(r3) shouldBe theSameInstanceAs ("z2")
   }
+
+  "Snapshotting" should "work" in {
+    val r1 = Ref.mk("r1")
+    val r2 = Ref.mk("r2")
+    val r3 = Ref.mk("r3")
+    val d0 = kcasImpl.start()
+    val d1 = d0.withCAS(r1, "r1", "r1x")
+    val snap = d1.snapshot()
+    val d21 = d1.withCAS(r2, "foo", "bar")
+    assert(!d21.tryPerform())
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("r1")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("r2")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("r3")
+    val d22 = snap.load().withCAS(r3, "r3", "r3x")
+    assert(d22.tryPerform())
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("r1x")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("r2")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("r3x")
+  }
+
+  it should "work when cancelling" in {
+    val r1 = Ref.mk("r1")
+    val r2 = Ref.mk("r2")
+    val r3 = Ref.mk("r3")
+    val d0 = kcasImpl.start()
+    val d1 = d0.withCAS(r1, "r1", "r1x")
+    val snap = d1.snapshot()
+    val d21 = d1.withCAS(r2, "foo", "bar")
+    d21.cancel()
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("r1")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("r2")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("r3")
+    val d22 = snap.load().withCAS(r3, "r3", "r3x")
+    assert(d22.tryPerform())
+    kcasImpl.read(r1) shouldBe theSameInstanceAs ("r1x")
+    kcasImpl.read(r2) shouldBe theSameInstanceAs ("r2")
+    kcasImpl.read(r3) shouldBe theSameInstanceAs ("r3x")
+  }
 }
 
 final class KCASSpecNaiveKCAS

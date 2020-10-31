@@ -26,17 +26,21 @@ import cats.effect.IO
 
 import kcas._
 
-class ReactSpecNaiveKCAS
+final class ReactSpecNaiveKCAS
   extends ReactSpec
   with SpecNaiveKCAS
 
-class ReactSpecCASN
+final class ReactSpecCASN
   extends ReactSpec
   with SpecCASN
 
-class ReactSpecMCAS
+final class ReactSpecMCAS
   extends ReactSpec
   with SpecMCAS
+
+final class ReactSpecEMCAS // TODO: this fails!
+  extends ReactSpec
+  with SpecEMCAS
 
 abstract class ReactSpec extends BaseSpec {
 
@@ -174,7 +178,7 @@ abstract class ReactSpec extends BaseSpec {
           errors.offer(s"actual length ${lst.length} doesn't equal expected length ${expLen}")
         } // else: OK, drained the stacks
       } else if (!lst.forall(_ == lst.head)) {
-        errors.offer(s"not all popped items are equal")
+        errors.offer(s"not all popped items are equal: ${lst}")
       }
     }
   }

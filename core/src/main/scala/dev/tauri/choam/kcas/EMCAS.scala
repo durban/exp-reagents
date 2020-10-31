@@ -30,6 +30,10 @@ private[kcas] object EMCAS extends KCAS { self =>
 
   // Listing 1 in the paper:
 
+  final object MCASDescriptor {
+    final val minArraySize = 8
+  }
+
   final class MCASDescriptor(
     // TODO: thread safety -- only read after reading from a Ref(?)
     val words: ArrayList[WordDescriptor[_]],
@@ -57,18 +61,22 @@ private[kcas] object EMCAS extends KCAS { self =>
         len: Int
       ): Unit = {
         if (idx < len) {
-          to.set(idx, from.get(idx).withParent(newParent))
+          to.add(from.get(idx).withParent(newParent))
           copy(from, to, newParent, idx + 1, len)
         }
       }
-      val newArr = new ArrayList[WordDescriptor[_]](this.words.size())
+      val newArrCapacity = Math.max(this.words.size(), MCASDescriptor.minArraySize)
+      val newArr = new ArrayList[WordDescriptor[_]](newArrCapacity)
       val r = new MCASDescriptor(newArr, this.isSorted)
-      copy(this.words, newArr, r, 0, newArr.size())
+      copy(this.words, newArr, r, 0, this.words.size())
       r
     }
 
     def sort(): Unit = {
-      if (!this.isSorted) this.words.sort(WordDescriptor.comparator)
+      if (!this.isSorted) {
+        this.words.sort(WordDescriptor.comparator)
+        this.isSorted = true
+      }
     }
 
     override def tryPerform(): Boolean = {
@@ -214,6 +222,9 @@ private[kcas] object EMCAS extends KCAS { self =>
   }
 
   private[choam] override def start(): Desc = {
-    new MCASDescriptor(new ArrayList(8), isSorted = true) // empty is always sorted
+    new MCASDescriptor(
+      new ArrayList(MCASDescriptor.minArraySize),
+      isSorted = true // empty is always sorted
+    )
   }
 }
