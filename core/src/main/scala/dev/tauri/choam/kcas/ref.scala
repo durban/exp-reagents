@@ -50,6 +50,9 @@ sealed trait Ref[A] {
   // TODO: this is dangerous, reading should go through the k-CAS implementation!
   private[kcas] def unsafeTryRead(): A
 
+  /** For testing */
+  private[kcas] def debugRead(): A
+
   private[kcas] def unsafeTryPerformCas(ov: A, nv: A): Boolean
 
   private[kcas] def unsafeLazySet(nv: A): Unit
@@ -165,6 +168,17 @@ private class UnpaddedRefImpl[A](initial: A)(i0: Long, i1: Long, i2: Long, i3: L
 
   private[kcas] final override def unsafeTryRead(): A =
     this.get()
+
+  private[kcas] final override def debugRead(): A = {
+    this.unsafeTryRead() match {
+      case null =>
+        kcas.NaiveKCAS.read(this)
+      case _: kcas.EMCAS.WordDescriptor[_] =>
+        kcas.EMCAS.read(this)
+      case a =>
+        a
+    }
+  }
 
   private[kcas] final override def unsafeSet(nv: A): Unit =
     this.set(nv)

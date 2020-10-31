@@ -72,7 +72,7 @@ class CommonThreadState extends RandomState {
 @State(Scope.Thread)
 trait KCASImplState {
 
-  @Param(Array(KCAS.fqns.CASN, KCAS.fqns.NaiveKCAS, KCAS.fqns.MCAS))
+  @Param(Array(KCAS.fqns.CASN, KCAS.fqns.NaiveKCAS, KCAS.fqns.MCAS, KCAS.fqns.EMCAS))
   private[choam] var kcasName: String = _
 
   private[choam] implicit var kcasImpl: KCAS = _

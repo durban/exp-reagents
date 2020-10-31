@@ -91,6 +91,8 @@ private[choam] object KCAS {
       CASN
     case fqns.MCAS =>
       MCAS
+    case fqns.EMCAS =>
+      EMCAS
     case _ =>
       throw new IllegalArgumentException(fqn)
   }
@@ -102,6 +104,8 @@ private[choam] object KCAS {
       "dev.tauri.choam.kcas.CASN"
     final val MCAS =
       "dev.tauri.choam.kcas.MCAS"
+    final val EMCAS =
+      "dev.tauri.choam.kcas.EMCAS"
   }
 }
 

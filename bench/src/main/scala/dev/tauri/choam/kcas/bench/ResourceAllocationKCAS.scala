@@ -88,7 +88,7 @@ object ResourceAllocationKCAS {
 
     @TearDown
     def checkResults(): Unit = {
-      val currentValues = rss.map(_.unsafeTryRead()).toVector
+      val currentValues = rss.map(_.debugRead()).toVector
       if (currentValues == initialValues) {
         throw new Exception(s"Unchanged results")
       }
