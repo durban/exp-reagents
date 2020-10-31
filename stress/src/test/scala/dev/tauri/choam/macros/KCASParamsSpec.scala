@@ -35,6 +35,8 @@ class KCASParamsSpec extends AnyFlatSpec with Matchers with TypeCheckedTripleEqu
     sub2.kcasImplPublic shouldBe theSameInstanceAs (KCAS.MCAS)
     val sub3 = new DummyTest.DummyTestNaiveKCAS
     sub3.kcasImplPublic shouldBe theSameInstanceAs (KCAS.NaiveKCAS)
+    val sub4 = new DummyTest.DummyTestEMCAS
+    sub4.kcasImplPublic shouldBe theSameInstanceAs (KCAS.EMCAS)
     for (sub <- List(sub1, sub2, sub3)) {
       sub
         .getClass()

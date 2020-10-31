@@ -32,6 +32,7 @@ object JcStressMacros {
     val impls = List(
       "CASN" -> q"_root_.dev.tauri.choam.kcas.KCAS.CASN",
       "MCAS" -> q"_root_.dev.tauri.choam.kcas.KCAS.MCAS",
+      "EMCAS" -> q"_root_.dev.tauri.choam.kcas.KCAS.EMCAS",
       "NaiveKCAS" -> q"_root_.dev.tauri.choam.kcas.KCAS.NaiveKCAS"
     )
 
