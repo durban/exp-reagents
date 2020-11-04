@@ -165,7 +165,7 @@ private[kcas] object EMCAS extends KCAS { self =>
     if (DescOr.isDescriptor(o)) {
       val wd: WordDescriptor[A] = DescOr.asDescriptor(o)
       val parentStatus = wd.parent.status.get()
-      if ((wd.parent ne self) && (parentStatus eq Active)) {
+      if ((wd.parent ne self) && (parentStatus eq Active)) { // `parent ne self` is to not "help" ourselves
         MCAS(wd.parent) // help
         readInternal(ref, self) // retry
       } else {
@@ -197,10 +197,12 @@ private[kcas] object EMCAS extends KCAS { self =>
         // expected value is different
         false
       } else if (desc.status.get() ne Active) {
-        true // TODO: true, but we should break from `go`
+        // we have been finalized (by a helping thread), no reason to continue
+        true // TODO: we should break from `go`
+        // TODO: `true` is not necessarily correct, the helping thread could've finalized us to failed too
       } else {
         if (!wordDesc.address.unsafeTryPerformCas(DescOr.asData(content), wordDesc.asInstanceOf[A])) {
-          tryWord(wordDesc) // retry
+          tryWord(wordDesc) // retry this word
         } else {
           true
         }
@@ -219,7 +221,8 @@ private[kcas] object EMCAS extends KCAS { self =>
     desc.sort() // NB: this is either a NOP, or it's BEFORE `desc` is visible to other threads
     val success = go(desc.words.iterator)
     if (desc.status.compareAndSet(Active, if (success) Successful else Failed)) {
-      // TODO: we finalized the descriptor, mark it for reclamation
+      // TODO: We finalized the descriptor, mark it for reclamation:
+      // TODO: retireForCleanup(desc)
       success
     } else {
       // someone else finalized the descriptor, must read its status:

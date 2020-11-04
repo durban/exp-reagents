@@ -1,3 +1,19 @@
+/*
+ * Copyright 2020 Daniel Urban and contributors listed in AUTHORS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package dev.tauri.choam
 package kcas
 package bench
@@ -10,7 +26,7 @@ import dev.tauri.choam.bench.util.{ RandomState, KCASImplState }
 /**
  * Benchmark for reading with different k-CAS implementations.
  *
- * One thread just reads 2 refs on-by-one, as fast as it can.
+ * One thread just reads 2 refs one-by-one, as fast as it can.
  * The other thread occasionally changes the values with a 2-CAS.
  */
 @Fork(2)

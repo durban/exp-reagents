@@ -21,10 +21,12 @@ import java.util.concurrent.atomic.AtomicInteger
 
 import scala.annotation.tailrec
 
-/** Treiber stack, which uses IBR for nodes */
-final class IBRStack[A] {
+import cats.data.Chain
 
-  import IBRStack._
+/** Treiber stack, which uses IBR for nodes */
+final class IBRStack[A] private (gc: IBR[IBRStack.Node[A]]) {
+
+  import IBRStack.{ Node, Cons, End }
 
   private[this] val head =
     Ref.mk[Node[A]](End.widen)
@@ -37,9 +39,12 @@ final class IBRStack[A] {
     _reusedCount.get()
   }
 
+  private def threadContext(): IBR.ThreadContext[Node[A]] =
+    gc.threadContext()
+
   @tailrec
   def push(a: A): Unit = {
-    val tc = threadContext[A]()
+    val tc = threadContext()
     tc.startOp()
     val done = try {
       val oldHead = tc.read(this.head)
@@ -49,15 +54,21 @@ final class IBRStack[A] {
       }
       newHead.asInstanceOf[Cons[A]].head = a
       tc.write(newHead.asInstanceOf[Cons[A]].tail, oldHead)
-      tc.cas(this.head, oldHead, newHead)
+      if (tc.cas(this.head, oldHead, newHead)) {
+        true
+      } else {
+        tc.retire(newHead)
+        false
+      }
     } finally tc.endOp() // FIXME: put the whole CAS-loop into one op?
-    if (done) ()
-    else push(a)
+    if (!done) {
+      push(a) // retry
+    }
   }
 
   @tailrec
   def tryPop(): Option[A] = {
-    val tc = threadContext[A]()
+    val tc = threadContext()
     tc.startOp()
     val res = try {
       val curr = tc.read(this.head)
@@ -79,19 +90,40 @@ final class IBRStack[A] {
       case _ => res
     }
   }
+
+  /** For testing; not threadsafe */
+  private[kcas] def unsafeToList(): List[A] = {
+    val tc = threadContext()
+    @tailrec
+    def go(next: Ref[Node[A]], acc: Chain[A]): Chain[A] = {
+      tc.read(next) match {
+        case c: Cons[_] =>
+          go(c.tail, acc :+ c.head)
+        case _: End.type =>
+          acc
+      }
+    }
+    tc.startOp()
+    try {
+      go(this.head, Chain.empty).toList
+    } finally tc.endOp()
+  }
 }
 
 final object IBRStack {
 
-  private val gc = new IBR[Node[Any]](0L) {
-    final override def allocateNew(): Node[Any] =
-      new Cons[Any](nullOf[Any], Ref.mk(nullOf[Node[Any]]))
-    final override def dynamicTest[A](a: A): Boolean =
-      a.isInstanceOf[Node[_]]
+  def apply[A](els: A*): IBRStack[A] = {
+    val s = new IBRStack[A](gc.asInstanceOf[IBR[Node[A]]])
+    els.foreach(s.push)
+    s
   }
 
-  private def threadContext[A](): IBR.ThreadContext[Node[A]] =
-    gc.threadContext().asInstanceOf[IBR.ThreadContext[Node[A]]]
+  private[this] val gc: IBR[Node[Any]] = new IBR[Node[Any]](0L) {
+    final override def allocateNew(): Node[Any] =
+      new Cons[Any](nullOf[Any], Ref.mk(nullOf[Node[Any]]))
+    final override def dynamicTest[X](a: X): Boolean =
+      a.isInstanceOf[Node[_]]
+  }
 
   private[kcas] abstract class Node[A]
     extends DebugManaged[Node[A]]

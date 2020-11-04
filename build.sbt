@@ -42,7 +42,8 @@ lazy val stress = project.in(file("stress"))
   .settings(macroSettings)
   .settings(scalacOptions -= "-Ywarn-unused:patvars") // false positives
   .enablePlugins(JCStressPlugin)
-  .dependsOn(core)
+  .settings(version in Jcstress := "0.7")
+  .dependsOn(core % "compile->compile;test->test")
 
 lazy val layout = project.in(file("layout"))
   .settings(name := "choam-layout")

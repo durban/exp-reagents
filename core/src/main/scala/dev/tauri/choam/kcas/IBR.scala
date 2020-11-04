@@ -250,7 +250,6 @@ private[kcas] final object IBR {
       } else {
         a
       }
-
     }
 
     def write[A](ref: Ref[A], nv: A): Unit = {

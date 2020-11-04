@@ -216,6 +216,68 @@ final class IBRSpec
     tc.fullGc() // this should collect `d`
     assert(d.freed === 1)
   }
+
+  it should "not block reclamation of newer blocks if a thread deadlocks" in {
+    val gc = new GC
+    val tc = gc.threadContext()
+    val firstEpoch = gc.epochNumber
+    val ref = Ref.mk(nullOf[Descriptor])
+    val d = tc.op {
+      val d = tc.alloc()
+      tc.write(ref, d)
+      d
+    }
+    @volatile var error: Throwable = null
+    val latch1 = new CountDownLatch(1)
+    val latch2 = new CountDownLatch(1)
+    val t = new Thread(() => {
+      try {
+        val tc = gc.threadContext()
+        tc.startOp()
+        val d = tc.read(ref)
+        assert(d.freed === 0)
+        // now the thread deadlocks while still "using" the
+        // descriptor, because it doesn't call `endOp`
+        assert(tc.snapshotReservation.lower === firstEpoch)
+        assert(tc.snapshotReservation.upper === firstEpoch)
+        latch1.countDown()
+        latch2.await() // blocks forever
+      } catch {
+        case ex: Throwable =>
+         error = ex
+         throw ex
+      }
+    })
+    t.start()
+    latch1.await()
+    assert(t.isAlive())
+    assert(error eq null, s"error: ${error}")
+    assert(gc.snapshotReservations(t.getId()).get() ne null)
+    tc.op {
+      tc.cas(ref, d, null)
+      tc.retire(d) // `d` will never be collected, because `t` protects it
+    }
+    assert(d.retireEpoch.get() === firstEpoch)
+    tc.fullGc() // this will not collect `d`
+    assert(d.freed === 0)
+    // but newet objects should be reclaimed:
+    val d2 = tc.op {
+      val d2 = tc.alloc()
+      assert(d2.birthEpoch.get() > firstEpoch)
+      tc.cas(ref, null, d2)
+      d2
+    }
+    assert(d.freed === 0)
+    assert(d2.freed === 0)
+    tc.op {
+      tc.cas(ref, d2, null)
+      tc.retire(d2)
+    }
+    assert(d2.retireEpoch.get() === gc.epochNumber)
+    tc.fullGc() // this should collect `d2` (but not `d`)
+    assert(d.freed === 0)
+    assert(d2.freed === 1)
+  }
 }
 
 final object IBRSpec {

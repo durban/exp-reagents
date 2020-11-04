@@ -19,6 +19,7 @@ package kcas
 
 import cats.syntax.all._
 
+// TODO: figure out a way to detect leaked (not retired) instances
 abstract class DebugManaged[M <: DebugManaged[M]]
   extends IBR.Managed[M] { this: M =>
 
@@ -27,15 +28,16 @@ abstract class DebugManaged[M <: DebugManaged[M]]
   private[this] var _freed = 0
 
   override protected[kcas] def allocate(tc: IBR.ThreadContext[M]): Unit = {
-    assert(this.birthEpoch.get() === tc.globalContext.epochNumber)
+    assert(this.birthEpoch.get() <= tc.globalContext.epochNumber)
     assert(this.retireEpoch.get() === Long.MaxValue)
     assert(this._allocated === this._freed)
     this._allocated += 1
   }
 
   override protected[kcas] def free(tc: IBR.ThreadContext[M]): Unit = {
-    assert(this.retireEpoch.get() <= tc.globalContext.epochNumber)
-    assert(this.birthEpoch.get() <= this.retireEpoch.get())
+    val retireEpoch = this.retireEpoch.get()
+    assert(retireEpoch <= tc.globalContext.epochNumber)
+    assert(this.birthEpoch.get() <= retireEpoch)
     this._freed += 1
     assert(this._allocated === this._freed)
   }
