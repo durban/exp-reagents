@@ -16,42 +16,29 @@
 
 package dev.tauri.choam
 package kcas
-
-import java.util.concurrent.atomic.AtomicInteger
+package bench
 
 import scala.annotation.tailrec
 
 import cats.data.Chain
 
-/** Treiber stack, which uses IBR for nodes */
-final class IBRStack[A] private (gc: IBR[IBRStack.Node[A]]) {
+/** Treiber stack, which uses IBR for nodes, and has no debug assertions */
+final class IBRStackFast[A] private (val gc: IBR[IBRStackFast.Node[A]]) {
 
-  import IBRStack.{ Node, Cons, End }
+  import IBRStackFast.{ Node, Cons, End }
 
   private[this] val head =
     Ref.mk[Node[A]](End.widen)
 
-  private[this] val _reusedCount =
-    new AtomicInteger(0)
-
-  /** For testing */
-  private[kcas] def reusedCount: Int = {
-    _reusedCount.get()
-  }
-
-  private def threadContext(): IBR.ThreadContext[Node[A]] =
-    gc.threadContext()
+  private[this] val _sentinel: A =
+    (new AnyRef).asInstanceOf[A]
 
   @tailrec
-  def push(a: A): Unit = {
-    val tc = threadContext()
+  def push(a: A, tc: IBR.ThreadContext[Node[A]]): Unit = {
     tc.startOp()
     val done = try {
       val oldHead = tc.read(this.head)
       val newHead = tc.alloc()
-      if (newHead.freed > 0) {
-        this._reusedCount.getAndIncrement()
-      }
       newHead.asInstanceOf[Cons[A]].head = a
       tc.write(newHead.asInstanceOf[Cons[A]].tail, oldHead)
       if (tc.cas(this.head, oldHead, newHead)) {
@@ -62,13 +49,12 @@ final class IBRStack[A] private (gc: IBR[IBRStack.Node[A]]) {
       }
     } finally tc.endOp() // FIXME: put the whole CAS-loop into one op?
     if (!done) {
-      push(a) // retry
+      push(a, tc) // retry
     }
   }
 
   @tailrec
-  def tryPop(): Option[A] = {
-    val tc = threadContext()
+  def tryPop(tc: IBR.ThreadContext[Node[A]]): A = {
     tc.startOp()
     val res = try {
       val curr = tc.read(this.head)
@@ -77,23 +63,20 @@ final class IBRStack[A] private (gc: IBR[IBRStack.Node[A]]) {
           val tail = tc.read(c.tail)
           if (tc.cas(this.head, curr, tail)) {
             tc.retire(curr)
-            Some(c.head)
+            c.head
           } else {
-            null // retry
+            _sentinel // retry
           }
         case _ =>
-          None
+          nullOf[A]
       }
     } finally tc.endOp()
-    res match {
-      case null => tryPop()
-      case _ => res
-    }
+    if (equ(res, _sentinel)) tryPop(tc)
+    else res
   }
 
   /** For testing; not threadsafe */
-  private[kcas] def unsafeToList(): List[A] = {
-    val tc = threadContext()
+  private[kcas] def unsafeToList(tc: IBR.ThreadContext[Node[A]]): List[A] = {
     @tailrec
     def go(next: Ref[Node[A]], acc: Chain[A]): Chain[A] = {
       tc.read(next) match {
@@ -110,13 +93,17 @@ final class IBRStack[A] private (gc: IBR[IBRStack.Node[A]]) {
   }
 }
 
-final object IBRStack {
+final object IBRStackFast {
 
-  def apply[A](els: A*): IBRStack[A] = {
-    val s = new IBRStack[A](gc.asInstanceOf[IBR[Node[A]]])
-    els.foreach(s.push)
+  def apply[A](els: A*): IBRStackFast[A] = {
+    val s = new IBRStackFast[A](gc.asInstanceOf[IBR[Node[A]]])
+    val tc = s.gc.threadContext()
+    els.foreach(e => s.push(e, tc))
     s
   }
+
+  private[kcas] def threadLocalContext[A](): IBR.ThreadContext[Node[A]] =
+    gc.asInstanceOf[IBR[Node[A]]].threadContext()
 
   private[this] val gc: IBR[Node[Any]] = new IBR[Node[Any]](0L) {
     final override def allocateNew(): Node[Any] =
@@ -126,52 +113,27 @@ final object IBRStack {
   }
 
   private[kcas] abstract class Node[A]
-    extends DebugManaged[Node[A]]
+    extends IBR.Managed[Node[A]]
 
   private[kcas] final class Cons[A](
-    @volatile private[this] var _head: A,
-    private[this] val _tail: Ref[Node[A]]
+    @volatile private[kcas] var head: A,
+    private[kcas] val tail: Ref[Node[A]]
   ) extends Node[A] {
 
-    def head: A = {
-      this.checkAccess()
-      this._head
-    }
-
-    def head_=(a: A): Unit = {
-      this.checkAccess()
-      this._head = a
-    }
-
-    def tail: Ref[Node[A]] = {
-      this.checkAccess()
-      this._tail
-    }
-
-    override protected[kcas] def allocate(tc: IBR.ThreadContext[Node[A]]): Unit = {
-      super.allocate(tc)
-      assert(equ(this._head, null))
-      assert(equ(tc.read(this._tail), null))
-    }
+    override protected[kcas] def allocate(tc: IBR.ThreadContext[Node[A]]): Unit =
+      ()
 
     override protected[kcas] def free(tc: IBR.ThreadContext[Node[A]]): Unit = {
-      this._head = nullOf[A]
-      tc.write(this._tail, nullOf[Node[A]])
-      super.free(tc)
+      this.head = nullOf[A]
+      tc.write(this.tail, nullOf[Node[A]])
     }
   }
 
   private[kcas] final object End extends Node[Nothing] {
-    @volatile private[this] var initialized = false
-    override protected[kcas] def allocate(tc: IBR.ThreadContext[Node[Nothing]]): Unit = {
-      super.allocate(tc)
-      if (this.initialized) throw new Exception("End should never be reused")
-      else this.initialized = true
-    }
-    override protected[kcas] def free(tc: IBR.ThreadContext[Node[Nothing]]): Unit = {
-      super.free(tc)
+    override protected[kcas] def allocate(tc: IBR.ThreadContext[Node[Nothing]]): Unit =
+      ()
+    override protected[kcas] def free(tc: IBR.ThreadContext[Node[Nothing]]): Unit =
       throw new Exception("End should never be freed")
-    }
     def widen[A]: Node[A] =
       this.asInstanceOf[Node[A]]
   }

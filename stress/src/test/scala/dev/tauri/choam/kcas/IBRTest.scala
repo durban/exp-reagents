@@ -32,7 +32,7 @@ import org.openjdk.jcstress.infra.results.LL_Result
 class IBRTest {
 
   private[this] val stack =
-    IBRStack[String]("z")
+    IBRStackDebug[String]("z")
 
   @Actor
   def push1(): Unit = {

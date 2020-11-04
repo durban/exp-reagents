@@ -29,7 +29,7 @@ final class IBRStackSpec
   with TypeCheckedTripleEquals {
 
   "IBRStack" should "work" in {
-    val s = IBRStack[Int]()
+    val s = IBRStackDebug[Int]()
     s.push(1)
     s.push(2)
     s.push(3)
@@ -42,7 +42,7 @@ final class IBRStackSpec
   it should "reuse nodes from the freelist" in {
     val N = 42
     val SYNC = 128
-    val s = IBRStack[Int]()
+    val s = IBRStackDebug[Int]()
     for (i <- 1 to (16 * IBR.emptyFreq)) {
       s.push(i)
     }
@@ -81,7 +81,7 @@ final class IBRStackSpec
   }
 
   it should "copy itself to a List" in {
-    val s = IBRStack[Int]()
+    val s = IBRStackDebug[Int]()
     s.push(1)
     s.push(2)
     s.push(3)
