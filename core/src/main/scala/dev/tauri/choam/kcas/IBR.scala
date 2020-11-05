@@ -315,14 +315,14 @@ private[kcas] final object IBR {
           wr.get() match {
             case null =>
               reservations.remove(tid, wr)
-              isConflict(block, it)
+              isConflict(block, it) // continue
             case tc =>
               val conflict = (
                 (block.birthEpoch.get() <=  tc.reservation.upper.get()) &&
                 (block.retireEpoch.get() >= tc.reservation.lower.get())
               )
               if (conflict) true
-              else isConflict(block, it)
+              else isConflict(block, it) // continue
           }
         } else {
           false
