@@ -30,13 +30,13 @@ class IBRBench {
 
   @Benchmark
   def stackBaseline(s: BaselineStackSt, t: ThSt, bh: Blackhole): Unit = {
-    bh.consume(s.stack.push(t.nextString()))
+    bh.consume(s.stack.push(t.nextInt()))
     assert(s.stack.tryPop().isDefined)
   }
 
   @Benchmark
   def stackIbr(s: StackSt, t: ThSt, bh: Blackhole): Unit = {
-    bh.consume(s.stack.push(t.nextString(), t.tc))
+    bh.consume(s.stack.push(t.nextInt(), t.tc))
     assert(s.stack.tryPop(t.tc) ne null)
   }
 
@@ -49,7 +49,7 @@ object IBRBench {
   class StackSt {
     val stack = {
       val xs = XorShift()
-      IBRStackFast[String](List.fill(10000) { xs.nextInt().toString }: _*)
+      IBRStackFast[Int](List.fill(100) { xs.nextInt() }: _*)
     }
   }
 
@@ -57,13 +57,13 @@ object IBRBench {
   class BaselineStackSt {
     val stack = {
       val xs = XorShift()
-      new ReferenceTreiberStack[String](List.fill(10000) { xs.nextInt().toString })
+      new ReferenceTreiberStack[Int](List.fill(100) { xs.nextInt() })
     }
   }
 
   @State(Scope.Thread)
   class ThSt extends RandomState {
-    val tc: IBR.ThreadContext[IBRStackFast.Node[String]] =
-      IBRStackFast.threadLocalContext[String]()
+    val tc: IBR.ThreadContext[IBRStackFast.Node[Int]] =
+      IBRStackFast.threadLocalContext[Int]()
   }
 }
