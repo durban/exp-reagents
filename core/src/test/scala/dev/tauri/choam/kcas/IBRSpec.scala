@@ -17,6 +17,7 @@
 package dev.tauri.choam
 package kcas
 
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.CountDownLatch
 
 import org.scalatest.flatspec.AnyFlatSpec
@@ -36,7 +37,7 @@ final class IBRSpec
     tc.startOp()
     val ref = try {
       val d1 = tc.alloc()
-      val ref = Ref.mk(d1)
+      val ref = new AtomicReference(d1)
       val d2 = tc.alloc()
       assert(tc.cas(ref, d1, d2))
       assert(!tc.cas(ref, d1, d2))
@@ -46,12 +47,12 @@ final class IBRSpec
       ref
     } finally tc.endOp()
     tc.fullGc()
-    assert(ref.unsafeTryRead().freed == 1)
+    assert(ref.get().freed == 1)
   }
 
   it should "not free an object referenced from another thread" in {
     val gc = new GC
-    val ref = Ref.mk[Descriptor](null)
+    val ref = new AtomicReference[Descriptor](null)
     val latch1 = new CountDownLatch(1)
     val latch2 = new CountDownLatch(1)
     @volatile var error = false
@@ -145,7 +146,7 @@ final class IBRSpec
   "A reclamation" should "run after a few retirements" in {
     val gc = new GC
     val tc = gc.threadContext()
-    val ref = Ref.mk(nullOf[Descriptor])
+    val ref = new AtomicReference[Descriptor](null)
     val seen = new java.util.IdentityHashMap[Descriptor, Unit]
     @tailrec
     def go(cnt: Int): Int = {
@@ -176,7 +177,7 @@ final class IBRSpec
     val gc = new GC
     val tc = gc.threadContext()
     val firstEpoch = gc.epochNumber
-    val ref = Ref.mk(nullOf[Descriptor])
+    val ref = new AtomicReference[Descriptor](null)
     val d = tc.op {
       val d = tc.alloc()
       tc.write(ref, d)
@@ -221,7 +222,7 @@ final class IBRSpec
     val gc = new GC
     val tc = gc.threadContext()
     val firstEpoch = gc.epochNumber
-    val ref = Ref.mk(nullOf[Descriptor])
+    val ref = new AtomicReference[Descriptor](null)
     val d = tc.op {
       val d = tc.alloc()
       tc.write(ref, d)

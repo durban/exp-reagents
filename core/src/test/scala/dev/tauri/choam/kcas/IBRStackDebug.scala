@@ -17,7 +17,7 @@
 package dev.tauri.choam
 package kcas
 
-import java.util.concurrent.atomic.AtomicInteger
+import java.util.concurrent.atomic.{ AtomicInteger, AtomicReference }
 
 import scala.annotation.tailrec
 
@@ -29,7 +29,7 @@ final class IBRStackDebug[A] private (gc: IBR[IBRStackDebug.Node[A]]) {
   import IBRStackDebug.{ Node, Cons, End }
 
   private[this] val head =
-    Ref.mk[Node[A]](End.widen)
+    new AtomicReference[Node[A]](End.widen)
 
   private[this] val _reusedCount =
     new AtomicInteger(0)
@@ -95,7 +95,7 @@ final class IBRStackDebug[A] private (gc: IBR[IBRStackDebug.Node[A]]) {
   private[kcas] def unsafeToList(): List[A] = {
     val tc = threadContext()
     @tailrec
-    def go(next: Ref[Node[A]], acc: Chain[A]): Chain[A] = {
+    def go(next: AtomicReference[Node[A]], acc: Chain[A]): Chain[A] = {
       tc.read(next) match {
         case c: Cons[_] =>
           go(c.tail, acc :+ c.head)
@@ -120,7 +120,7 @@ final object IBRStackDebug {
 
   private[this] val gc: IBR[Node[Any]] = new IBR[Node[Any]](0L) {
     final override def allocateNew(): Node[Any] =
-      new Cons[Any](nullOf[Any], Ref.mk(nullOf[Node[Any]]))
+      new Cons[Any](nullOf[Any], new AtomicReference(nullOf[Node[Any]]))
     final override def dynamicTest[X](a: X): Boolean =
       a.isInstanceOf[Node[_]]
   }
@@ -130,7 +130,7 @@ final object IBRStackDebug {
 
   private[kcas] final class Cons[A](
     @volatile private[this] var _head: A,
-    private[this] val _tail: Ref[Node[A]]
+    private[this] val _tail: AtomicReference[Node[A]]
   ) extends Node[A] {
 
     def head: A = {
@@ -143,7 +143,7 @@ final object IBRStackDebug {
       this._head = a
     }
 
-    def tail: Ref[Node[A]] = {
+    def tail: AtomicReference[Node[A]] = {
       this.checkAccess()
       this._tail
     }

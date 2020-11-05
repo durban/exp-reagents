@@ -18,6 +18,8 @@ package dev.tauri.choam
 package kcas
 package bench
 
+import java.util.concurrent.atomic.AtomicReference
+
 import scala.annotation.tailrec
 
 import cats.data.Chain
@@ -28,7 +30,7 @@ final class IBRStackFast[A] private (val gc: IBR[IBRStackFast.Node[A]]) {
   import IBRStackFast.{ Node, Cons, End }
 
   private[this] val head =
-    Ref.mk[Node[A]](End.widen)
+    new AtomicReference[Node[A]](End.widen)
 
   private[this] val _sentinel: A =
     (new AnyRef).asInstanceOf[A]
@@ -78,7 +80,7 @@ final class IBRStackFast[A] private (val gc: IBR[IBRStackFast.Node[A]]) {
   /** For testing; not threadsafe */
   private[kcas] def unsafeToList(tc: IBR.ThreadContext[Node[A]]): List[A] = {
     @tailrec
-    def go(next: Ref[Node[A]], acc: Chain[A]): Chain[A] = {
+    def go(next: AtomicReference[Node[A]], acc: Chain[A]): Chain[A] = {
       tc.read(next) match {
         case c: Cons[_] =>
           go(c.tail, acc :+ c.head)
@@ -107,7 +109,7 @@ final object IBRStackFast {
 
   private[this] val gc: IBR[Node[Any]] = new IBR[Node[Any]](0L) {
     final override def allocateNew(): Node[Any] =
-      new Cons[Any](nullOf[Any], Ref.mk(nullOf[Node[Any]]))
+      new Cons[Any](nullOf[Any], new AtomicReference(nullOf[Node[Any]]))
     final override def dynamicTest[X](a: X): Boolean =
       a.isInstanceOf[Node[_]]
   }
@@ -117,7 +119,7 @@ final object IBRStackFast {
 
   private[kcas] final class Cons[A](
     @volatile private[kcas] var head: A,
-    private[kcas] val tail: Ref[Node[A]]
+    private[kcas] val tail: AtomicReference[Node[A]]
   ) extends Node[A] {
 
     override protected[kcas] def allocate(tc: IBR.ThreadContext[Node[A]]): Unit =

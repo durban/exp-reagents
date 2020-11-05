@@ -19,7 +19,7 @@ package kcas
 
 import java.lang.Math
 import java.lang.ref.{ WeakReference => WeakRef }
-import java.util.concurrent.atomic.AtomicLong
+import java.util.concurrent.atomic.{ AtomicLong, AtomicReference }
 
 import scala.annotation.tailrec
 import scala.collection.concurrent.TrieMap
@@ -236,8 +236,8 @@ private[kcas] final object IBR {
     }
 
     @tailrec
-    def read[A](ref: Ref[A]): A = {
-      val a: A = ref.unsafeTryRead()
+    def read[A](ref: AtomicReference[A]): A = {
+      val a: A = ref.get()
       if (this.global.dynamicTest(a)) {
         val m: M = a.asInstanceOf[M]
         val upper = this.reservation.upper.get()
@@ -252,12 +252,12 @@ private[kcas] final object IBR {
       }
     }
 
-    def write[A](ref: Ref[A], nv: A): Unit = {
-      ref.unsafeSet(nv)
+    def write[A](ref: AtomicReference[A], nv: A): Unit = {
+      ref.set(nv)
     }
 
-    def cas[A](ref: Ref[A], ov: A, nv: A): Boolean = {
-      ref.unsafeTryPerformCas(ov, nv)
+    def cas[A](ref: AtomicReference[A], ov: A, nv: A): Boolean = {
+      ref.compareAndSet(ov, nv)
     }
 
     /** For testing */

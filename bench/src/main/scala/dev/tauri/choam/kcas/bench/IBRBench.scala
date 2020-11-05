@@ -39,6 +39,8 @@ class IBRBench {
     bh.consume(s.stack.push(t.nextString(), t.tc))
     assert(s.stack.tryPop(t.tc) ne null)
   }
+
+  // TODO: add a benchmark with a `kcas.Ref`-based stack
 }
 
 object IBRBench {
