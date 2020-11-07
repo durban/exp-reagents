@@ -20,24 +20,26 @@ package kcas
 import cats.syntax.all._
 
 // TODO: figure out a way to detect leaked (not retired) instances
-abstract class DebugManaged[M <: DebugManaged[M]]
-  extends IBR.Managed[M] { this: M =>
+trait DebugManaged[T <: IBR.ThreadContext[T, M], M <: IBRManaged[T, M]]
+  extends IBRManaged[T, M] { this: M =>
 
   private[this] var _allocated = 0
 
   private[this] var _freed = 0
 
-  override protected[kcas] def allocate(tc: IBR.ThreadContext[M]): Unit = {
-    assert(this.birthEpoch.get() <= tc.globalContext.epochNumber)
-    assert(this.retireEpoch.get() === Long.MaxValue)
+  override protected[kcas] def allocate(tc: T): Unit = {
+    val be = this.getBirthEpoch()
+    assert(be <= tc.globalContext.epochNumber)
+    val re = this.getRetireEpoch()
+    assert(re === Long.MaxValue, s"retire epoch is ${re}")
     assert(this._allocated === this._freed)
     this._allocated += 1
   }
 
-  override protected[kcas] def free(tc: IBR.ThreadContext[M]): Unit = {
-    val retireEpoch = this.retireEpoch.get()
+  override protected[kcas] def free(tc: T): Unit = {
+    val retireEpoch = this.getRetireEpoch()
     assert(retireEpoch <= tc.globalContext.epochNumber)
-    assert(this.birthEpoch.get() <= retireEpoch)
+    assert(this.getBirthEpoch() <= retireEpoch)
     this._freed += 1
     assert(this._allocated === this._freed)
   }

@@ -36,21 +36,21 @@ class IBRTest {
 
   @Actor
   def push1(): Unit = {
-    this.stack.push("x")
+    this.stack.push("x", IBRStackDebug.threadLocalContext())
   }
 
   @Actor
   def push2(): Unit = {
-    this.stack.push("y")
+    this.stack.push("y", IBRStackDebug.threadLocalContext())
   }
 
   @Actor
   def pop(r: LL_Result): Unit = {
-    r.r1 = this.stack.tryPop().get
+    r.r1 = this.stack.tryPop(IBRStackDebug.threadLocalContext())
   }
 
   @Arbiter
   def arbiter(r: LL_Result): Unit = {
-    r.r2 = stack.unsafeToList()
+    r.r2 = stack.unsafeToList(IBRStackDebug.threadLocalContext())
   }
 }

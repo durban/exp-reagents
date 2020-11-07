@@ -19,10 +19,11 @@ package kcas
 
 import java.lang.Math
 import java.lang.ref.{ WeakReference => WeakRef }
-import java.util.concurrent.atomic.{ AtomicLong, AtomicReference }
+import java.lang.invoke.VarHandle
+import java.util.concurrent.atomic.{ AtomicLong, AtomicReference, AtomicReferenceFieldUpdater }
+import java.util.concurrent.ConcurrentSkipListMap
 
 import scala.annotation.tailrec
-import scala.collection.concurrent.TrieMap
 
 /**
  * Interval-based memory reclamation (TagIBR-TPA), based on
@@ -34,13 +35,15 @@ import scala.collection.concurrent.TrieMap
  *
  * @param `zeroEpoch` is the value of the very first epoch.
 */
-private[kcas] abstract class IBR[M <: IBR.Managed[M]](zeroEpoch: Long) {
+private[kcas] abstract class IBR[T, M <: IBRManaged[T, M]](zeroEpoch: Long) {
 
   /** @return `true` iff `a` is really an `M` */
   protected[IBR] def dynamicTest[A](a: A): Boolean
 
   /** @return a newly allocated object */
   protected[IBR] def allocateNew(): M
+
+  protected[IBR] def newThreadContext(): T
 
   /** Current epoch number, read/written by any thread */
   private[IBR] val epoch =
@@ -65,23 +68,36 @@ private[kcas] abstract class IBR[M <: IBR.Managed[M]](zeroEpoch: Long) {
    * continue its current op (if any).
    */
   private[IBR] val reservations =
-    new TrieMap[Long, WeakRef[IBR.ThreadContext[M]]]
+    new ConcurrentSkipListMap[Long, WeakRef[T]]
 
   /** For testing */
-  private[kcas] def snapshotReservations: Map[Long, WeakRef[IBR.ThreadContext[M]]] =
-    this.reservations.readOnlySnapshot().toMap
+  private[kcas] def snapshotReservations: Map[Long, WeakRef[T]] = {
+    @tailrec
+    def go(
+      it: java.util.Iterator[java.util.Map.Entry[Long, WeakRef[T]]],
+      acc: Map[Long, WeakRef[T]]
+    ): Map[Long, WeakRef[T]] = {
+      if (it.hasNext()) {
+        val n = it.next()
+        go(it, acc.updated(n.getKey(), n.getValue()))
+      } else {
+        acc
+      }
+    }
+    go(this.reservations.entrySet().iterator(), Map.empty)
+  }
 
   /** Holds the context for each (active) thread */
   private[this] val threadContextKey =
-    new ThreadLocal[IBR.ThreadContext[M]]()
+    new ThreadLocal[T]()
 
   /** Gets of creates the context for the current thread */
-  def threadContext(): IBR.ThreadContext[M] = {
+  def threadContext(): T = {
     threadContextKey.get() match {
       case null =>
-        val tc = new IBR.ThreadContext(this)
+        val tc = this.newThreadContext()
         threadContextKey.set(tc)
-        reservations.put(
+        this.reservations.put(
           Thread.currentThread().getId(),
           new WeakRef(tc)
         )
@@ -102,34 +118,6 @@ private[kcas] final object IBR {
 
   private[kcas] final val maxFreeListSize = 64 // TODO
 
-  /**
-   * Base class for objects managed by IBR
-   *
-   * @param `birthEp` the initial birth epoch of the object.
-   */
-  abstract class Managed[M <: IBR.Managed[M]] { this: M =>
-
-    /** Intrusive linked list (free/retired list) */
-    private[IBR] var next: M =
-      _
-
-    // TODO: verify that we really don't need born_before from the paper
-
-    // TODO: Could we have these as simple `var`s
-    // TODO: (look into acq/rel modes: http://gee.cs.oswego.edu/dl/html/j9mm.html)?
-    private[kcas] val birthEpoch =
-      new AtomicLong(Long.MinValue)
-
-    private[kcas] val retireEpoch =
-      new AtomicLong(Long.MaxValue)
-
-    /** Hook for subclasses for performing cleanup */
-    protected[IBR] def free(tc: ThreadContext[M]): Unit
-
-    /** Hook for subclasses for performing initialization */
-    protected[IBR] def allocate(tc: ThreadContext[M]): Unit
-  }
-
   /** The epoch interval reserved by a thread */
   private final class Reservation(initial: Long) {
     val lower: AtomicLong = new AtomicLong(initial)
@@ -147,7 +135,9 @@ private[kcas] final object IBR {
    *
    * Note: some fields can be accessed by other threads!
    */
-  final class ThreadContext[M <: IBR.Managed[M]](global: IBR[M]) {
+  abstract class ThreadContext[T <: ThreadContext[T, M], M <: IBRManaged[T, M]](
+    global: IBR[T, M]
+  ) { this: T =>
 
     /**
      * Allocation counter for incrementing the epoch and running reclamation
@@ -189,7 +179,7 @@ private[kcas] final object IBR {
     }
 
     /** For testing */
-    private[kcas] def globalContext: IBR[M] =
+    private[kcas] def globalContext: IBR[T, M] =
       global
 
     /** For testing */
@@ -198,7 +188,7 @@ private[kcas] final object IBR {
       try { body } finally { this.endOp() }
     }
 
-    def alloc(): M = {
+    final def alloc(): M = {
       this.counter += 1
       val epoch = if ((this.counter % epochFreq) == 0) {
         this.global.epoch.incrementAndGet()
@@ -213,50 +203,85 @@ private[kcas] final object IBR {
       } else {
         global.allocateNew()
       }
-      elem.birthEpoch.set(epoch)
+      elem.setBirthEpoch(epoch)
       elem.allocate(this)
       elem
     }
 
-    def retire(a: M): Unit = {
-      a.next = this.retired
+    final def retire(a: M): Unit = {
+      a.setNext(this.retired)
       this.retired = a
-      a.retireEpoch.set(this.global.epoch.get())
+      a.setRetireEpoch(this.global.epoch.get())
       if ((this.counter % emptyFreq) == 0) {
         this.empty()
       }
     }
 
-    def startOp(): Unit = {
+    final def startOp(): Unit = {
       reserve(this.global.epoch.get())
     }
 
-    def endOp(): Unit = {
+    final def endOp(): Unit = {
       reserve(Long.MaxValue)
     }
 
     @tailrec
-    def read[A](ref: AtomicReference[A]): A = {
+    final def readArfu[A](arfu: AtomicReferenceFieldUpdater[M, A], obj: M): A = {
+      val a: A = arfu.get(obj)
+      if (tryAdjustReservation(a)) a
+      else readArfu(arfu, obj)
+    }
+
+    @tailrec
+    final def readVh[A](vh: VarHandle, obj: M): A = {
+      val a: A = vh.getVolatile(obj)
+      if (tryAdjustReservation(a)) a
+      else readVh(vh, obj) // retry
+    }
+
+    @tailrec
+    final def read[A](ref: AtomicReference[A]): A = {
       val a: A = ref.get()
+      if (tryAdjustReservation(a)) a
+      else read(ref) // retry
+    }
+
+    private final def tryAdjustReservation[A](a: A): Boolean = {
       if (this.global.dynamicTest(a)) {
         val m: M = a.asInstanceOf[M]
         val upper = this.reservation.upper.get()
-        this.reservation.upper.set(Math.max(upper, m.birthEpoch.get()))
-        if (this.reservation.upper.get() >= m.birthEpoch.get()) {
-          a // ok, we're done
+        this.reservation.upper.set(Math.max(upper, m.getBirthEpoch()))
+        if (this.reservation.upper.get() >= m.getBirthEpoch()) {
+          true // ok, we're done
         } else {
-          read(ref) // retry
+          false // retry
         }
       } else {
-        a
+        true // we're done
       }
     }
 
-    def write[A](ref: AtomicReference[A], nv: A): Unit = {
+    final def writeArfu[A](arfu: AtomicReferenceFieldUpdater[M, A], obj: M, a: A): Unit = {
+      arfu.set(obj, a)
+    }
+
+    final def writeVh[A](vh: VarHandle, obj: M, a: A): Unit = {
+      vh.setVolatile(obj, a)
+    }
+
+    final def write[A](ref: AtomicReference[A], nv: A): Unit = {
       ref.set(nv)
     }
 
-    def cas[A](ref: AtomicReference[A], ov: A, nv: A): Boolean = {
+    final def casArfu[A](arfu: AtomicReferenceFieldUpdater[M, A], obj: M, ov: A, nv: A): Boolean = {
+      arfu.compareAndSet(obj, ov, nv)
+    }
+
+    final def casVh[A](vh: VarHandle, obj: M, ov: A, nv: A): Boolean = {
+      vh.compareAndSet(obj, ov, nv)
+    }
+
+    final def cas[A](ref: AtomicReference[A], ov: A, nv: A): Boolean = {
       ref.compareAndSet(ov, nv)
     }
 
@@ -288,14 +313,14 @@ private[kcas] final object IBR {
     }
 
     private def empty(): Unit = {
-      val reservations = this.global.reservations
+      val reservations = this.global.reservations.values()
       @tailrec
       def go(curr: M, prev: M, deleteHead: Boolean): Boolean = {
         if (curr ne null) {
-          val del = if (!isConflict(curr, reservations.iterator)) {
+          val del = if (!isConflict(curr, reservations.iterator())) {
             free(curr)
             if (prev ne null) {
-              prev.next = curr.next
+              prev.setNext(curr.next)
               deleteHead
             } else {
               true
@@ -309,17 +334,17 @@ private[kcas] final object IBR {
         }
       }
       @tailrec
-      def isConflict(block: M, it: Iterator[(Long, WeakRef[ThreadContext[M]])]): Boolean = {
-        if (it.hasNext) {
-          val (tid, wr) = it.next()
+      def isConflict(block: M, it: java.util.Iterator[WeakRef[T]]): Boolean = {
+        if (it.hasNext()) {
+          val wr = it.next()
           wr.get() match {
             case null =>
-              reservations.remove(tid, wr)
+              it.remove()
               isConflict(block, it) // continue
             case tc =>
               val conflict = (
-                (block.birthEpoch.get() <=  tc.reservation.upper.get()) &&
-                (block.retireEpoch.get() >= tc.reservation.lower.get())
+                (block.getBirthEpoch() <=  tc.reservation.upper.get()) &&
+                (block.getRetireEpoch() >= tc.reservation.lower.get())
               )
               if (conflict) true
               else isConflict(block, it) // continue
@@ -337,11 +362,11 @@ private[kcas] final object IBR {
 
     private def free(block: M): Unit = {
       block.free(this)
-      block.birthEpoch.set(Long.MinValue) // TODO: not strictly necessary
-      block.retireEpoch.set(Long.MaxValue) // TODO: not strictly necessary
+      block.setBirthEpoch(Long.MinValue) // TODO: not strictly necessary
+      block.setRetireEpoch(Long.MaxValue) // TODO: not strictly necessary
       if (this.freeListSize < maxFreeListSize) {
         this.freeListSize += 1
-        block.next = this.freeList
+        block.setNext(this.freeList)
         this.freeList = block
       } // else: JVM GC will collect
     }

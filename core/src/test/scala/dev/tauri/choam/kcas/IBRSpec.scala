@@ -138,8 +138,8 @@ final class IBRSpec
       } finally tc.endOp()
     }
     for (desc <- descs) {
-      assert(desc.birthEpoch.get() == startEpoch)
-      assert(desc.retireEpoch.get() === newEpoch)
+      assert(desc.getBirthEpoch() == startEpoch)
+      assert(desc.getRetireEpoch() === newEpoch)
     }
   }
 
@@ -213,9 +213,10 @@ final class IBRSpec
       tc.cas(ref, d, null)
       tc.retire(d)
     }
-    assert(d.retireEpoch.get() === firstEpoch)
+    assert(d.getRetireEpoch() === firstEpoch)
     tc.fullGc() // this should collect `d`
     assert(d.freed === 1)
+    assert(gc.snapshotReservations.get(t.getId()).isEmpty)
   }
 
   it should "not block reclamation of newer blocks if a thread deadlocks" in {
@@ -258,13 +259,13 @@ final class IBRSpec
       tc.cas(ref, d, null)
       tc.retire(d) // `d` will never be collected, because `t` protects it
     }
-    assert(d.retireEpoch.get() === firstEpoch)
+    assert(d.getRetireEpoch() === firstEpoch)
     tc.fullGc() // this will not collect `d`
     assert(d.freed === 0)
     // but newet objects should be reclaimed:
     val d2 = tc.op {
       val d2 = tc.alloc()
-      assert(d2.birthEpoch.get() > firstEpoch)
+      assert(d2.getBirthEpoch() > firstEpoch)
       tc.cas(ref, null, d2)
       d2
     }
@@ -274,7 +275,7 @@ final class IBRSpec
       tc.cas(ref, d2, null)
       tc.retire(d2)
     }
-    assert(d2.retireEpoch.get() === gc.epochNumber)
+    assert(d2.getRetireEpoch() === gc.epochNumber)
     tc.fullGc() // this should collect `d2` (but not `d`)
     assert(d.freed === 0)
     assert(d2.freed === 1)
@@ -284,18 +285,25 @@ final class IBRSpec
 final object IBRSpec {
 
   final case class Descriptor(dummy: String)
-    extends DebugManaged[Descriptor] {
+    extends DebugManaged[TC, Descriptor] {
 
     final def foobar(): Unit =
       this.checkAccess()
   }
 
-  final class GC extends IBR[Descriptor](zeroEpoch = 0L) {
+  final class TC(global: GC)
+    extends IBR.ThreadContext[TC, Descriptor](global)
+
+  final class GC
+    extends IBR[TC, Descriptor](zeroEpoch = 0L) {
 
     protected[kcas] override def allocateNew(): Descriptor =
       Descriptor("dummy")
 
     protected[kcas] override def dynamicTest[A](a: A): Boolean =
       a.isInstanceOf[Descriptor]
+
+    protected[kcas] override def newThreadContext(): TC =
+      new TC(this)
   }
 }

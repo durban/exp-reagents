@@ -21,7 +21,8 @@ package bench
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-import dev.tauri.choam.bench.util.{ RandomState, XorShift, ReferenceTreiberStack }
+import dev.tauri.choam.bench.util.{ RandomState, XorShift, ReferenceTreiberStack, TsList }
+import dev.tauri.choam.kcas.IBRStackFast
 
 @Fork(2)
 class IBRBench {
@@ -38,6 +39,16 @@ class IBRBench {
   def stackIbr(s: StackSt, t: ThSt, bh: Blackhole): Unit = {
     bh.consume(s.stack.push(t.nextInt(), t.tc))
     assert(s.stack.tryPop(t.tc) ne null)
+  }
+
+  @Benchmark
+  def allocBaseline(t: ThSt, bh: Blackhole): Unit = {
+    bh.consume(TsList.Cons[Int](42, t.dummy))
+  }
+
+  @Benchmark
+  def allocIbr(t: ThSt, bh: Blackhole): Unit = {
+    bh.consume(t.tc.alloc())
   }
 
   // TODO: add a benchmark with a `kcas.Ref`-based stack
@@ -63,7 +74,7 @@ object IBRBench {
 
   @State(Scope.Thread)
   class ThSt extends RandomState {
-    val tc: IBR.ThreadContext[IBRStackFast.Node[Int]] =
-      IBRStackFast.threadLocalContext[Int]()
+    val tc = IBRStackFast.threadLocalContext[Int]()
+    val dummy = TsList.Cons(42, null)
   }
 }

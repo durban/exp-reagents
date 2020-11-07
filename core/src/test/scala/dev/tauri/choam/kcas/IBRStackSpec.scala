@@ -29,30 +29,33 @@ final class IBRStackSpec
   with TypeCheckedTripleEquals {
 
   "IBRStack" should "work" in {
-    val s = IBRStackDebug[Int]()
-    s.push(1)
-    s.push(2)
-    s.push(3)
-    assert(s.tryPop().get === 3)
-    assert(s.tryPop().get === 2)
-    assert(s.tryPop().get === 1)
-    assert(s.tryPop().isEmpty)
+    val s = IBRStackDebug[String]()
+    val tc = IBRStackDebug.threadLocalContext[String]()
+    s.push("a", tc)
+    s.push("b", tc)
+    s.push("c", tc)
+    assert(s.tryPop(tc) === "c")
+    assert(s.tryPop(tc) === "b")
+    assert(s.tryPop(tc) === "a")
+    assert(Option(s.tryPop(tc)).isEmpty)
   }
 
   it should "reuse nodes from the freelist" in {
-    val N = 42
-    val SYNC = 128
-    val s = IBRStackDebug[Int]()
+    val N = 42L
+    val SYNC = 128L
+    val s = IBRStackDebug[String]()
+    val tc = IBRStackDebug.threadLocalContext[String]()
     for (i <- 1 to (16 * IBR.emptyFreq)) {
-      s.push(i)
+      s.push(i.toString, tc)
     }
     val latch = new CountDownLatch(3)
     val barrier = new CyclicBarrier(2)
     val pusher = new Thread(() => {
+      val tc = IBRStackDebug.threadLocalContext[String]()
       latch.countDown()
       latch.await()
       for (i <- 1 to (16 * IBR.emptyFreq)) {
-        s.push(i)
+        s.push(i.toString, tc)
         if ((i % SYNC) == 0) {
           barrier.await()
         }
@@ -60,16 +63,17 @@ final class IBRStackSpec
     })
     pusher.start()
     val popper = new Thread(() => {
+      val tc = IBRStackDebug.threadLocalContext[String]()
       latch.countDown()
       latch.await()
       for (i <- 1 to (16 * IBR.emptyFreq)) {
-        s.tryPop().get
+        assert(Option(s.tryPop(tc)).nonEmpty)
         if ((i % SYNC) == 0) {
           barrier.await()
         }
       }
-      for (_ <- 1 to N) {
-        s.push(42)
+      for (_ <- 1L to N) {
+        s.push("42", tc)
       }
     })
     popper.start()
@@ -77,14 +81,15 @@ final class IBRStackSpec
     latch.await()
     pusher.join()
     popper.join()
-    assert(s.reusedCount >= (N/2)) // the exact count is non-deterministic
+    assert(s.debugGc.reuseCount.get() >= (N/2)) // the exact count is non-deterministic
   }
 
   it should "copy itself to a List" in {
     val s = IBRStackDebug[Int]()
-    s.push(1)
-    s.push(2)
-    s.push(3)
-    assert(s.unsafeToList() === List(3, 2, 1))
+    val tc = IBRStackDebug.threadLocalContext[Int]()
+    s.push(1, tc)
+    s.push(2, tc)
+    s.push(3, tc)
+    assert(s.unsafeToList(tc) === List(3, 2, 1))
   }
 }

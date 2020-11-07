@@ -34,7 +34,7 @@ lazy val bench = project.in(file("bench"))
   )
   .settings(macroSettings)
   .enablePlugins(JmhPlugin)
-  .dependsOn(core % "compile->compile;test->test")
+  .dependsOn(core % "compile->compile;compile->test")
 
 lazy val stress = project.in(file("stress"))
   .settings(name := "choam-stress")

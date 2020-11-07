@@ -19,7 +19,7 @@ package bench
 package util
 
 /** Thread-safe list */
-private[bench] sealed abstract class TsList[+A] {
+private[choam] sealed abstract class TsList[+A] {
 
   import TsList._
 
@@ -47,7 +47,7 @@ private[bench] sealed abstract class TsList[+A] {
   }
 }
 
-private[bench] object TsList {
+private[choam] object TsList {
   final case class Cons[A](h: A, t: TsList[A]) extends TsList[A]
   final case object End extends TsList[Nothing]
 }
