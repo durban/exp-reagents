@@ -61,6 +61,8 @@ lazy val commonSettings = Seq[Setting[_]](
     "-unchecked",
     "-encoding", "UTF-8",
     "-language:higherKinds,experimental.macros",
+    "-opt:l:inline",
+    "-opt-inline-from:<sources>",
     // "-Werror", TODO: reënable when possible
     // TODO: see: https://github.com/scala/bug/issues/12072
     "-Wconf:any:warning-verbose",
@@ -73,44 +75,20 @@ lazy val commonSettings = Seq[Setting[_]](
     "-Xverify",
     "-Ywarn-numeric-widen",
     "-Ywarn-dead-code",
-    "-Ywarn-value-discard"
+    "-Ywarn-value-discard",
+    "-Ywarn-unused:implicits",
+    "-Ywarn-unused:imports",
+    "-Ywarn-unused:locals",
+    "-Ywarn-unused:patvars",
+    "-Ywarn-unused:params",
+    "-Ywarn-unused:privates",
     // TODO: experiment with -Ydelambdafy:inline for performance
     // TODO: experiment with -Yno-predef and/or -Yno-imports
   ),
-  scalacOptions ++= {
-    if (scalaVersion.value.startsWith("2.11")) {
-      Seq(
-        "-Ywarn-unused",
-        "-Ywarn-unused-import"
-      )
-    } else {
-      Seq(
-        "-Ywarn-unused:implicits",
-        "-Ywarn-unused:imports",
-        "-Ywarn-unused:locals",
-        "-Ywarn-unused:patvars",
-        "-Ywarn-unused:params",
-        "-Ywarn-unused:privates"
-      )
-    }
-  },
-  scalacOptions ++= {
-    if (scalaVersion.value.startsWith("2.11")) {
-      Seq(
-        "-Yopt:l:project"
-      )
-    } else {
-      Seq(
-        "-opt:l:inline",
-        "-opt-inline-from:<sources>"
-      )
-    }
-  },
   scalacOptions in (Compile, console) ~= { _.filterNot("-Ywarn-unused-import" == _).filterNot("-Ywarn-unused:imports" == _) },
   scalacOptions in (Test, console) := (scalacOptions in (Compile, console)).value,
   addCompilerPlugin("org.typelevel" % "kind-projector" % "0.11.0" cross CrossVersion.full),
   parallelExecution in Test := false,
-
   libraryDependencies ++= Seq(
     Seq(
       dependencies.cats,
@@ -134,14 +112,14 @@ lazy val macroSettings = Seq(
 
 lazy val dependencies = new {
 
-  val catsVersion = "2.2.0"
-  val circeVersion = "0.13.0"
-  val fs2Version = "2.4.4"
+  val catsVersion = "2.3.0-M2"
+  val circeVersion = "0.14.0-M1"
+  val fs2Version = "2.5.0-M1"
 
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
   val catsFree = "org.typelevel" %% "cats-free" % catsVersion
-  val catsEffect = "org.typelevel" %% "cats-effect" % "2.2.0"
+  val catsEffect = "org.typelevel" %% "cats-effect" % "2.3.0-M1"
 
   val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,
