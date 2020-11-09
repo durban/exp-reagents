@@ -118,12 +118,6 @@ private[kcas] final object IBR {
 
   private[kcas] final val maxFreeListSize = 64 // TODO
 
-  /** The epoch interval reserved by a thread */
-  private final class Reservation(initial: Long) {
-    val lower: AtomicLong = new AtomicLong(initial)
-    val upper: AtomicLong = new AtomicLong(initial)
-  }
-
   /** For testing */
   private[kcas] final case class SnapshotReservation(
     lower: Long,
@@ -167,14 +161,14 @@ private[kcas] final object IBR {
      *
      * Note: read by other threads when reclaiming memory!
      */
-    private[IBR] val reservation: Reservation =
-      new Reservation(Long.MaxValue)
+    private[IBR] final val reservation: IBRReservation =
+      new IBRReservation(Long.MaxValue)
 
     /** For testing */
     private[kcas] def snapshotReservation: SnapshotReservation = {
       SnapshotReservation(
-        lower = this.reservation.lower.get(),
-        upper = this.reservation.upper.get()
+        lower = this.reservation.getLower(),
+        upper = this.reservation.getUpper()
       )
     }
 
@@ -246,12 +240,13 @@ private[kcas] final object IBR {
       else read(ref) // retry
     }
 
-    private final def tryAdjustReservation[A](a: A): Boolean = {
+    private[kcas] final def tryAdjustReservation[A](a: A): Boolean = {
       if (this.global.dynamicTest(a)) {
         val m: M = a.asInstanceOf[M]
-        val upper = this.reservation.upper.get()
-        this.reservation.upper.set(Math.max(upper, m.getBirthEpoch()))
-        if (this.reservation.upper.get() >= m.getBirthEpoch()) {
+        val res: IBRReservation = this.reservation
+        val currUpper = res.getUpper()
+        res.setUpper(Math.max(currUpper, m.getBirthEpoch()))
+        if (res.getUpper() >= m.getBirthEpoch()) {
           true // ok, we're done
         } else {
           false // retry
@@ -287,15 +282,15 @@ private[kcas] final object IBR {
 
     /** For testing */
     private[kcas] def forceGc(): Unit = {
-      assert(this.reservation.lower.get() < Long.MaxValue)
-      assert(this.reservation.upper.get() < Long.MaxValue)
+      assert(this.reservation.getLower() < Long.MaxValue)
+      assert(this.reservation.getUpper() < Long.MaxValue)
       this.empty()
     }
 
     /** For testing */
     private[kcas] def forceNextEpoch(): Unit = {
-      assert(this.reservation.lower.get() == Long.MaxValue)
-      assert(this.reservation.upper.get() == Long.MaxValue)
+      assert(this.reservation.getLower() == Long.MaxValue)
+      assert(this.reservation.getUpper() == Long.MaxValue)
       this.global.epoch.getAndIncrement()
       ()
     }
@@ -308,8 +303,8 @@ private[kcas] final object IBR {
     }
 
     private def reserve(epoch: Long): Unit = {
-      this.reservation.lower.set(epoch)
-      this.reservation.upper.set(epoch)
+      this.reservation.setLower(epoch)
+      this.reservation.setUpper(epoch)
     }
 
     private def empty(): Unit = {
@@ -343,8 +338,8 @@ private[kcas] final object IBR {
               isConflict(block, it) // continue
             case tc =>
               val conflict = (
-                (block.getBirthEpoch() <=  tc.reservation.upper.get()) &&
-                (block.getRetireEpoch() >= tc.reservation.lower.get())
+                (block.getBirthEpoch() <=  tc.reservation.getUpper()) &&
+                (block.getRetireEpoch() >= tc.reservation.getLower())
               )
               if (conflict) true
               else isConflict(block, it) // continue

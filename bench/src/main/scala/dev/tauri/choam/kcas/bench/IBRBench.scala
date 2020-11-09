@@ -18,11 +18,13 @@ package dev.tauri.choam
 package kcas
 package bench
 
+import scala.annotation.unused
+
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
 import dev.tauri.choam.bench.util.{ RandomState, XorShift, ReferenceTreiberStack, TsList }
-import dev.tauri.choam.kcas.IBRStackFast
+import dev.tauri.choam.kcas.{ IBRStackFast, BenchmarkAccess }
 
 @Fork(2)
 class IBRBench {
@@ -51,6 +53,14 @@ class IBRBench {
     bh.consume(t.tc.alloc())
   }
 
+  @Benchmark
+  def tryAdjustReservation(t: ThSt, @unused a: AdjustResSt): Unit = {
+    val e = t.ibrConsBirthEpoch + 10L
+    BenchmarkAccess.setBirthEpoch(t.ibrCons, e)
+    t.ibrConsBirthEpoch = e
+    assert(t.tc.tryAdjustReservation(t.ibrCons))
+  }
+
   // TODO: add a benchmark with a `kcas.Ref`-based stack
 }
 
@@ -75,6 +85,18 @@ object IBRBench {
   @State(Scope.Thread)
   class ThSt extends RandomState {
     val tc = IBRStackFast.threadLocalContext[Int]()
+    val ibrCons = {
+      val c = new IBRStackFast.Cons()
+      BenchmarkAccess.setBirthEpoch(c, 0L)
+      c
+    }
+    var ibrConsBirthEpoch = 0L
     val dummy = TsList.Cons(42, null)
+  }
+
+  @State(Scope.Benchmark)
+  class AdjustResSt extends StackSt {
+    // reserve epoch 0:
+    this.stack.gc.threadContext().startOp()
   }
 }
