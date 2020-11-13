@@ -14,6 +14,7 @@
 
 *.class
 *.log
+reading/
 
 # sbt specific
 .cache
@@ -48,6 +49,7 @@ bin/
 .ensime
 .ensime_cache
 
-# jcstress
+# jcstress/JMH
 results/
 jcstress-results-*.bin.gz
+*.jfr

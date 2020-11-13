@@ -1,0 +1,95 @@
+/*
+ * Copyright 2020 Daniel Urban and contributors listed in AUTHORS
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
+package dev.tauri.choam
+package kcas
+
+import scala.annotation.tailrec
+
+import org.openjdk.jcstress.annotations.{ Ref => _, _ }
+import org.openjdk.jcstress.annotations.Outcome.Outcomes
+import org.openjdk.jcstress.annotations.Expect._
+import org.openjdk.jcstress.infra.results.LLLLL_Result
+
+@JCStressTest
+@State
+@Description("EMCASTest")
+@Outcomes(Array(
+  new Outcome(id = Array("true, 21, 42, Active, null"), expect = ACCEPTABLE, desc = "observed descriptors in correct  order (active)"),
+  new Outcome(id = Array("true, 21, 42, Successful, null"), expect = ACCEPTABLE, desc = "observed descriptors in correct  order (finalized)"),
+  new Outcome(id = Array("true, 21, 42, Failed, null"), expect = FORBIDDEN, desc = "observed descriptors in correct  order, but failed status"),
+  new Outcome(id = Array("true, 42, 21, Active, null", "true, 42, 21, Successful, null"), expect = FORBIDDEN, desc = "observed descriptors in incorrect (unsorted) order")
+))
+class EMCASTest {
+
+  private[this] val ref1 =
+    Ref.mkWithId("a")(0L, 0L, 0L, i3 = 42L)
+
+  private[this] val ref2 =
+    Ref.mkWithId("x")(0L, 0L, 0L, i3 = 21L)
+
+  assert(Ref.globalCompare(ref1, ref2) > 0) // ref1 > ref2
+
+  // LLLLL_Result:
+  // r1: k-CAS result (Boolean)
+  // r2: `id3` of first observed descriptor (Long)
+  // r3: `id3` of second observed descriptor (Long)
+  // r4: `status` of observed parent (StatusType)
+  // r5: any unexpected object (for debugging)
+
+  @Actor
+  def write(r: LLLLL_Result): Unit = {
+    val ok = EMCAS
+      .start()
+      .withCAS(this.ref1, "a", "b")
+      .withCAS(this.ref2, "x", "y")
+      .tryPerform()
+    r.r1 = ok // true
+  }
+
+  @Actor
+  def read(r: LLLLL_Result): Unit = {
+    @tailrec
+    def go(): Unit = {
+      // ref2 will be acquired first:
+      (this.ref2.unsafeTryRead() : Any) match {
+        case s: String if s eq "x" =>
+          go() // retry
+        case d: EMCAS.WordDescriptor[_] =>
+          val it = d.parent.words.iterator()
+          val dFirst = it.next()
+          val dSecond = it.next()
+          r.r4 = d.parent.status.get()
+          r.r2 = dFirst.address.id3
+          r.r3 = dSecond.address.id3
+          if (it.hasNext) {
+            // mustn't happen
+            r.r5 = s"unexpected 3rd descriptor: ${it.next().toString}"
+          }
+        case s =>
+          // mustn't happen
+          r.r5 = s"unexpected object: ${s.toString}"
+      }
+    }
+    go()
+  }
+
+  @Arbiter
+  def arbiter(): Unit = {
+    assert(EMCAS.read(this.ref1) eq "b")
+    assert(EMCAS.read(this.ref2) eq "y")
+  }
+}

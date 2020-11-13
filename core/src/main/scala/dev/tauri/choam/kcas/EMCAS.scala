@@ -158,7 +158,7 @@ private[kcas] object EMCAS extends KCAS { self =>
 
   // Listing 2 in the paper:
 
-  // TODO: try to void allocating the return tuple
+  // TODO: try to avoid allocating the return tuple
   @tailrec
   def readInternal[A](ref: Ref[A], self: MCASDescriptor): (DescOr.Type[A], A) = {
     val o = rawRead(ref)
