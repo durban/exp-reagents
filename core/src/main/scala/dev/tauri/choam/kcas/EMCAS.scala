@@ -35,9 +35,13 @@ private[kcas] object EMCAS extends KCAS { self =>
   }
 
   final class MCASDescriptor(
-    // TODO: thread safety -- only read after reading from a Ref(?)
-    val words: ArrayList[WordDescriptor[_]],
-    var isSorted: Boolean
+    /**
+     * Word descriptors
+     *
+     * Thread safety: we only read the list after reading the descriptor from a `Ref`;
+     * we only mutate the list before writing the descriptor to a `Ref`.
+     */
+    val words: ArrayList[WordDescriptor[_]]
   ) extends self.Desc with self.Snap {
 
     val status =
@@ -45,9 +49,6 @@ private[kcas] object EMCAS extends KCAS { self =>
 
     override def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc = {
       this.words.add(new WordDescriptor[A](ref, ov, nv, this))
-      if (this.words.size() > 1) {
-        this.isSorted = false
-      } // else: empty and 1-element is always sorted
       this
     }
 
@@ -67,20 +68,17 @@ private[kcas] object EMCAS extends KCAS { self =>
       }
       val newArrCapacity = Math.max(this.words.size(), MCASDescriptor.minArraySize)
       val newArr = new ArrayList[WordDescriptor[_]](newArrCapacity)
-      val r = new MCASDescriptor(newArr, this.isSorted)
+      val r = new MCASDescriptor(newArr)
       copy(this.words, newArr, r, 0, this.words.size())
       r
     }
 
     def sort(): Unit = {
-      if (!this.isSorted) {
-        this.words.sort(WordDescriptor.comparator)
-        this.isSorted = true
-      }
+      this.words.sort(WordDescriptor.comparator)
     }
 
     override def tryPerform(): Boolean = {
-      MCAS(this)
+      MCAS(this, helping = false)
     }
 
     override def cancel(): Unit =
@@ -166,7 +164,7 @@ private[kcas] object EMCAS extends KCAS { self =>
       val wd: WordDescriptor[A] = DescOr.asDescriptor(o)
       val parentStatus = wd.parent.status.get()
       if ((wd.parent ne self) && (parentStatus eq Active)) { // `parent ne self` is to not "help" ourselves
-        MCAS(wd.parent) // help
+        MCAS(wd.parent, helping = true) // help the other op
         readInternal(ref, self) // retry
       } else {
         if (parentStatus eq Successful) {
@@ -186,7 +184,14 @@ private[kcas] object EMCAS extends KCAS { self =>
     readInternal(ref, null)._2
   }
 
-  def MCAS(desc: MCASDescriptor): Boolean = {
+  /**
+   * Performs an MCAS operation.
+   *
+   * @param desc: The main descriptor.
+   * @param helping: Pass `true` when helping `desc` found in a `Ref`;
+   *                 `false` when `desc` is a new descriptor.
+   */
+  def MCAS(desc: MCASDescriptor, helping: Boolean): Boolean = {
     @tailrec
     def tryWord[A](wordDesc: WordDescriptor[A]): Boolean = {
       val (content, value) = readInternal(wordDesc.address, desc)
@@ -218,7 +223,10 @@ private[kcas] object EMCAS extends KCAS { self =>
         true
       }
     }
-    desc.sort() // NB: this is either a NOP, or it's BEFORE `desc` is visible to other threads
+    if (!helping) {
+      // we're not helping, so `desc` is not yet visible to other threads
+      desc.sort()
+    } // else: the thread which published `desc` already sorted it
     val success = go(desc.words.iterator)
     if (desc.status.compareAndSet(Active, if (success) Successful else Failed)) {
       // TODO: We finalized the descriptor, mark it for reclamation:
@@ -231,9 +239,6 @@ private[kcas] object EMCAS extends KCAS { self =>
   }
 
   private[choam] override def start(): Desc = {
-    new MCASDescriptor(
-      new ArrayList(MCASDescriptor.minArraySize),
-      isSorted = true // empty is always sorted
-    )
+    new MCASDescriptor(new ArrayList(MCASDescriptor.minArraySize))
   }
 }
