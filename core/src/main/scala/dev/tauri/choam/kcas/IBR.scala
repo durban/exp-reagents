@@ -193,6 +193,7 @@ private[kcas] final object IBR {
         this.freeListSize -= 1
         val elem = this.freeList
         this.freeList = elem.next
+        elem.setNext(nullOf[M])
         elem
       } else {
         global.allocateNew()
@@ -281,16 +282,21 @@ private[kcas] final object IBR {
     }
 
     /** For testing */
+    private[kcas] def isDuringOp(): Boolean = {
+      (this.reservation.getLower() != Long.MaxValue) && (
+        this.reservation.getUpper() != Long.MaxValue
+      )
+    }
+
+    /** For testing */
     private[kcas] def forceGc(): Unit = {
-      assert(this.reservation.getLower() < Long.MaxValue)
-      assert(this.reservation.getUpper() < Long.MaxValue)
+      assert(this.isDuringOp())
       this.empty()
     }
 
     /** For testing */
     private[kcas] def forceNextEpoch(): Unit = {
-      assert(this.reservation.getLower() == Long.MaxValue)
-      assert(this.reservation.getUpper() == Long.MaxValue)
+      assert(!this.isDuringOp())
       this.global.epoch.getAndIncrement()
       ()
     }
@@ -310,23 +316,23 @@ private[kcas] final object IBR {
     private def empty(): Unit = {
       val reservations = this.global.reservations.values()
       @tailrec
-      def go(curr: M, prev: M, deleteHead: Boolean): Boolean = {
+      def go(curr: M, prev: M): Unit = {
         if (curr ne null) {
-          val del = if (!isConflict(curr, reservations.iterator())) {
-            free(curr)
+          var newPrev = curr
+          if (!isConflict(curr, reservations.iterator())) {
+            // remove `curr` from the `retired` list
             if (prev ne null) {
+              // delete an internal item:
               prev.setNext(curr.next)
-              deleteHead
             } else {
-              true
+              // delete the head:
+              this.retired = curr.next
             }
-          } else {
-            deleteHead
+            free(curr) // actually free `curr`
+            newPrev = prev // since we removed `curr` form the list
           }
-          go(curr.next, curr, del)
-        } else {
-          deleteHead
-        }
+          go(curr.next, newPrev)
+        } // else: end of `retired` list
       }
       @tailrec
       def isConflict(block: M, it: java.util.Iterator[WeakRef[T]]): Boolean = {
@@ -349,10 +355,7 @@ private[kcas] final object IBR {
         }
       }
 
-      val delHead = go(this.retired, prev = nullOf[M], deleteHead = false)
-      if (delHead) {
-        this.retired = this.retired.next
-      }
+      go(this.retired, prev = nullOf[M])
     }
 
     private def free(block: M): Unit = {

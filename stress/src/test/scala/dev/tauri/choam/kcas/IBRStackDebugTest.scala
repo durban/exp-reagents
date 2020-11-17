@@ -24,12 +24,12 @@ import org.openjdk.jcstress.infra.results.LL_Result
 
 @JCStressTest
 @State
-@Description("IBR stack pop/push should be atomic")
+@Description("IBRStackDebug pop/push should be atomic")
 @Outcomes(Array(
   new Outcome(id = Array("z, List(x, y)", "z, List(y, x)"), expect = ACCEPTABLE, desc = "Pop is the first"),
   new Outcome(id = Array("x, List(y, z)", "y, List(x, z)"), expect = ACCEPTABLE, desc = "Pop one of the pushed values")
 ))
-class IBRTest {
+class IBRStackDebugTest {
 
   private[this] val stack =
     IBRStackDebug[String]("z")
