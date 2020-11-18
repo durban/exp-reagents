@@ -283,7 +283,7 @@ private[kcas] final object IBR {
 
     /** For testing */
     private[kcas] def isDuringOp(): Boolean = {
-      (this.reservation.getLower() != Long.MaxValue) && (
+      (this.reservation.getLower() != Long.MaxValue) || (
         this.reservation.getUpper() != Long.MaxValue
       )
     }
