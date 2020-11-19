@@ -115,6 +115,9 @@ final object IBRReservationTest {
     protected[kcas] def allocate(tc: TC): Unit =
       this.freed = false
 
+    protected[kcas] def retire(tc: TC): Unit =
+      ()
+
     protected[kcas] def free(tc: TC): Unit =
       this.freed = true
   }

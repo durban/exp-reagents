@@ -141,9 +141,25 @@ private[kcas] final object IBR {
     private[this] var counter: Int =
       0
 
-    /** Intrusive linked list of retired (but not freed) objects */
+    /**
+     * Intrusive linked list of retired (but not freed) objects
+     *
+     * It contains `retiredCount` items.
+     */
     private[this] var retired: M =
       nullOf[M]
+
+    /** Current size of the `retired` list */
+    private[this] var retiredCount: Long =
+      0L
+
+    // TODO: Maybe add a failsafe: if `retiredCount`
+    // TODO: is abnormally big, release some objects
+    // TODO: without `free`-ing them. Since we'll use
+    // TODO: IBR to remove EMCAS descriptors, this
+    // TODO: shouldn't cause correctness problems, and
+    // TODO: would avoid leaking a lot of memory if
+    // TOOD: something goes terribly wrong.
 
     /**
      * Intrusive linked list of freed (reusable) objects
@@ -204,9 +220,11 @@ private[kcas] final object IBR {
     }
 
     final def retire(a: M): Unit = {
+      this.retiredCount += 1L
       a.setNext(this.retired)
       this.retired = a
       a.setRetireEpoch(this.global.epoch.get())
+      a.retire(this)
       if ((this.counter % emptyFreq) == 0) {
         this.empty()
       }
@@ -289,6 +307,11 @@ private[kcas] final object IBR {
     }
 
     /** For testing */
+    private[kcas] def getRetiredCount(): Long = {
+      this.retiredCount
+    }
+
+    /** For testing */
     private[kcas] def forceGc(): Unit = {
       assert(this.isDuringOp())
       this.empty()
@@ -318,9 +341,11 @@ private[kcas] final object IBR {
       @tailrec
       def go(curr: M, prev: M): Unit = {
         if (curr ne null) {
-          var newPrev = curr
+          val currNext = curr.next // save `.next`, because `free` may clear it
+          var newPrev = curr // `prev` for the next iteration
           if (!isConflict(curr, reservations.iterator())) {
-            // remove `curr` from the `retired` list
+            // remove `curr` from the `retired` list:
+            this.retiredCount -= 1L
             if (prev ne null) {
               // delete an internal item:
               prev.setNext(curr.next)
@@ -331,7 +356,7 @@ private[kcas] final object IBR {
             free(curr) // actually free `curr`
             newPrev = prev // since we removed `curr` form the list
           }
-          go(curr.next, newPrev)
+          go(currNext, newPrev)
         } // else: end of `retired` list
       }
       @tailrec
@@ -366,7 +391,9 @@ private[kcas] final object IBR {
         this.freeListSize += 1
         block.setNext(this.freeList)
         this.freeList = block
-      } // else: JVM GC will collect
+      } else {
+        block.setNext(nullOf[M])
+      }
     }
   }
 }

@@ -25,6 +25,8 @@ trait DebugManaged[T <: IBR.ThreadContext[T, M], M <: IBRManaged[T, M]]
 
   private[this] var _allocated = 0
 
+  private[this] var _retired = 0
+
   private[this] var _freed = 0
 
   override protected[kcas] def allocate(tc: T): Unit = {
@@ -36,12 +38,18 @@ trait DebugManaged[T <: IBR.ThreadContext[T, M], M <: IBRManaged[T, M]]
     this._allocated += 1
   }
 
+  override protected[kcas] def retire(tc: T): Unit = {
+    this._retired += 1
+    assert(this._allocated === this._retired)
+  }
+
   override protected[kcas] def free(tc: T): Unit = {
     val retireEpoch = this.getRetireEpoch()
     assert(retireEpoch <= tc.globalContext.epochNumber)
     assert(this.getBirthEpoch() <= retireEpoch)
     this._freed += 1
     assert(this._allocated === this._freed)
+    assert(this._retired === this._freed)
   }
 
   protected def checkAccess(): Unit = {

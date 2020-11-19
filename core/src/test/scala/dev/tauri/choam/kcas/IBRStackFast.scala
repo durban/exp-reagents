@@ -73,8 +73,9 @@ class IBRStackFast[A](
         case c: Cons[_] =>
           val tail = tc.readVh[Node[A]](c.getTailVh, c)
           if (tc.casVh(this.head.getTailVh, this.head, curr, tail)) {
-            tc.retire(curr)
-            tc.readVh[A](c.getHeadVh(), c)
+            val res = tc.readVh[A](c.getHeadVh(), c)
+            tc.retire(c)
+            res
           } else {
             _sentinel // retry
           }
@@ -146,15 +147,20 @@ final object IBRStackFast {
     override protected[kcas] def allocate(tc: TC[A]): Unit =
       ()
 
-    override protected[kcas] def free(tc: TC[A]): Unit = {
+    override protected[kcas] def retire(tc: TC[A]): Unit = {
       this.setHeadPlain(nullOf[A])
       this.setTailPlain(nullOf[Node[A]])
     }
+
+    override protected[kcas] def free(tc: TC[A]): Unit =
+      ()
   }
 
   private[kcas] final object End extends Node[Nothing] {
     override protected[kcas] def allocate(tc: TC[Nothing]): Unit =
       ()
+    override protected[kcas] def retire(tc: TC[Nothing]): Unit =
+      throw new Exception("End should never be retired")
     override protected[kcas] def free(tc: TC[Nothing]): Unit =
       throw new Exception("End should never be freed")
     def widen[A]: Node[A] =

@@ -89,9 +89,12 @@ public abstract class IBRManaged<T, M extends IBRManaged<T, M>> {
     RETIRE_EPOCH.set(this, e);
   }
 
-  /** Hook for subclasses for performing cleanup */
-  abstract protected void free(T tc);
-
   /** Hook for subclasses for performing initialization */
   abstract protected void allocate(T tc);
+
+  /** Hook for subclasses for performing cleanup when retiring */
+  abstract protected void retire(T tc);
+
+  /** Hook for subclasses for performing cleanup when freeing */
+  abstract protected void free(T tc);
 }

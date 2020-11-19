@@ -23,14 +23,52 @@ import org.scalatest.flatspec.AnyFlatSpec
 import org.scalatest.matchers.should.Matchers
 import org.scalactic.TypeCheckedTripleEquals
 
-final class IBRStackSpec
+final class IBRStackDebugSpec extends IBRStackSpec[IBRStackDebug] {
+
+  override protected def name: String =
+    "IBRStackDebug"
+
+  override protected def mkEmpty[A]() =
+    IBRStackDebug[A]()
+
+  override protected def threadLocalContext[A](): IBRStackFast.TC[A] =
+    IBRStackDebug.threadLocalContext()
+
+  override protected def reuseCount[A](stack: IBRStackDebug[A]): Option[Long] =
+    Some(stack.debugGc.reuseCount.get())
+}
+
+final class IBRStackFastSpec extends IBRStackSpec[IBRStackFast] {
+
+  override protected def name: String =
+    "IBRStackFast"
+
+  override protected def mkEmpty[A]() =
+    IBRStackFast[A]()
+
+  override protected def threadLocalContext[A](): IBRStackFast.TC[A] =
+    IBRStackFast.threadLocalContext()
+
+  override protected def reuseCount[A](stack: IBRStackFast[A]): Option[Long] =
+    None
+}
+
+abstract class IBRStackSpec[S[a] <: IBRStackFast[a]]
   extends AnyFlatSpec
   with Matchers
   with TypeCheckedTripleEquals {
 
-  "IBRStack" should "work" in {
-    val s = IBRStackDebug[String]()
-    val tc = IBRStackDebug.threadLocalContext[String]()
+  protected def name: String
+
+  protected def mkEmpty[A](): S[A]
+
+  protected def threadLocalContext[A](): IBRStackFast.TC[A]
+
+  protected def reuseCount[A](stack: S[A]): Option[Long]
+
+  this.name should "work" in {
+    val s = this.mkEmpty[String]()
+    val tc = this.threadLocalContext[String]()
     s.push("a", tc)
     s.push("b", tc)
     s.push("c", tc)
@@ -43,15 +81,15 @@ final class IBRStackSpec
   it should "reuse nodes from the freelist" in {
     val N = 42L
     val SYNC = 128L
-    val s = IBRStackDebug[String]()
-    val tc = IBRStackDebug.threadLocalContext[String]()
+    val s = this.mkEmpty[String]()
+    val tc = this.threadLocalContext[String]()
     for (i <- 1 to (16 * IBR.emptyFreq)) {
       s.push(i.toString, tc)
     }
     val latch = new CountDownLatch(3)
     val barrier = new CyclicBarrier(2)
     val pusher = new Thread(() => {
-      val tc = IBRStackDebug.threadLocalContext[String]()
+      val tc = this.threadLocalContext[String]()
       latch.countDown()
       latch.await()
       for (i <- 1 to (16 * IBR.emptyFreq)) {
@@ -63,7 +101,7 @@ final class IBRStackSpec
     })
     pusher.start()
     val popper = new Thread(() => {
-      val tc = IBRStackDebug.threadLocalContext[String]()
+      val tc = this.threadLocalContext[String]()
       latch.countDown()
       latch.await()
       for (i <- 1 to (16 * IBR.emptyFreq)) {
@@ -81,15 +119,32 @@ final class IBRStackSpec
     latch.await()
     pusher.join()
     popper.join()
-    assert(s.debugGc.reuseCount.get() >= (N/2)) // the exact count is non-deterministic
+    this.reuseCount(s).foreach { reuseCount =>
+      assert(reuseCount >= (N/2)) // the exact count is non-deterministic
+    }
   }
 
   it should "copy itself to a List" in {
-    val s = IBRStackDebug[Int]()
-    val tc = IBRStackDebug.threadLocalContext[Int]()
+    val s = this.mkEmpty[Int]()
+    val tc = this.threadLocalContext[Int]()
     s.push(1, tc)
     s.push(2, tc)
     s.push(3, tc)
     assert(s.unsafeToList(tc) === List(3, 2, 1))
+  }
+
+  it should "not leak memory" in {
+    val s = this.mkEmpty[String]()
+    val tc = this.threadLocalContext[String]()
+    s.push("1", tc)
+    s.push("2", tc)
+    s.push("3", tc)
+    val N = 1_000_000
+    for (i <- 1 to N) {
+      s.push((i + 3).toString(), tc)
+      assert(s.tryPop(tc) ne null)
+    }
+    tc.fullGc()
+    assert(tc.getRetiredCount() === 0L) // all of it should've been freed
   }
 }

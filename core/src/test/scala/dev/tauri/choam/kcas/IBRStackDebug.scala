@@ -64,6 +64,10 @@ final object IBRStackDebug {
       assert(hd eq null, s"head is '${hd}'")
       assert(equ(tc.readVh[Node[A]](this.getTailVh(), this), null))
     }
+    override def retire(tc: TC[A]): Unit = {
+      super[DebugManaged].retire(tc)
+      super[Cons].retire(tc)
+    }
     override def free(tc: TC[A]): Unit = {
       super[DebugManaged].free(tc)
       super[Cons].free(tc)
