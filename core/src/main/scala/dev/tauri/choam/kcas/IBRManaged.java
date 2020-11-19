@@ -18,7 +18,6 @@ package dev.tauri.choam.kcas;
 
 import java.lang.invoke.VarHandle;
 import java.lang.invoke.MethodHandles;
-import java.util.concurrent.atomic.AtomicLongFieldUpdater;
 
 /**
  * Base class for objects managed by IBR
@@ -28,23 +27,15 @@ public abstract class IBRManaged<T, M extends IBRManaged<T, M>> {
   // TODO: (look into acq/rel modes: http://gee.cs.oswego.edu/dl/html/j9mm.html)?
   // TODO: verify that we really don't need born_before from the paper
 
-  @SuppressWarnings("rawtypes")
-  private static final AtomicLongFieldUpdater<IBRManaged> BIRTH_EPOCH =
-    AtomicLongFieldUpdater.newUpdater(IBRManaged.class, "_birthEpoch");
+  private static final VarHandle BIRTH_EPOCH;
 
-  @SuppressWarnings("rawtypes")
-  private static final AtomicLongFieldUpdater<IBRManaged> RETIRE_EPOCH =
-    AtomicLongFieldUpdater.newUpdater(IBRManaged.class, "_retireEpoch");
-
-  private static final VarHandle BIRTH_EPOCH_VH;
-
-  private static final VarHandle RETIRE_EPOCH_VH;
+  private static final VarHandle RETIRE_EPOCH;
 
   static {
     try {
       MethodHandles.Lookup l = MethodHandles.lookup();
-      BIRTH_EPOCH_VH = l.findVarHandle(IBRManaged.class, "_birthEpoch", long.class);
-      RETIRE_EPOCH_VH = l.findVarHandle(IBRManaged.class, "_retireEpoch", long.class);
+      BIRTH_EPOCH = l.findVarHandle(IBRManaged.class, "_birthEpoch", long.class);
+      RETIRE_EPOCH = l.findVarHandle(IBRManaged.class, "_retireEpoch", long.class);
     } catch (ReflectiveOperationException ex) {
       throw new ExceptionInInitializerError(ex);
     }
@@ -61,8 +52,8 @@ public abstract class IBRManaged<T, M extends IBRManaged<T, M>> {
 
   protected IBRManaged() {
     // TODO: maybe `setOpaque`?
-    BIRTH_EPOCH_VH.set(this, Long.MIN_VALUE);
-    RETIRE_EPOCH_VH.set(this, Long.MAX_VALUE);
+    BIRTH_EPOCH.set(this, Long.MIN_VALUE);
+    RETIRE_EPOCH.set(this, Long.MAX_VALUE);
   }
 
   final M next() { // TODO: -> getNext()
@@ -74,19 +65,19 @@ public abstract class IBRManaged<T, M extends IBRManaged<T, M>> {
   }
 
   final long getBirthEpoch() {
-    return BIRTH_EPOCH.get(this);
+    return (long) BIRTH_EPOCH.getVolatile(this);
   }
 
   final void setBirthEpoch(long e) {
-    BIRTH_EPOCH.set(this, e);
+    BIRTH_EPOCH.setVolatile(this, e);
   }
 
   final long getRetireEpoch() {
-    return RETIRE_EPOCH.get(this);
+    return (long) RETIRE_EPOCH.getVolatile(this);
   }
 
   final void setRetireEpoch(long e) {
-    RETIRE_EPOCH.set(this, e);
+    RETIRE_EPOCH.setVolatile(this, e);
   }
 
   /** Hook for subclasses for performing initialization */

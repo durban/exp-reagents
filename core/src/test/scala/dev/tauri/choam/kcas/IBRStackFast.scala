@@ -42,26 +42,24 @@ class IBRStackFast[A](
   protected def checkReuse(@unused tc: TC[A], @unused c: Cons[A]): Unit =
     ()
 
-  @tailrec
   final def push(a: A, tc: TC[A]): Unit = {
-    tc.startOp()
-    val done = try {
+    @tailrec
+    def go(newHead: Cons[A]): Unit = {
       val oldHead = tc.readVh[Node[A]](this.head.getTailVh, this.head)
+      // the CAS on the next line will make these writes visible
+      newHead.setTailPlain(oldHead)
+      if (!tc.casVh(this.head.getTailVh, this.head, oldHead, newHead)) {
+        go(newHead)
+      }
+    }
+    tc.startOp()
+    try {
       val newHead = tc.alloc().asInstanceOf[Cons[A]]
       this.checkReuse(tc, newHead)
       // the CAS on the next line will make these writes visible
       newHead.setHeadPlain(a)
-      newHead.setTailPlain(oldHead)
-      if (tc.casVh(this.head.getTailVh, this.head, oldHead, newHead)) {
-        true
-      } else {
-        tc.retire(newHead)
-        false
-      }
-    } finally tc.endOp() // FIXME: put the whole CAS-loop into one op?
-    if (!done) {
-      push(a, tc) // retry
-    }
+      go(newHead)
+    } finally tc.endOp()
   }
 
   @tailrec
