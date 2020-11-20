@@ -41,7 +41,7 @@ final class IBRSpec
       val d2 = tc.alloc()
       assert(tc.cas(ref, d1, d2))
       assert(!tc.cas(ref, d1, d2))
-      assert(tc.read(ref) eq d2)
+      assert(tc.readAcquire(ref) eq d2)
       tc.retire(d1)
       tc.retire(d2)
       ref
@@ -61,7 +61,7 @@ final class IBRSpec
       val tc = gc.threadContext()
       tc.startOp()
       try {
-        val d1 = tc.read(ref)
+        val d1 = tc.readAcquire(ref)
         latch1.countDown()
         latch2.await()
         // we're still using `d1` ...
@@ -138,8 +138,8 @@ final class IBRSpec
       } finally tc.endOp()
     }
     for (desc <- descs) {
-      assert(desc.getBirthEpoch() == startEpoch)
-      assert(desc.getRetireEpoch() === newEpoch)
+      assert(desc.getBirthEpochOpaque() == startEpoch)
+      assert(desc.getRetireEpochOpaque() === newEpoch)
     }
   }
 
@@ -159,7 +159,7 @@ final class IBRSpec
           true
         } else {
           seen.put(d, ())
-          val prev = tc.read(ref)
+          val prev = tc.readAcquire(ref)
           assert(tc.cas(ref, prev, d))
           if (prev ne null) tc.retire(prev)
           // continue:
@@ -188,7 +188,7 @@ final class IBRSpec
       try {
         val tc = gc.threadContext()
         tc.startOp()
-        val d = tc.read(ref)
+        val d = tc.readAcquire(ref)
         assert(d.freed === 0)
         // now the thread exits while still "using" the
         // descriptor, because it doesn't call `endOp`
@@ -213,7 +213,7 @@ final class IBRSpec
       tc.cas(ref, d, null)
       tc.retire(d)
     }
-    assert(d.getRetireEpoch() === firstEpoch)
+    assert(d.getRetireEpochOpaque() === firstEpoch)
     tc.fullGc() // this should collect `d`
     assert(d.freed === 1)
     assert(gc.snapshotReservations.get(t.getId()).isEmpty)
@@ -236,7 +236,7 @@ final class IBRSpec
       try {
         val tc = gc.threadContext()
         tc.startOp()
-        val d = tc.read(ref)
+        val d = tc.readAcquire(ref)
         assert(d.freed === 0)
         // now the thread deadlocks while still "using" the
         // descriptor, because it doesn't call `endOp`
@@ -259,13 +259,13 @@ final class IBRSpec
       tc.cas(ref, d, null)
       tc.retire(d) // `d` will never be collected, because `t` protects it
     }
-    assert(d.getRetireEpoch() === firstEpoch)
+    assert(d.getRetireEpochOpaque() === firstEpoch)
     tc.fullGc() // this will not collect `d`
     assert(d.freed === 0)
     // but newet objects should be reclaimed:
     val d2 = tc.op {
       val d2 = tc.alloc()
-      assert(d2.getBirthEpoch() > firstEpoch)
+      assert(d2.getBirthEpochOpaque() > firstEpoch)
       tc.cas(ref, null, d2)
       d2
     }
@@ -275,7 +275,7 @@ final class IBRSpec
       tc.cas(ref, d2, null)
       tc.retire(d2)
     }
-    assert(d2.getRetireEpoch() === gc.epochNumber)
+    assert(d2.getRetireEpochOpaque() === gc.epochNumber)
     tc.fullGc() // this should collect `d2` (but not `d`)
     assert(d.freed === 0)
     assert(d2.freed === 1)

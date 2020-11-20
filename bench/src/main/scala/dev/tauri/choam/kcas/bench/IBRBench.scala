@@ -56,7 +56,7 @@ class IBRBench {
   @Benchmark
   def tryAdjustReservation(t: ThSt, @unused a: AdjustResSt): Unit = {
     val e = t.ibrConsBirthEpoch + 10L
-    BenchmarkAccess.setBirthEpoch(t.ibrCons, e)
+    BenchmarkAccess.setBirthEpochOpaque(t.ibrCons, e)
     t.ibrConsBirthEpoch = e
     assert(t.tc.tryAdjustReservation(t.ibrCons))
   }
@@ -87,7 +87,7 @@ object IBRBench {
     val tc = IBRStackFast.threadLocalContext[Int]()
     val ibrCons = {
       val c = new IBRStackFast.Cons()
-      BenchmarkAccess.setBirthEpoch(c, 0L)
+      BenchmarkAccess.setBirthEpochOpaque(c, 0L)
       c
     }
     var ibrConsBirthEpoch = 0L

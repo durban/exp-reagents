@@ -41,12 +41,12 @@ abstract class IBRStackFastConsBase<A, T, M extends IBRManaged<T, M>>
   @SuppressWarnings("unused")
   private M _tail;
 
-  final void setHeadPlain(A a) {
-    this._head = a;
+  final void setHeadOpaque(A a) {
+    HEAD.setOpaque(this, a);
   }
 
-  final void setTailPlain(M t) {
-    this._tail = t;
+  final void setTailOpaque(M t) {
+    TAIL.setOpaque(this, t);
   }
 
   VarHandle getHeadVh() {

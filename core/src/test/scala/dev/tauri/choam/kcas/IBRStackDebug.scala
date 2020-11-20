@@ -62,7 +62,7 @@ final object IBRStackDebug {
       super.allocate(tc)
       val hd = this.getHeadVh().get(this)
       assert(hd eq null, s"head is '${hd}'")
-      assert(equ(tc.readVh[Node[A]](this.getTailVh(), this), null))
+      assert(equ(tc.readVhAcquire[Node[A]](this.getTailVh(), this), null))
     }
     override def retire(tc: TC[A]): Unit = {
       super[DebugManaged].retire(tc)

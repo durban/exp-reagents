@@ -19,7 +19,7 @@ package kcas
 
 final object BenchmarkAccess {
 
-  def setBirthEpoch[T, M <: IBRManaged[T, M]](b: IBRManaged[T, M], e: Long): Unit = {
-    b.setBirthEpoch(e)
+  def setBirthEpochOpaque[T, M <: IBRManaged[T, M]](b: IBRManaged[T, M], e: Long): Unit = {
+    b.setBirthEpochOpaque(e)
   }
 }

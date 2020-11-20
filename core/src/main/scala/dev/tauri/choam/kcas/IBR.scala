@@ -215,7 +215,7 @@ private[kcas] final object IBR {
       } else {
         global.allocateNew()
       }
-      elem.setBirthEpoch(epoch)
+      elem.setBirthEpochOpaque(epoch) // opaque: will be published with release
       elem.allocate(this)
       elem
     }
@@ -224,7 +224,7 @@ private[kcas] final object IBR {
       this.retiredCount += 1L
       a.setNext(this.retired)
       this.retired = a
-      a.setRetireEpoch(this.global.epoch.get())
+      a.setRetireEpochOpaque(this.global.epoch.get()) // opaque: was read with acquire
       a.retire(this)
       if ((this.counter % emptyFreq) == 0) {
         this.empty()
@@ -240,17 +240,17 @@ private[kcas] final object IBR {
     }
 
     @tailrec
-    final def readVh[A](vh: VarHandle, obj: M): A = {
-      val a: A = vh.getVolatile(obj)
+    final def readVhAcquire[A](vh: VarHandle, obj: M): A = {
+      val a: A = vh.getAcquire(obj)
       if (tryAdjustReservation(a)) a
-      else readVh(vh, obj) // retry
+      else readVhAcquire(vh, obj) // retry
     }
 
     @tailrec
-    final def read[A](ref: AtomicReference[A]): A = {
-      val a: A = ref.get() // getAcquire might be enough(?)
+    final def readAcquire[A](ref: AtomicReference[A]): A = {
+      val a: A = ref.getAcquire()
       if (tryAdjustReservation(a)) a
-      else read(ref) // retry
+      else readAcquire(ref) // retry
     }
 
     private[kcas] final def tryAdjustReservation[A](a: A): Boolean = {
@@ -258,11 +258,12 @@ private[kcas] final object IBR {
         val m: M = a.asInstanceOf[M]
         val res: IBRReservation = this.reservation
         val currUpper = res.getUpper()
-        res.setUpper(Math.max(currUpper, m.getBirthEpoch()))
+        // we read `a` with acquire, so we can read birthEpoch with opaque:
+        res.setUpper(Math.max(currUpper, m.getBirthEpochOpaque()))
         // `m` might've been retired before we ajusted
         // our reservation, so we have to recheck the
         // birth epoch:
-        if (res.getUpper() >= m.getBirthEpoch()) {
+        if (res.getUpper() >= m.getBirthEpochOpaque()) { // opaque: as above
           // ok, we're done
           true
         } else {
@@ -361,9 +362,10 @@ private[kcas] final object IBR {
               it.remove()
               isConflict(block, it) // continue
             case tc =>
+              // block is currently threadlocal, we can read with opaque
               val conflict = (
-                (block.getBirthEpoch() <=  tc.reservation.getUpper()) &&
-                (block.getRetireEpoch() >= tc.reservation.getLower())
+                (block.getBirthEpochOpaque() <=  tc.reservation.getUpper()) &&
+                (block.getRetireEpochOpaque() >= tc.reservation.getLower())
               )
               if (conflict) true
               else isConflict(block, it) // continue
@@ -378,8 +380,8 @@ private[kcas] final object IBR {
 
     private def free(block: M): Unit = {
       block.free(this)
-      block.setBirthEpoch(Long.MinValue) // TODO: not strictly necessary
-      block.setRetireEpoch(Long.MaxValue) // TODO: not strictly necessary
+      block.setBirthEpochOpaque(Long.MinValue) // TODO: not strictly necessary
+      block.setRetireEpochOpaque(Long.MaxValue) // TODO: not strictly necessary
       if (this.freeListSize < maxFreeListSize) {
         this.freeListSize += 1
         block.setNext(this.freeList)

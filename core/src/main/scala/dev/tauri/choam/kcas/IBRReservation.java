@@ -46,17 +46,22 @@ final class IBRReservation {
     this.setUpper(initial);
   }
 
-  // Only the owner thread writes lower/upper,
-  // other threads just read it. So the owner
-  // writes them with `setRelease`, and others
-  // read the with `getAcquire`.
+  // We write with `setVolatile`; while only
+  // the owner thread writes lower/upper, it is
+  // important, that writing a reservation
+  // happens before reading from refs (with acquire);
+  // this is why `setRelease` is not enough.
+
+  // For reading reservations, `getAcquire` is
+  // enough: only one thread (the owner) is writing
+  // values, so we'll see them.
 
   final long getLower() {
     return (long) LOWER.getAcquire(this);
   }
 
   final void setLower(long value) {
-    LOWER.setRelease(this, value);
+    LOWER.setVolatile(this, value);
   }
 
   final long getUpper() {
@@ -64,6 +69,18 @@ final class IBRReservation {
   }
 
   final void setUpper(long value) {
+    UPPER.setVolatile(this, value);
+  }
+
+  // These are only for testing:
+
+  @Deprecated
+  final void setLowerRelease(long value) {
+    LOWER.setRelease(this, value);
+  }
+
+  @Deprecated
+  final void setUpperRelease(long value) {
     UPPER.setRelease(this, value);
   }
 }

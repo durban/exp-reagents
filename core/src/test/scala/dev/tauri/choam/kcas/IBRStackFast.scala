@@ -45,9 +45,8 @@ class IBRStackFast[A](
   final def push(a: A, tc: TC[A]): Unit = {
     @tailrec
     def go(newHead: Cons[A]): Unit = {
-      val oldHead = tc.readVh[Node[A]](this.head.getTailVh, this.head)
-      // the CAS on the next line will make these writes visible
-      newHead.setTailPlain(oldHead)
+      val oldHead = tc.readVhAcquire[Node[A]](this.head.getTailVh, this.head)
+      newHead.setTailOpaque(oldHead) // opaque: the CAS below will make it visible
       if (!tc.casVh(this.head.getTailVh, this.head, oldHead, newHead)) {
         go(newHead)
       }
@@ -56,8 +55,7 @@ class IBRStackFast[A](
     try {
       val newHead = tc.alloc().asInstanceOf[Cons[A]]
       this.checkReuse(tc, newHead)
-      // the CAS on the next line will make these writes visible
-      newHead.setHeadPlain(a)
+      newHead.setHeadOpaque(a) // opaque: the CAS in `go` will make it visible
       go(newHead)
     } finally tc.endOp()
   }
@@ -66,12 +64,12 @@ class IBRStackFast[A](
   final def tryPop(tc: TC[A]): A = {
     tc.startOp()
     val res = try {
-      val curr = tc.readVh[Node[A]](this.head.getTailVh, this.head)
+      val curr = tc.readVhAcquire[Node[A]](this.head.getTailVh, this.head)
       curr match {
         case c: Cons[_] =>
-          val tail = tc.readVh[Node[A]](c.getTailVh, c)
+          val tail = tc.readVhAcquire[Node[A]](c.getTailVh, c)
           if (tc.casVh(this.head.getTailVh, this.head, curr, tail)) {
-            val res = tc.readVh[A](c.getHeadVh(), c)
+            val res = tc.readVhAcquire[A](c.getHeadVh(), c)
             tc.retire(c)
             res
           } else {
@@ -89,9 +87,9 @@ class IBRStackFast[A](
   private[kcas] final def unsafeToList(tc: TC[A]): List[A] = {
     @tailrec
     def go(next: Cons[A], acc: Chain[A]): Chain[A] = {
-      tc.readVh[Node[A]](next.getTailVh, next) match {
+      tc.readVhAcquire[Node[A]](next.getTailVh, next) match {
         case c: Cons[_] =>
-          go(c, acc :+ tc.readVh[A](c.getHeadVh(), c))
+          go(c, acc :+ tc.readVhAcquire[A](c.getHeadVh(), c))
         case _: End.type =>
           acc
       }
@@ -146,8 +144,8 @@ final object IBRStackFast {
       ()
 
     override protected[kcas] def retire(tc: TC[A]): Unit = {
-      this.setHeadPlain(nullOf[A])
-      this.setTailPlain(nullOf[Node[A]])
+      this.setHeadOpaque(nullOf[A])
+      this.setTailOpaque(nullOf[Node[A]])
     }
 
     override protected[kcas] def free(tc: TC[A]): Unit =

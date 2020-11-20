@@ -20,9 +20,9 @@ package kcas
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.atomic.AtomicReference
 
-import org.openjdk.jcstress.annotations._
-import org.openjdk.jcstress.annotations.Outcome.Outcomes
 import org.openjdk.jcstress.annotations.Expect._
+import org.openjdk.jcstress.annotations.Outcome.Outcomes
+import org.openjdk.jcstress.annotations._
 import org.openjdk.jcstress.infra.results._
 
 @JCStressTest
@@ -68,9 +68,9 @@ class IBRReservationTest {
   def detach(r: LLZ_Result): Unit = {
     val tc = this.gc.threadContext()
     tc.startOp()
-    var d = tc.read(this.ref)
+    var d = tc.readAcquire(this.ref)
     while (d.toString ne "data") {
-      d = tc.read(this.ref)
+      d = tc.readAcquire(this.ref)
     }
     assert(tc.cas(this.ref, d, this.end)) // detach
     tc.retire(d) // retire
@@ -84,9 +84,9 @@ class IBRReservationTest {
   def read(r: LLZ_Result): Unit = {
     val tc = this.gc.threadContext()
     tc.startOp()
-    var d = tc.read(this.ref)
+    var d = tc.readAcquire(this.ref)
     while (d.toString eq "begin") {
-      d = tc.read(this.ref)
+      d = tc.readAcquire(this.ref)
     }
     val success = d.toString == "data"
     if (success) {

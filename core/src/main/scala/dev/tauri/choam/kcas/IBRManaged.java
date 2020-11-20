@@ -63,23 +63,20 @@ public abstract class IBRManaged<T, M extends IBRManaged<T, M>> {
     this._next = n;
   }
 
-  // FIXME: get/set birth/retire epoch is only used thread-locally(?)
-  // FIXME: so we might not need volatile(!)
-
-  final long getBirthEpoch() {
-    return (long) BIRTH_EPOCH.getVolatile(this);
+  final long getBirthEpochOpaque() {
+    return (long) BIRTH_EPOCH.getOpaque(this);
   }
 
-  final void setBirthEpoch(long e) {
-    BIRTH_EPOCH.setVolatile(this, e);
+  final void setBirthEpochOpaque(long e) {
+    BIRTH_EPOCH.setOpaque(this, e);
   }
 
-  final long getRetireEpoch() {
-    return (long) RETIRE_EPOCH.getVolatile(this);
+  final long getRetireEpochOpaque() {
+    return (long) RETIRE_EPOCH.getOpaque(this);
   }
 
-  final void setRetireEpoch(long e) {
-    RETIRE_EPOCH.setVolatile(this, e);
+  final void setRetireEpochOpaque(long e) {
+    RETIRE_EPOCH.setOpaque(this, e);
   }
 
   /** Hook for subclasses for performing initialization */
