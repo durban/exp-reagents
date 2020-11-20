@@ -208,7 +208,7 @@ private[kcas] final object IBR {
       val elem = if (this.freeList ne null) {
         this.freeListSize -= 1
         val elem = this.freeList
-        this.freeList = elem.next
+        this.freeList = elem.getNext()
         elem.setNext(nullOf[M])
         elem
       } else {
@@ -254,7 +254,7 @@ private[kcas] final object IBR {
 
     @tailrec
     final def read[A](ref: AtomicReference[A]): A = {
-      val a: A = ref.get()
+      val a: A = ref.get() // getAcquire might be enough(?)
       if (tryAdjustReservation(a)) a
       else read(ref) // retry
     }
@@ -265,10 +265,17 @@ private[kcas] final object IBR {
         val res: IBRReservation = this.reservation
         val currUpper = res.getUpper()
         res.setUpper(Math.max(currUpper, m.getBirthEpoch()))
+        // `m` might've been retired before we ajusted
+        // our reservation, so we have to recheck the
+        // birth epoch:
         if (res.getUpper() >= m.getBirthEpoch()) {
-          true // ok, we're done
+          // ok, we're done
+          true
         } else {
-          false // retry
+          // `m` was probably retired, freed and reused;
+          // its birth epoch is therefore greater; we
+          // need to re-read the ref, and try again
+          false
         }
       } else {
         true // we're done
@@ -341,17 +348,17 @@ private[kcas] final object IBR {
       @tailrec
       def go(curr: M, prev: M): Unit = {
         if (curr ne null) {
-          val currNext = curr.next // save `.next`, because `free` may clear it
+          val currNext = curr.getNext() // save next, because `free` may clear it
           var newPrev = curr // `prev` for the next iteration
           if (!isConflict(curr, reservations.iterator())) {
             // remove `curr` from the `retired` list:
             this.retiredCount -= 1L
             if (prev ne null) {
               // delete an internal item:
-              prev.setNext(curr.next)
+              prev.setNext(curr.getNext())
             } else {
               // delete the head:
-              this.retired = curr.next
+              this.retired = curr.getNext()
             }
             free(curr) // actually free `curr`
             newPrev = prev // since we removed `curr` form the list

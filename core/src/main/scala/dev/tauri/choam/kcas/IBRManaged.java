@@ -51,18 +51,20 @@ public abstract class IBRManaged<T, M extends IBRManaged<T, M>> {
   private M _next;
 
   protected IBRManaged() {
-    // TODO: maybe `setOpaque`?
-    BIRTH_EPOCH.set(this, Long.MIN_VALUE);
-    RETIRE_EPOCH.set(this, Long.MAX_VALUE);
+    BIRTH_EPOCH.setOpaque(this, Long.MIN_VALUE);
+    RETIRE_EPOCH.setOpaque(this, Long.MAX_VALUE);
   }
 
-  final M next() { // TODO: -> getNext()
+  final M getNext() {
     return this._next;
   }
 
   final void setNext(M n) {
     this._next = n;
   }
+
+  // FIXME: get/set birth/retire epoch is only used thread-locally(?)
+  // FIXME: so we might not need volatile(!)
 
   final long getBirthEpoch() {
     return (long) BIRTH_EPOCH.getVolatile(this);
