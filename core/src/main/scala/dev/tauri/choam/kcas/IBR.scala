@@ -20,7 +20,7 @@ package kcas
 import java.lang.Math
 import java.lang.ref.{ WeakReference => WeakRef }
 import java.lang.invoke.VarHandle
-import java.util.concurrent.atomic.{ AtomicLong, AtomicReference, AtomicReferenceFieldUpdater }
+import java.util.concurrent.atomic.{ AtomicLong, AtomicReference }
 import java.util.concurrent.ConcurrentSkipListMap
 
 import scala.annotation.tailrec
@@ -32,6 +32,7 @@ import scala.annotation.tailrec
  * Type Preserving Allocator").
  *
  * @see https://www.cs.rochester.edu/u/scott/papers/2018_PPoPP_IBR.pdf
+ * @see https://github.com/urcs-sync/Interval-Based-Reclamation
  *
  * @param `zeroEpoch` is the value of the very first epoch.
 */
@@ -239,13 +240,6 @@ private[kcas] final object IBR {
     }
 
     @tailrec
-    final def readArfu[A](arfu: AtomicReferenceFieldUpdater[M, A], obj: M): A = {
-      val a: A = arfu.get(obj)
-      if (tryAdjustReservation(a)) a
-      else readArfu(arfu, obj)
-    }
-
-    @tailrec
     final def readVh[A](vh: VarHandle, obj: M): A = {
       val a: A = vh.getVolatile(obj)
       if (tryAdjustReservation(a)) a
@@ -282,20 +276,12 @@ private[kcas] final object IBR {
       }
     }
 
-    final def writeArfu[A](arfu: AtomicReferenceFieldUpdater[M, A], obj: M, a: A): Unit = {
-      arfu.set(obj, a)
-    }
-
     final def writeVh[A](vh: VarHandle, obj: M, a: A): Unit = {
       vh.setVolatile(obj, a)
     }
 
     final def write[A](ref: AtomicReference[A], nv: A): Unit = {
       ref.set(nv)
-    }
-
-    final def casArfu[A](arfu: AtomicReferenceFieldUpdater[M, A], obj: M, ov: A, nv: A): Boolean = {
-      arfu.compareAndSet(obj, ov, nv)
     }
 
     final def casVh[A](vh: VarHandle, obj: M, ov: A, nv: A): Boolean = {
