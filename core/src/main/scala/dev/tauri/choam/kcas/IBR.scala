@@ -257,21 +257,17 @@ private[kcas] final object IBR {
         val mbe = m.getBirthEpochOpaque()
         if (mbe > currUpper) {
           res.setUpper(mbe)
-        }
-        // `m` might've been retired before we ajusted
-        // our reservation, so we have to recheck the
-        // birth epoch:
-        if (res.getUpper() >= m.getBirthEpochOpaque()) { // opaque: as above
-          // ok, we're done
-          true
-        } else {
-          // `m` was probably retired, freed and reused;
-          // its birth epoch is therefore greater; we
-          // need to re-read the ref, and try again
+          // `m` might've been retired (and reused) before we adjusted
+          // our reservation, so we have to recheck the birth epoch
+          // (and opaque is not enough here), so we'll re-acquire from the ref:
           false
+        } else {
+          // no need to adjust our reservation
+          true
         }
       } else {
-        true // we're done
+        // no need to adjust our reservation
+        true
       }
     }
 
