@@ -33,7 +33,7 @@ import org.openjdk.jcstress.infra.results._
   new Outcome(id = Array("data, data, false"), expect = ACCEPTABLE, desc = "Reader still holds it, wasn't freed"),
   new Outcome(id = Array("data, data, true"), expect = FORBIDDEN, desc = "Reader still holds it, but was freed"),
   new Outcome(id = Array("data, end, true"), expect = ACCEPTABLE, desc = "Reader was late, was freed"),
-  new Outcome(id = Array("data, end, false"), expect = ACCEPTABLE, desc = "Reader was late, but wasn't freed (publisher might still use it)")
+  new Outcome(id = Array("data, end, false"), expect = ACCEPTABLE_INTERESTING, desc = "Reader was late, but wasn't freed (publisher might still use it)")
 ))
 class IBRReservationTest {
 
@@ -63,6 +63,11 @@ class IBRReservationTest {
     tc.endOp()
     r.r1 = d
   }
+
+  // Note: due to the `latch`, the methods
+  // below need to be in this exact order,
+  // otherwise jcstress deadlocks during the
+  // sanity check.
 
   @Actor
   def detach(r: LLZ_Result): Unit = {

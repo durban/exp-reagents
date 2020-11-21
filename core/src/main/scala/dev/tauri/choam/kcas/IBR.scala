@@ -17,7 +17,6 @@
 package dev.tauri.choam
 package kcas
 
-import java.lang.Math
 import java.lang.ref.{ WeakReference => WeakRef }
 import java.lang.invoke.VarHandle
 import java.util.concurrent.atomic.{ AtomicLong, AtomicReference }
@@ -131,7 +130,8 @@ private[kcas] final object IBR {
    * Note: some fields can be accessed by other threads!
    */
   abstract class ThreadContext[T <: ThreadContext[T, M], M <: IBRManaged[T, M]](
-    global: IBR[T, M]
+    global: IBR[T, M],
+    startCounter: Int = 0
   ) { this: T =>
 
     /**
@@ -140,7 +140,7 @@ private[kcas] final object IBR {
      * Overflow doesn't really matter, we only use it modulo `epochFreq` or `emptyFreq`.
      */
     private[this] var counter: Int =
-      0
+      startCounter
 
     /**
      * Intrusive linked list of retired (but not freed) objects
@@ -182,7 +182,7 @@ private[kcas] final object IBR {
       new IBRReservation(Long.MaxValue)
 
     /** For testing */
-    private[kcas] def snapshotReservation: SnapshotReservation = {
+    private[kcas] final def snapshotReservation: SnapshotReservation = {
       SnapshotReservation(
         lower = this.reservation.getLower(),
         upper = this.reservation.getUpper()
@@ -190,11 +190,11 @@ private[kcas] final object IBR {
     }
 
     /** For testing */
-    private[kcas] def globalContext: IBR[T, M] =
+    private[kcas] final def globalContext: IBR[T, M] =
       global
 
     /** For testing */
-    private[kcas] def op[A](body: => A): A = {
+    private[kcas] final def op[A](body: => A): A = {
       this.startOp()
       try { body } finally { this.endOp() }
     }
@@ -258,8 +258,11 @@ private[kcas] final object IBR {
         val m: M = a.asInstanceOf[M]
         val res: IBRReservation = this.reservation
         val currUpper = res.getUpper()
-        // we read `a` with acquire, so we can read birthEpoch with opaque:
-        res.setUpper(Math.max(currUpper, m.getBirthEpochOpaque()))
+        // we read `m` (that is, `a`) with acquire, so we can read birthEpoch with opaque:
+        val mbe = m.getBirthEpochOpaque()
+        if (mbe > currUpper) {
+          res.setUpper(mbe)
+        }
         // `m` might've been retired before we ajusted
         // our reservation, so we have to recheck the
         // birth epoch:
@@ -294,43 +297,59 @@ private[kcas] final object IBR {
     }
 
     /** For testing */
-    private[kcas] def isDuringOp(): Boolean = {
+    private[kcas] final def isDuringOp(): Boolean = {
       (this.reservation.getLower() != Long.MaxValue) || (
         this.reservation.getUpper() != Long.MaxValue
       )
     }
 
     /** For testing */
-    private[kcas] def getRetiredCount(): Long = {
+    private[kcas] final def getRetiredCount(): Long = {
       this.retiredCount
     }
 
     /** For testing */
-    private[kcas] def forceGc(): Unit = {
+    private[kcas] final def forceGc(): Unit = {
       assert(this.isDuringOp())
       this.empty()
     }
 
     /** For testing */
-    private[kcas] def forceNextEpoch(): Unit = {
+    private[kcas] final def forceDebugGc(): List[(M, (T, Long, Long))] = {
+      assert(this.isDuringOp())
+      val conflicts = this.emptyDebug()
+      conflicts.reverse
+    }
+
+    /** For testing */
+    private[kcas] final def forceNextEpoch(): Unit = {
       assert(!this.isDuringOp())
       this.global.epoch.getAndIncrement()
       ()
     }
 
-    private[kcas] def fullGc(): Unit = {
+    /** For testing */
+    private[kcas] final def fullGc(): Unit = {
       forceNextEpoch()
       startOp()
       try forceGc()
       finally endOp()
     }
 
-    private def reserve(epoch: Long): Unit = {
+    /** For testing */
+    private[kcas] final def fullDebugGc(): List[(M, (T, Long, Long))] = {
+      forceNextEpoch()
+      startOp()
+      try forceDebugGc()
+      finally endOp()
+    }
+
+    private final def reserve(epoch: Long): Unit = {
       this.reservation.setLower(epoch)
       this.reservation.setUpper(epoch)
     }
 
-    private def empty(): Unit = {
+    private final def empty(): Unit = {
       val reservations = this.global.reservations.values()
       @tailrec
       def go(curr: M, prev: M): Unit = {
@@ -378,7 +397,70 @@ private[kcas] final object IBR {
       go(this.retired, prev = nullOf[M])
     }
 
-    private def free(block: M): Unit = {
+    /** For testing and debugging */
+    private final def emptyDebug(): List[(M, (T, Long, Long))] = {
+      val reservations = this.global.reservations.values()
+      @tailrec
+      def goDebug(curr: M, prev: M, conflicts: List[(M, (T, Long, Long))]): List[(M, (T, Long, Long))] = {
+        if (curr ne null) {
+          val currNext = curr.getNext() // save next, because `free` may clear it
+          var newPrev = curr // `prev` for the next iteration
+          val conflict = isConflictDebug(curr, reservations.iterator())
+          if (conflict eq null) {
+            // no conflict, remove `curr` from the `retired` list:
+            this.retiredCount -= 1L
+            if (prev ne null) {
+              // delete an internal item:
+              prev.setNext(curr.getNext())
+            } else {
+              // delete the head:
+              this.retired = curr.getNext()
+            }
+            free(curr) // actually free `curr`
+            newPrev = prev // since we removed `curr` form the list
+            goDebug(currNext, newPrev, conflicts)
+          } else {
+            // found a conflict
+            goDebug(currNext, newPrev, (curr, conflict) :: conflicts)
+          }
+        } else {
+          // end of `retired` list
+          conflicts
+        }
+      }
+      @tailrec
+      def isConflictDebug(block: M, it: java.util.Iterator[WeakRef[T]]): (T, Long, Long) = {
+        if (it.hasNext()) {
+          val wr = it.next()
+          wr.get() match {
+            case null =>
+              it.remove()
+              isConflictDebug(block, it) // continue
+            case tc =>
+              // block is currently threadlocal, we can read with opaque
+              val birthEpoch = block.getBirthEpochOpaque()
+              val upper = tc.reservation.getUpper()
+              if (birthEpoch <= upper) {
+                val retireEpoch = block.getRetireEpochOpaque()
+                val lower = tc.reservation.getLower()
+                if (retireEpoch >= lower) {
+                  (tc, lower, upper) // found a conflict, return it
+                } else {
+                  isConflictDebug(block, it) // continue
+                }
+              } else {
+                isConflictDebug(block, it) // continue
+              }
+          }
+        } else {
+          null // no conflict
+        }
+      }
+
+      goDebug(this.retired, prev = nullOf[M], conflicts = Nil)
+    }
+
+    private final def free(block: M): Unit = {
       block.free(this)
       block.setBirthEpochOpaque(Long.MinValue) // TODO: not strictly necessary
       block.setRetireEpochOpaque(Long.MaxValue) // TODO: not strictly necessary
