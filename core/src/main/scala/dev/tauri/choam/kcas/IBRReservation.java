@@ -19,43 +19,6 @@ package dev.tauri.choam.kcas;
 import java.lang.invoke.VarHandle;
 import java.lang.invoke.MethodHandles;
 
-final class IBREpoch {
-
-  private static final VarHandle VALUE;
-
-  static {
-    try {
-      MethodHandles.Lookup l = MethodHandles.lookup();
-      VALUE = l.findVarHandle(IBREpoch.class, "_value", long.class);
-    } catch (ReflectiveOperationException ex) {
-      throw new ExceptionInInitializerError(ex);
-    }
-  }
-
-  // TODO: check if 64 bits is enough (overflow)
-  @SuppressWarnings("unused")
-  private long _value;
-
-  IBREpoch(long zeroEpoch) {
-    VALUE.setRelease(this, zeroEpoch); // FIXME
-  }
-
-  // We're incrementing the global epoch with
-  // `getAndAddRelease`, which is atomic, so
-  // increments will not be lost.
-  // We're reading it with `getAcquire`, so
-  // we'll write correct values into blocks
-  // when retiring.
-
-  final long get() {
-    return (long) VALUE.getAcquire(this);
-  }
-
-  final void increment() {
-    VALUE.getAndAddRelease(this, 1L);
-  }
-}
-
 /** The epoch interval reserved by a thread */
 final class IBRReservation {
 

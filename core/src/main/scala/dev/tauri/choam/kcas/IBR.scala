@@ -35,7 +35,8 @@ import scala.annotation.tailrec
  *
  * @param `zeroEpoch` is the value of the very first epoch.
 */
-private[kcas] abstract class IBR[T, M <: IBRManaged[T, M]](zeroEpoch: Long) {
+private[kcas] abstract class IBR[T, M <: IBRManaged[T, M]](zeroEpoch: Long)
+  extends IBRBase(zeroEpoch) {
 
   /** @return `true` iff `a` is really an `M` */
   protected[IBR] def dynamicTest[A](a: A): Boolean
@@ -45,13 +46,9 @@ private[kcas] abstract class IBR[T, M <: IBRManaged[T, M]](zeroEpoch: Long) {
 
   protected[IBR] def newThreadContext(): T
 
-  /** Current epoch number, read/written by any thread */
-  private[IBR] val epoch =
-    new IBREpoch(zeroEpoch)
-
   /** For testing */
   private[kcas] def epochNumber: Long =
-    this.epoch.get()
+    this.getEpoch()
 
   /**
    * Reservations of all the (active) threads
@@ -202,7 +199,7 @@ private[kcas] final object IBR {
     final def alloc(): M = {
       this.counter += 1
       if ((this.counter % epochFreq) == 0) {
-        this.global.epoch.increment()
+        this.global.incrementEpoch()
       }
       val elem = if (this.freeList ne null) {
         this.freeListSize -= 1
@@ -213,7 +210,7 @@ private[kcas] final object IBR {
       } else {
         global.allocateNew()
       }
-      elem.setBirthEpochOpaque(this.global.epoch.get()) // opaque: will be published with release
+      elem.setBirthEpochOpaque(this.global.getEpoch()) // opaque: will be published with release
       elem.allocate(this)
       elem
     }
@@ -222,7 +219,7 @@ private[kcas] final object IBR {
       this.retiredCount += 1L
       a.setNext(this.retired)
       this.retired = a
-      a.setRetireEpochOpaque(this.global.epoch.get()) // opaque: was read with acquire
+      a.setRetireEpochOpaque(this.global.getEpoch()) // opaque: was read with acquire
       a.retire(this)
       if ((this.counter % emptyFreq) == 0) {
         this.empty()
@@ -230,7 +227,7 @@ private[kcas] final object IBR {
     }
 
     final def startOp(): Unit = {
-      reserve(this.global.epoch.get())
+      reserve(this.global.getEpoch())
     }
 
     final def endOp(): Unit = {
@@ -322,7 +319,7 @@ private[kcas] final object IBR {
     /** For testing */
     private[kcas] final def forceNextEpoch(): Unit = {
       assert(!this.isDuringOp())
-      this.global.epoch.increment()
+      this.global.incrementEpoch()
       ()
     }
 
