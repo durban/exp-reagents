@@ -19,7 +19,7 @@ package kcas
 
 import java.lang.ref.{ WeakReference => WeakRef }
 import java.lang.invoke.VarHandle
-import java.util.concurrent.atomic.{ AtomicLong, AtomicReference }
+import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.ConcurrentSkipListMap
 
 import scala.annotation.tailrec
@@ -47,7 +47,7 @@ private[kcas] abstract class IBR[T, M <: IBRManaged[T, M]](zeroEpoch: Long) {
 
   /** Current epoch number, read/written by any thread */
   private[IBR] val epoch =
-    new AtomicLong(zeroEpoch) // TODO: check if 64 bits is enough (overflow)
+    new IBREpoch(zeroEpoch)
 
   /** For testing */
   private[kcas] def epochNumber: Long =
@@ -201,10 +201,8 @@ private[kcas] final object IBR {
 
     final def alloc(): M = {
       this.counter += 1
-      val epoch = if ((this.counter % epochFreq) == 0) {
-        this.global.epoch.incrementAndGet()
-      } else {
-        this.global.epoch.get()
+      if ((this.counter % epochFreq) == 0) {
+        this.global.epoch.increment()
       }
       val elem = if (this.freeList ne null) {
         this.freeListSize -= 1
@@ -215,7 +213,7 @@ private[kcas] final object IBR {
       } else {
         global.allocateNew()
       }
-      elem.setBirthEpochOpaque(epoch) // opaque: will be published with release
+      elem.setBirthEpochOpaque(this.global.epoch.get()) // opaque: will be published with release
       elem.allocate(this)
       elem
     }
@@ -324,7 +322,7 @@ private[kcas] final object IBR {
     /** For testing */
     private[kcas] final def forceNextEpoch(): Unit = {
       assert(!this.isDuringOp())
-      this.global.epoch.getAndIncrement()
+      this.global.epoch.increment()
       ()
     }
 
