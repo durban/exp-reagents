@@ -147,4 +147,31 @@ abstract class IBRStackSpec[S[a] <: IBRStackFast[a]]
     tc.fullGc()
     assert(tc.getRetiredCount() === 0L) // all of it should've been freed
   }
+
+  "tryPopN" should "pop `n` items if possible" in {
+    val s = this.mkEmpty[String]()
+    val tc = this.threadLocalContext[String]()
+    s.push("1", tc)
+    s.push("2", tc)
+    s.push("3", tc)
+    s.push("4", tc)
+    val arr = Array.ofDim[String](3)
+    assert(s.tryPopN(arr, 3, tc) === 3)
+    assert(arr(0) === "4")
+    assert(arr(1) === "3")
+    assert(arr(2) === "2")
+    assert(s.tryPopN(arr, 2, tc) === 1)
+    assert(arr(0) === "1")
+    assert(arr(1) === "3")
+    assert(arr(2) === "2")
+  }
+
+  "pushAll" should "push all items" in {
+    val s = this.mkEmpty[String]()
+    val tc = this.threadLocalContext[String]()
+    val arr = Array("a", "b", "c", "d", "e")
+    s.pushAll(arr, tc)
+    assert(s.tryPopN(arr, arr.length, tc) === arr.length)
+    assert(arr.toList === List("e", "d", "c", "b", "a"))
+  }
 }

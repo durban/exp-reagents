@@ -44,6 +44,28 @@ class IBRBench {
   }
 
   @Benchmark
+  def stackBaselineMany(s: BaselineStackSt, t: ThSt, bh: Blackhole): Unit = {
+    if ((t.nextInt() % 2) == 0) {
+      s.stack.pushAll(t.arr)
+      bh.consume(s.stack.tryPopN(t.arr, N))
+    } else {
+      bh.consume(s.stack.tryPopN(t.arr, N))
+      s.stack.pushAll(t.arr)
+    }
+  }
+
+  @Benchmark
+  def stackIbrMany(s: StackSt, t: ThSt, bh: Blackhole): Unit = {
+    if ((t.nextInt() % 2) == 0) {
+      s.stack.pushAll(t.arr, t.tc)
+      bh.consume(s.stack.tryPopN(t.arr, N, t.tc))
+    } else {
+      bh.consume(s.stack.tryPopN(t.arr, N, t.tc))
+      s.stack.pushAll(t.arr, t.tc)
+    }
+  }
+
+  @Benchmark
   def allocBaseline(t: ThSt, bh: Blackhole): Unit = {
     bh.consume(TsList.Cons[Int](42, t.dummy))
   }
@@ -65,6 +87,8 @@ class IBRBench {
 }
 
 object IBRBench {
+
+  final val N = 4
 
   @State(Scope.Benchmark)
   class StackSt {
@@ -92,6 +116,7 @@ object IBRBench {
     }
     var ibrConsBirthEpoch = 0L
     val dummy = TsList.Cons(42, null)
+    val arr = Array.fill[Int](N) { this.nextInt() }
   }
 
   @State(Scope.Benchmark)

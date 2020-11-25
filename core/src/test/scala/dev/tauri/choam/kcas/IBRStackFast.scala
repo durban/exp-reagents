@@ -21,7 +21,12 @@ import scala.annotation.{ tailrec, unused }
 
 import cats.data.Chain
 
-/** Treiber stack, which uses IBR for nodes, and has no debug assertions */
+/**
+ * Treiber stack, which uses IBR for nodes
+ *
+ * It's "fast", because it has no debug assertions.
+ * It's used for testing IBR correctness and performance.
+ */
 class IBRStackFast[A](
   val gc: IBR[IBRStackFast.TC[A], IBRStackFast.Node[A]]
 ) {
@@ -81,6 +86,37 @@ class IBRStackFast[A](
     } finally tc.endOp()
     if (equ(res, _sentinel)) tryPop(tc)
     else res
+  }
+
+  final def tryPopN(to: Array[A], n: Int, tc: TC[A]): Int = {
+    def go(left: Int): Int = {
+      this.tryPop(tc) match {
+        case null =>
+          left
+        case a =>
+          to(n - left) = a
+          if (left > 1) go(left - 1) else left - 1
+      }
+    }
+
+    tc.startOp()
+    try {
+      val left = go(n)
+      n - left
+    } finally tc.endOp()
+  }
+
+  final def pushAll(arr: Array[A], tc: TC[A]): Unit = {
+    def go(idx: Int): Unit = {
+      if (idx < arr.length) {
+        this.push(arr(idx), tc)
+        go(idx + 1)
+      }
+    }
+
+    tc.startOp()
+    try go(0)
+    finally tc.endOp()
   }
 
   /** For testing; not threadsafe */

@@ -21,7 +21,12 @@ import java.util.concurrent.atomic.AtomicLong
 
 import IBRStackFast.{ Node, Cons, TC }
 
-/** Treiber stack, which uses IBR for nodes, and has extra verification checks */
+/**
+ * Treiber stack, which uses IBR for nodes (debug version)
+ *
+ * It's "debug", because it has extra assertions.
+ * It's used for testing IBR correctness.
+ */
 final class IBRStackDebug[A] private (val debugGc: IBRStackDebug.GC[A])
   extends IBRStackFast[A](debugGc) {
 
