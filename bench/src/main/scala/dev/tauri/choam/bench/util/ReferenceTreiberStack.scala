@@ -49,6 +49,30 @@ final class ReferenceTreiberStack[A](els: Iterable[A]) {
     }
   }
 
+  final def tryPopN(to: Array[A], n: Int): Int = {
+    def go(left: Int): Int = {
+      this.tryPop() match {
+        case None =>
+          left
+        case Some(a) =>
+          to(n - left) = a
+          if (left > 1) go(left - 1) else left - 1
+      }
+    }
+    val left = go(n)
+    n - left
+  }
+
+  final def pushAll(arr: Array[A]): Unit = {
+    def go(idx: Int): Unit = {
+      if (idx < arr.length) {
+        this.push(arr(idx))
+        go(idx + 1)
+      }
+    }
+    go(0)
+  }
+
   def length: Int =
     head.get().length
 }
