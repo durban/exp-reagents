@@ -271,6 +271,12 @@ private[kcas] final object IBR {
       }
     }
 
+    // TODO: When writing or CAS-ing, the previous descriptor
+    // in the ref could still be in use. Thus, we need to include
+    // its whole interval in the interval of the new descriptor.
+    // (And writing or CAS-ing a non-descriptor is not allowed
+    // in that case.)
+
     final def writeVh[A](vh: VarHandle, obj: M, a: A): Unit = {
       vh.setVolatile(obj, a)
     }

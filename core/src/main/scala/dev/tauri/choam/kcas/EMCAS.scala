@@ -22,6 +22,8 @@ import java.util.{ ArrayList, Comparator }
 
 import scala.annotation.tailrec
 
+// TODO: integrate with IBR
+
 /**
  * Efficient Multi-word Compare and Swap:
  * https://arxiv.org/pdf/2008.02527.pdf
@@ -31,6 +33,7 @@ private[kcas] object EMCAS extends KCAS { self =>
   // Listing 1 in the paper:
 
   final object MCASDescriptor {
+    // TODO: should always be inlined
     final val minArraySize = 8
   }
 
@@ -44,6 +47,7 @@ private[kcas] object EMCAS extends KCAS { self =>
     val words: ArrayList[WordDescriptor[_]]
   ) extends self.Desc with self.Snap {
 
+    // TODO: move to field, use VarHandle
     val status =
       new AtomicReference[StatusType](Active)
 

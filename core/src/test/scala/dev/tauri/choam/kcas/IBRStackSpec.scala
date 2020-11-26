@@ -139,7 +139,7 @@ abstract class IBRStackSpec[S[a] <: IBRStackFast[a]]
     s.push("1", tc)
     s.push("2", tc)
     s.push("3", tc)
-    val N = 1_000_000
+    val N = 1000000
     for (i <- 1 to N) {
       s.push((i + 3).toString(), tc)
       assert(s.tryPop(tc) ne null)

@@ -27,7 +27,6 @@ import org.openjdk.jcstress.infra.results._
 
 import dev.tauri.choam.util.IBRReservationTest2Data
 
-
 @JCStressTest
 @State
 @Description("IBR reservation should forbid freeing an object")
