@@ -55,7 +55,7 @@ class EMCASSpec
     res should === ("x")
     EMCAS.tryReadOne(r1) should === ("x")
     EMCAS.tryReadOne(r2) should === ("y")
-    assert(other.status.get() eq EMCAS.Successful)
+    assert(other.getStatus() eq EMCASStatus.SUCCESSFUL)
   }
 
   it should "roll back the other op if necessary" in {

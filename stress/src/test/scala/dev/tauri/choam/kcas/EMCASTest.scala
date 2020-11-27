@@ -28,10 +28,10 @@ import org.openjdk.jcstress.infra.results.LLLLL_Result
 @State
 @Description("EMCASTest")
 @Outcomes(Array(
-  new Outcome(id = Array("true, 21, 42, Active, null"), expect = ACCEPTABLE, desc = "observed descriptors in correct  order (active)"),
-  new Outcome(id = Array("true, 21, 42, Successful, null"), expect = ACCEPTABLE, desc = "observed descriptors in correct  order (finalized)"),
-  new Outcome(id = Array("true, 21, 42, Failed, null"), expect = FORBIDDEN, desc = "observed descriptors in correct  order, but failed status"),
-  new Outcome(id = Array("true, 42, 21, Active, null", "true, 42, 21, Successful, null"), expect = FORBIDDEN, desc = "observed descriptors in incorrect (unsorted) order")
+  new Outcome(id = Array("true, 21, 42, ACTIVE, null"), expect = ACCEPTABLE, desc = "observed descriptors in correct  order (active)"),
+  new Outcome(id = Array("true, 21, 42, SUCCESSFUL, null"), expect = ACCEPTABLE, desc = "observed descriptors in correct  order (finalized)"),
+  new Outcome(id = Array("true, 21, 42, FAILED, null"), expect = FORBIDDEN, desc = "observed descriptors in correct  order, but failed status"),
+  new Outcome(id = Array("true, 42, 21, ACTIVE, null", "true, 42, 21, SUCCESSFUL, null"), expect = FORBIDDEN, desc = "observed descriptors in incorrect (unsorted) order")
 ))
 class EMCASTest {
 
@@ -72,7 +72,7 @@ class EMCASTest {
           val it = d.parent.words.iterator()
           val dFirst = it.next()
           val dSecond = it.next()
-          r.r4 = d.parent.status.get()
+          r.r4 = d.parent.getStatus()
           r.r2 = dFirst.address.id3
           r.r3 = dSecond.address.id3
           if (it.hasNext) {

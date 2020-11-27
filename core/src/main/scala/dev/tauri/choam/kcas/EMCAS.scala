@@ -17,7 +17,6 @@
 package dev.tauri.choam
 package kcas
 
-import java.util.concurrent.atomic.AtomicReference
 import java.util.{ ArrayList, Comparator }
 
 import scala.annotation.tailrec
@@ -45,11 +44,7 @@ private[kcas] object EMCAS extends KCAS { self =>
      * we only mutate the list before writing the descriptor to a `Ref`.
      */
     val words: ArrayList[WordDescriptor[_]]
-  ) extends self.Desc with self.Snap {
-
-    // TODO: move to field, use VarHandle
-    val status =
-      new AtomicReference[StatusType](Active)
+  ) extends EMCASDescriptorBase with self.Desc with self.Snap {
 
     override def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc = {
       this.words.add(new WordDescriptor[A](ref, ov, nv, this))
@@ -120,11 +115,6 @@ private[kcas] object EMCAS extends KCAS { self =>
     }
   }
 
-  sealed abstract class StatusType extends Product with Serializable
-  final case object Active extends StatusType
-  final case object Successful extends StatusType
-  final case object Failed extends StatusType
-
   final object DescOr {
 
     type _Base
@@ -166,14 +156,16 @@ private[kcas] object EMCAS extends KCAS { self =>
     val o = rawRead(ref)
     if (DescOr.isDescriptor(o)) {
       val wd: WordDescriptor[A] = DescOr.asDescriptor(o)
-      val parentStatus = wd.parent.status.get()
-      if ((wd.parent ne self) && (parentStatus eq Active)) { // `parent ne self` is to not "help" ourselves
+      val parentStatus = wd.parent.getStatus()
+      if ((wd.parent ne self) && // don't "help" ourselves
+          (parentStatus eq EMCASStatus.ACTIVE)
+      ) {
         MCAS(wd.parent, helping = true) // help the other op
         readInternal(ref, self) // retry
       } else {
-        if (parentStatus eq Successful) {
+        if (parentStatus eq EMCASStatus.SUCCESSFUL) {
           (o, wd.nv)
-        } else { // Failed OR ((parent eq self) AND !Successful)
+        } else { // Failed OR ((parent eq self) AND !SUCCESSFUL)
           (o, wd.ov)
         }
       }
@@ -205,7 +197,7 @@ private[kcas] object EMCAS extends KCAS { self =>
       } else if (!equ(value, wordDesc.ov)) {
         // expected value is different
         false
-      } else if (desc.status.get() ne Active) {
+      } else if (desc.getStatus ne EMCASStatus.ACTIVE) {
         // we have been finalized (by a helping thread), no reason to continue
         true // TODO: we should break from `go`
         // TODO: `true` is not necessarily correct, the helping thread could've finalized us to failed too
@@ -232,13 +224,16 @@ private[kcas] object EMCAS extends KCAS { self =>
       desc.sort()
     } // else: the thread which published `desc` already sorted it
     val success = go(desc.words.iterator)
-    if (desc.status.compareAndSet(Active, if (success) Successful else Failed)) {
+    if (desc.casStatus(
+      EMCASStatus.ACTIVE,
+      if (success) EMCASStatus.SUCCESSFUL else EMCASStatus.FAILED
+    )) {
       // TODO: We finalized the descriptor, mark it for reclamation:
       // TODO: retireForCleanup(desc)
       success
     } else {
       // someone else finalized the descriptor, must read its status:
-      desc.status.get() eq Successful
+      desc.getStatus() eq EMCASStatus.SUCCESSFUL
     }
   }
 
