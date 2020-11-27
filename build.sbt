@@ -112,7 +112,7 @@ lazy val macroSettings = Seq(
 
 lazy val dependencies = new {
 
-  val catsVersion = "2.3.0-M2"
+  val catsVersion = "2.3.0"
   val circeVersion = "0.14.0-M1"
   val fs2Version = "2.5.0-M1"
 
