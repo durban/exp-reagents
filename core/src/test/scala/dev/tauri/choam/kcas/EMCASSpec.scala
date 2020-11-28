@@ -39,7 +39,23 @@ class EMCASSpec
   private def polluteTheHeap[A](desc: AnyRef): A =
     desc.asInstanceOf[A]
 
-  "Read" should "help the other operation" in {
+  "EMCAS" should "allow null as ov or nv" in {
+    val r1 = Ref.mk[String](null)
+    val r2 = Ref.mk[String]("x")
+    val desc = EMCAS
+      .start()
+      .withCAS(r1, null, "x")
+      .withCAS(r2, "x", null)
+    val snap = desc.snapshot()
+    assert(desc.tryPerform())
+    assert(EMCAS.tryReadOne(r1) eq "x")
+    assert(EMCAS.tryReadOne(r2) eq null)
+    assert(!snap.load().tryPerform())
+    assert(EMCAS.tryReadOne(r1) eq "x")
+    assert(EMCAS.tryReadOne(r2) eq null)
+  }
+
+  "EMCAS Read" should "help the other operation" in {
     val r1 = Ref.mkWithId("r1")(0L, 0L, 0L, 0L)
     val r2 = Ref.mkWithId("r2")(0L, 0L, 0L, 42L)
     val other: EMCAS.MCASDescriptor = EMCAS

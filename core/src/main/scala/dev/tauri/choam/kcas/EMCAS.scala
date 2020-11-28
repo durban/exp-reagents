@@ -115,70 +115,42 @@ private[kcas] object EMCAS extends KCAS { self =>
     }
   }
 
-  final object DescOr {
-
-    type _Base
-    trait _Tag extends Any
-    type Type[A] <: _Base with _Tag
-
-    @inline
-    def wrap[A](a: A): Type[A] =
-      a.asInstanceOf[Type[A]] // NOP
-
-    @inline
-    def desc[A](d: WordDescriptor[A]): Type[A] =
-      d.asInstanceOf[Type[A]] // NOP
-
-    def isData[A](t: Type[A]): Boolean =
-      !isDescriptor(t) // instanceof, negate
-
-    @inline
-    def isDescriptor[A](t: Type[A]): Boolean =
-      t.isInstanceOf[WordDescriptor[_]] // instanceof
-
-    @inline
-    def asData[A](t: Type[A]): A =
-      t.asInstanceOf[A] // NOP
-
-    @inline
-    def asDescriptor[A](t: Type[A]): WordDescriptor[A] =
-      t.asInstanceOf[WordDescriptor[A]] // checkcast
-  }
-
-  private def rawRead[A](ref: Ref[A]): DescOr.Type[A] =
-    DescOr.wrap(ref.unsafeTryRead())
-
   // Listing 2 in the paper:
 
-  // TODO: try to avoid allocating the return tuple
+  /**
+   * A specialized version of `readInternal` from the paper
+   *
+   * Only returns the actual value (after possibly helping).
+   * Cannot be called from an ongoing MCAS operation (but
+   * can be called when we're only reading).
+   *
+   * (The other version of `readInternal`, specialized for
+   * an ongoing MCAS operation is inlined into `tryWord` below,
+   * see the do-while loop.)
+   */
   @tailrec
-  def readInternal[A](ref: Ref[A], self: MCASDescriptor): (DescOr.Type[A], A) = {
-    val o = rawRead(ref)
-    if (DescOr.isDescriptor(o)) {
-      val wd: WordDescriptor[A] = DescOr.asDescriptor(o)
+  private def readValue[A](ref: Ref[A]): A = {
+    val o = ref.unsafeTryRead()
+    if (o.isInstanceOf[WordDescriptor[_]]) {
+      val wd: WordDescriptor[A] = o.asInstanceOf[WordDescriptor[A]]
       val parentStatus = wd.parent.getStatus()
-      if ((wd.parent ne self) && // don't "help" ourselves
-          (parentStatus eq EMCASStatus.ACTIVE)
-      ) {
+      if (parentStatus eq EMCASStatus.ACTIVE) {
         MCAS(wd.parent, helping = true) // help the other op
-        readInternal(ref, self) // retry
-      } else {
-        if (parentStatus eq EMCASStatus.SUCCESSFUL) {
-          (o, wd.nv)
-        } else { // Failed OR ((parent eq self) AND !SUCCESSFUL)
-          (o, wd.ov)
-        }
+        readValue(ref) // retry
+      } else if (parentStatus eq EMCASStatus.SUCCESSFUL) {
+        wd.nv
+      } else { // FAILED
+        wd.ov
       }
     } else {
-      (o, DescOr.asData(o))
+      o
     }
   }
 
   // Listing 3 in the paper:
 
-  private[choam] override def tryReadOne[A](ref: Ref[A]): A = {
-    readInternal(ref, null)._2
-  }
+  private[choam] override def tryReadOne[A](ref: Ref[A]): A =
+    readValue(ref)
 
   /**
    * Performs an MCAS operation.
@@ -190,30 +162,69 @@ private[kcas] object EMCAS extends KCAS { self =>
   def MCAS(desc: MCASDescriptor, helping: Boolean): Boolean = {
     @tailrec
     def tryWord[A](wordDesc: WordDescriptor[A]): Boolean = {
-      val (content, value) = readInternal(wordDesc.address, desc)
-      if (equ[Any](content, wordDesc)) {
-        // already points to the right place
-        true
-      } else if (!equ(value, wordDesc.ov)) {
+      var content: A = nullOf[A]
+      var value: A = nullOf[A]
+      var go = true
+      // Read `content`, and `value` if necessary;
+      // this is a specialized and inlined version
+      // of `readInternal` from the paper. We're
+      // using a do-while loop instead of a tail-recursive
+      // function (like in the paper), because we may
+      // need both `content` and `value`, and returning
+      // them would require allocating a tuple (like in
+      // the paper).
+      do {
+        content = wordDesc.address.unsafeTryRead()
+        if (equ[Any](content, wordDesc)) {
+          // already points to the right place, early return:
+          return true // scalastyle:ignore return
+        } else {
+          // At this point, we're sure that if `content` is a
+          // descriptor, then it belongs to another op (not `desc`);
+          // because otherwise it would've been equal to `wordDesc`
+          // (we're assuming that any WordDescriptor only appears at
+          // most once in an MCASDescriptor).
+          if (content.isInstanceOf[WordDescriptor[_]]) {
+            val wd: WordDescriptor[A] = content.asInstanceOf[WordDescriptor[A]]
+            val parentStatus = wd.parent.getStatus()
+            if (parentStatus eq EMCASStatus.ACTIVE) {
+              MCAS(wd.parent, helping = true) // help the other op
+              // Note: we're not "helping" ourselves for sure, see the comment above.
+              // Here, we still don't have the value, so the loop must retry.
+            } else if (parentStatus eq EMCASStatus.SUCCESSFUL) {
+              value = wd.nv
+              go = false
+            } else {
+              value = wd.ov
+              go = false
+            }
+          } else {
+            value = content
+            go = false
+          }
+        }
+      } while (go)
+
+      if (!equ(value, wordDesc.ov)) {
         // expected value is different
         false
-      } else if (desc.getStatus ne EMCASStatus.ACTIVE) {
+      } else if (desc.getStatus() ne EMCASStatus.ACTIVE) {
         // we have been finalized (by a helping thread), no reason to continue
         true // TODO: we should break from `go`
         // TODO: `true` is not necessarily correct, the helping thread could've finalized us to failed too
       } else {
-        if (!wordDesc.address.unsafeTryPerformCas(DescOr.asData(content), wordDesc.asInstanceOf[A])) {
+        if (!wordDesc.address.unsafeTryPerformCas(content, wordDesc.asInstanceOf[A])) {
           tryWord(wordDesc) // retry this word
         } else {
           true
         }
       }
     }
+
     @tailrec
     def go(words: java.util.Iterator[WordDescriptor[_]]): Boolean = {
       if (words.hasNext) {
-        val wordDesc = words.next()
-        if (tryWord(wordDesc)) go(words)
+        if (tryWord(words.next())) go(words)
         else false
       } else {
         true

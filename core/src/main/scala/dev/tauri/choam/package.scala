@@ -20,6 +20,11 @@ package object choam {
 
   private[choam] type tailrec = scala.annotation.tailrec
 
+  // TODO: Using these always leaves a check for
+  // TODO: the package object in the bytecode.
+  // TODO: Maybe put these in a Java class as static
+  // TODO: methods...
+
   @inline
   private[choam] def box[A](a: A): AnyRef =
     a.asInstanceOf[AnyRef]
@@ -27,6 +32,10 @@ package object choam {
   @inline
   private[choam] def equ[A](x: A, y: A): Boolean =
     box(x) eq box(y)
+
+  @inline
+  private[choam] def isNull[A](a: A): Boolean =
+    box(a) eq null
 
   @inline
   private[choam] def nullOf[A]: A =
