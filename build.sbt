@@ -18,6 +18,15 @@ scalaVersion in ThisBuild := "2.13.3"
 crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value)
 scalaOrganization in ThisBuild := "org.scala-lang"
 
+githubWorkflowPublishTargetBranches in ThisBuild := Seq()
+githubWorkflowBuild in ThisBuild := Seq(
+  WorkflowStep.Sbt(List("test:compile"))
+)
+githubWorkflowJavaVersions in ThisBuild := Seq(
+  "adopt@1.11",
+  "adopt@1.15"
+)
+
 lazy val core = project.in(file("core"))
   .settings(name := "choam-core")
   .settings(commonSettings)
