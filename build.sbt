@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-scalaVersion in ThisBuild := "2.13.3"
+scalaVersion in ThisBuild := "2.13.4"
 crossScalaVersions in ThisBuild := Seq((scalaVersion in ThisBuild).value)
 scalaOrganization in ThisBuild := "org.scala-lang"
 
@@ -129,7 +129,7 @@ lazy val dependencies = new {
   val shapeless = "com.chuusai" %% "shapeless" % "2.3.3"
   val cats = "org.typelevel" %% "cats-core" % catsVersion
   val catsFree = "org.typelevel" %% "cats-free" % catsVersion
-  val catsEffect = "org.typelevel" %% "cats-effect" % "2.3.0-M1"
+  val catsEffect = "org.typelevel" %% "cats-effect" % "2.3.0"
 
   val circe = Seq(
     "io.circe" %% "circe-core" % circeVersion,
