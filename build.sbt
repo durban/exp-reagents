@@ -78,7 +78,6 @@ lazy val commonSettings = Seq[Setting[_]](
     "-Wconf:any:warning-verbose",
     "-Xlint:_",
     // "-Xfatal-warnings", TODO: reënable when possible
-    // "-Xstrict-patmat-analysis", TODO: maybe in 2.13.4
     "-Xelide-below", "INFO",
     "-Xmigration:2.13.3",
     "-Xsource:3.0",

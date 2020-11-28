@@ -164,7 +164,7 @@ final object IBRStackFast {
   class TC[A](global: IBR[TC[A], Node[A]])
     extends IBR.ThreadContext[TC[A], Node[A]](global)
 
-  private[kcas] trait Node[A]
+  private[kcas] sealed trait Node[A]
     extends IBRManaged[TC[A], Node[A]]
 
   private[kcas] class Cons[A]
