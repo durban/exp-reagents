@@ -24,7 +24,8 @@ githubWorkflowBuild in ThisBuild := Seq(
 )
 githubWorkflowJavaVersions in ThisBuild := Seq(
   "adopt@1.11",
-  "adopt@1.15"
+  "adopt@1.15",
+  "adopt-openj9@1.15",
 )
 
 lazy val core = project.in(file("core"))
