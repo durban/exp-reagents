@@ -18,6 +18,8 @@ package dev.tauri.choam
 package kcas
 package bench
 
+import scala.runtime.BoxesRunTime
+
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
@@ -37,7 +39,7 @@ class FalseSharing {
   @Benchmark
   @Group("baseline")
   def writeBaseline(s: NotContended, r: RandomState): Unit = {
-    s.rw = box(r.nextInt())
+    s.rw = BoxesRunTime.boxToInteger(r.nextInt())
   }
 
   @Benchmark
@@ -69,8 +71,8 @@ object FalseSharing {
 
   @State(Scope.Thread)
   class NotContended {
-    var rr: AnyRef = box(42)
-    var rw: AnyRef = box(21)
+    var rr: AnyRef = BoxesRunTime.boxToInteger(42)
+    var rw: AnyRef = BoxesRunTime.boxToInteger(21)
   }
 
   abstract class Base {

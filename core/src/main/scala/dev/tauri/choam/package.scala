@@ -20,13 +20,14 @@ package object choam {
 
   private[choam] type tailrec = scala.annotation.tailrec
 
-  // TODO: Using these always leaves a check for
-  // TODO: the package object in the bytecode.
-  // TODO: Maybe put these in a Java class as static
-  // TODO: methods...
+  // Note: using these always leaves a check for
+  // the package object in the bytecode (getstatic
+  // and a null check). However, microbenchmarks
+  // couldn't show a difference between these methods
+  // and Java static method equivalents (see StaticsBench).
 
   @inline
-  private[choam] def box[A](a: A): AnyRef =
+  private[this] def box[A](a: A): AnyRef =
     a.asInstanceOf[AnyRef]
 
   @inline
