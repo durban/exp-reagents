@@ -16,6 +16,9 @@
 
 package dev.tauri.choam
 
+// To avoid going through the aliases in scala._:
+import scala.collection.immutable.{ Nil, :: }
+
 import cats.Monad
 import cats.arrow.Arrow
 import cats.effect.Sync
