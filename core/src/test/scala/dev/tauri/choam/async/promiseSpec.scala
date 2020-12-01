@@ -42,7 +42,7 @@ abstract class PromiseSpec extends BaseSpec {
       fib1 <- act.start
       fib2 <- act.start
       _ <- IO { Thread.sleep(100L) }
-      b <- AsyncReact.lift(React.ret(42) >>> p.tryComplete).run[IO]
+      b <- (React.pure(42) >>> p.tryComplete).run[IO]
       res1 <- fib1.join
       res2 <- fib2.join
     } yield (b, res1, res2)
@@ -67,7 +67,7 @@ abstract class PromiseSpec extends BaseSpec {
     val tsk = for {
       res1 <- act
       res2 <- act
-      b <- AsyncReact.lift(React.ret(42) >>> p.tryComplete).run[IO]
+      b <- (React.pure(42) >>> p.tryComplete).run[IO]
     } yield (b, res1, res2)
     tsk.unsafeRunSync() should === ((false, 42, 42))
     cnt.get() should === (2L)
