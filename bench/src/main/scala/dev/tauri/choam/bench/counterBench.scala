@@ -27,23 +27,25 @@ class CounterBench {
 
   import CounterBench._
 
+  final val waitTime = 128L
+
   @Benchmark
-  def reference(s: ReferenceSt, t: CommonThreadState, bh: Blackhole): Unit = {
+  def reference(s: ReferenceSt, t: RandomState, bh: Blackhole): Unit = {
     bh.consume(s.referenceCtr.add(t.nextLong()))
-    Blackhole.consumeCPU(t.tokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def locked(s: LockedSt, t: CommonThreadState, bh: Blackhole): Unit = {
+  def locked(s: LockedSt, t: RandomState, bh: Blackhole): Unit = {
     bh.consume(s.lockedCtr.add(t.nextLong()))
-    Blackhole.consumeCPU(t.tokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def react(s: ReactSt, t: KCASThreadState, bh: Blackhole): Unit = {
-    import t.kcasImpl
-    bh.consume(s.reactCtr.add.unsafePerform(t.nextLong()))
-    Blackhole.consumeCPU(t.tokens)
+  def react(s: ReactSt, k: KCASImplState, bh: Blackhole): Unit = {
+    import k.kcasImpl
+    bh.consume(s.reactCtr.add.unsafePerform(k.nextLong()))
+    Blackhole.consumeCPU(waitTime)
   }
 }
 
@@ -85,17 +87,19 @@ class CounterBenchN {
 
   import CounterBenchN._
 
+  final val waitTime = 128L
+
   @Benchmark
-  def lockedN(s: LockedStN, t: CommonThreadState, bh: Blackhole): Unit = {
+  def lockedN(s: LockedStN, t: RandomState, bh: Blackhole): Unit = {
     bh.consume(s.lockedCtrN.add(t.nextLong()))
-    Blackhole.consumeCPU(t.tokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def reactN(s: ReactStN, t: KCASThreadState, bh: Blackhole): Unit = {
-    import t.kcasImpl
-    bh.consume(s.r.unsafePerform(t.nextLong()))
-    Blackhole.consumeCPU(t.tokens)
+  def reactN(s: ReactStN, k: KCASImplState, bh: Blackhole): Unit = {
+    import k.kcasImpl
+    bh.consume(s.r.unsafePerform(k.nextLong()))
+    Blackhole.consumeCPU(waitTime)
   }
 }
 

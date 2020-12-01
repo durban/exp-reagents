@@ -20,13 +20,16 @@ package bench
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-import util._
-
 @Fork(2)
 class BaselineBench {
 
   @Benchmark
-  def baseline(t: CommonThreadState): Unit = {
-    Blackhole.consumeCPU(t.tokens)
+  def baseline128(): Unit = {
+    Blackhole.consumeCPU(128L)
+  }
+
+  @Benchmark
+  def baseline2048(): Unit = {
+    Blackhole.consumeCPU(2048L)
   }
 }

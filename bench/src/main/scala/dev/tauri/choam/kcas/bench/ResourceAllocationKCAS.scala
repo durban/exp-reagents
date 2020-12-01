@@ -21,7 +21,7 @@ package bench
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-import dev.tauri.choam.bench.util.{ CommonThreadState, RandomState, KCASImplState }
+import dev.tauri.choam.bench.util.KCASImplState
 
 /**
  * Resource allocation scenario, described in [Software transactional memory](
@@ -101,10 +101,9 @@ object ResourceAllocationKCAS {
   }
 
   @State(Scope.Thread)
-  class ThSt extends RandomState with KCASImplState {
+  class ThSt extends KCASImplState {
 
-    val tokens: Long =
-      CommonThreadState.BaseTokens << CommonThreadState.LowContention
+    final val tokens = 128L
 
     private[this] var selectedRss: Array[Ref[String]] = _
 

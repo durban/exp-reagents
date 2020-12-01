@@ -27,17 +27,19 @@ class QueueTransferBench {
 
   import QueueTransferBench._
 
+  final val waitTime = 128L
+
   @Benchmark
-  def michaelScottQueue(s: MsSt, bh: Blackhole, ct: KCASThreadState): Unit = {
+  def michaelScottQueue(s: MsSt, bh: Blackhole, ct: KCASImplState): Unit = {
     import ct.kcasImpl
     bh.consume(s.michaelScottQueue1.enqueue.unsafePerform(ct.nextString()))
     bh.consume(s.transfer.unsafeRun)
     if (s.michaelScottQueue2.tryDeque.unsafeRun eq None) throw Errors.EmptyQueue
-    Blackhole.consumeCPU(ct.tokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def lockedQueue(s: LockedSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+  def lockedQueue(s: LockedSt, bh: Blackhole, ct: RandomState): Unit = {
     bh.consume(s.lockedQueue1.enqueue(ct.nextString()))
 
     s.lockedQueue1.lock.lock()
@@ -52,11 +54,11 @@ class QueueTransferBench {
 
     if (s.lockedQueue2.tryDequeue() eq None) throw Errors.EmptyQueue
 
-    Blackhole.consumeCPU(ct.tokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def stmQueue(s: StmSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+  def stmQueue(s: StmSt, bh: Blackhole, ct: RandomState): Unit = {
     import scala.concurrent.stm._
     bh.consume(s.stmQueue1.enqueue(ct.nextString()))
     bh.consume(atomic { implicit txn =>
@@ -64,7 +66,7 @@ class QueueTransferBench {
       s.stmQueue2.enqueue(item)
     })
     if (s.stmQueue2.tryDequeue() eq None) throw Errors.EmptyQueue
-    Blackhole.consumeCPU(ct.tokens)
+    Blackhole.consumeCPU(waitTime)
   }
 }
 

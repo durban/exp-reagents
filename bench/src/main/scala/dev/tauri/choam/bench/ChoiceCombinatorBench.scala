@@ -29,14 +29,14 @@ class ChoiceCombinatorBench {
   import ChoiceCombinatorBench._
 
   @Benchmark
-  def choiceDummy(s: DummyChoice, k: KCASImplStateImpl): Unit = {
+  def choiceDummy(s: DummyChoice, k: KCASImplState): Unit = {
     import k.kcasImpl
     s.choice.unsafeRun
     s.reset.unsafeRun
   }
 
   @Benchmark
-  def choiceCAS(s: CASChoice, k: KCASImplStateImpl): Unit = {
+  def choiceCAS(s: CASChoice, k: KCASImplState): Unit = {
     import k.kcasImpl
     s.choice.unsafeRun
     s.reset.reset()

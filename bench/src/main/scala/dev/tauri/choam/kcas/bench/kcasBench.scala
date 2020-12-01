@@ -21,7 +21,6 @@ package bench
 import java.util.concurrent.ThreadLocalRandom
 
 import org.openjdk.jmh.annotations._
-import org.openjdk.jmh.infra.Blackhole
 
 import dev.tauri.choam.bench.util._
 
@@ -32,17 +31,15 @@ class FailedCAS1Bench {
   import KCASBenchHelpers._
 
   @Benchmark
-  def failedCAS1(r: RefState, t: KCASThreadState): Unit = {
+  def failedCAS1(r: RefState, t: KCASImplState): Unit = {
     val succ = t.kcasImpl.start().withCAS(r.ref, incorrectOv, t.nextString()).tryPerform()
     if (succ) throw new AssertionError("CAS should've failed")
-    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
-  def failedCAS1Reference(r: RefState, t: CommonThreadState): Unit = {
+  def failedCAS1Reference(r: RefState, t: KCASImplState): Unit = {
     val succ = r.ref.unsafeTryPerformCas(incorrectOv, t.nextString())
     if (succ) throw new AssertionError("CAS should've failed")
-    Blackhole.consumeCPU(t.tokens)
   }
 }
 
@@ -53,7 +50,7 @@ class CAS1LoopBench {
   import KCASBenchHelpers._
 
   @Benchmark
-  def successfulCAS1Loop(r: RefState, t: KCASThreadState): Unit = {
+  def successfulCAS1Loop(r: RefState, t: KCASImplState): Unit = {
     val ref = r.ref
     val kcasImpl = t.kcasImpl
     @tailrec
@@ -65,11 +62,10 @@ class CAS1LoopBench {
       else go()
     }
     go()
-    Blackhole.consumeCPU(t.tokens)
   }
 
   @Benchmark
-  def successfulCAS1LoopReference(r: RefState, t: CommonThreadState): Unit = {
+  def successfulCAS1LoopReference(r: RefState, t: KCASImplState): Unit = {
     val ref = r.ref
     @tailrec
     def go(): Unit = {
@@ -80,7 +76,6 @@ class CAS1LoopBench {
       else go()
     }
     go()
-    Blackhole.consumeCPU(t.tokens)
   }
 }
 

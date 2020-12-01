@@ -27,37 +27,39 @@ class StackBench {
 
   import StackBench._
 
+  final val waitTime = 128L
+
   @Benchmark
-  def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASThreadState): Unit = {
+  def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASImplState): Unit = {
     import ct.kcasImpl
     bh.consume(s.treiberStack.push.unsafePerform(ct.nextString()))
-    Blackhole.consumeCPU(ct.halfTokens)
+    Blackhole.consumeCPU(waitTime)
     if (s.treiberStack.tryPop.unsafeRun eq None) throw Errors.EmptyStack
-    Blackhole.consumeCPU(ct.halfTokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def referenceStack(s: ReferenceSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+  def referenceStack(s: ReferenceSt, bh: Blackhole, ct: KCASImplState): Unit = {
     bh.consume(s.referenceStack.push(ct.nextString()))
-    Blackhole.consumeCPU(ct.halfTokens)
+    Blackhole.consumeCPU(waitTime)
     if (s.referenceStack.tryPop() eq None) throw Errors.EmptyStack
-    Blackhole.consumeCPU(ct.halfTokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def lockedStack(s: LockedSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+  def lockedStack(s: LockedSt, bh: Blackhole, ct: KCASImplState): Unit = {
     bh.consume(s.lockedStack.push(ct.nextString()))
-    Blackhole.consumeCPU(ct.halfTokens)
+    Blackhole.consumeCPU(waitTime)
     if (s.lockedStack.tryPop() eq None) throw Errors.EmptyStack
-    Blackhole.consumeCPU(ct.halfTokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def stmStack(s: StmSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+  def stmStack(s: StmSt, bh: Blackhole, ct: KCASImplState): Unit = {
     bh.consume(s.stmStack.push(ct.nextString()))
-    Blackhole.consumeCPU(ct.halfTokens)
+    Blackhole.consumeCPU(waitTime)
     if (s.stmStack.tryPop() eq None) throw Errors.EmptyStack
-    Blackhole.consumeCPU(ct.halfTokens)
+    Blackhole.consumeCPU(waitTime)
   }
 }
 

@@ -27,17 +27,19 @@ class StackTransferBench {
 
   import StackTransferBench._
 
+  final val waitTime = 128L
+
   @Benchmark
-  def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASThreadState): Unit = {
+  def treiberStack(s: TreiberSt, bh: Blackhole, ct: KCASImplState): Unit = {
     import ct.kcasImpl
     bh.consume(s.treiberStack1.push.unsafePerform(ct.nextString()))
     bh.consume(s.transfer.unsafeRun)
     if (s.treiberStack2.tryPop.unsafeRun eq None) throw Errors.EmptyStack
-    Blackhole.consumeCPU(ct.tokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def lockedStack(s: LockedSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+  def lockedStack(s: LockedSt, bh: Blackhole, ct: KCASImplState): Unit = {
     bh.consume(s.lockedStack1.push(ct.nextString()))
 
     s.lockedStack1.lock.lock()
@@ -52,11 +54,11 @@ class StackTransferBench {
 
     if (s.lockedStack2.tryPop() eq None) throw Errors.EmptyStack
 
-    Blackhole.consumeCPU(ct.tokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def stmStack(s: StmSt, bh: Blackhole, ct: CommonThreadState): Unit = {
+  def stmStack(s: StmSt, bh: Blackhole, ct: KCASImplState): Unit = {
     import scala.concurrent.stm._
     bh.consume(s.stmStack1.push(ct.nextString()))
     bh.consume(atomic { implicit txn =>
@@ -64,7 +66,7 @@ class StackTransferBench {
       s.stmStack2.push(item)
     })
     if (s.stmStack2.tryPop() eq None) throw Errors.EmptyStack
-    Blackhole.consumeCPU(ct.tokens)
+    Blackhole.consumeCPU(waitTime)
   }
 }
 

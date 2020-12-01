@@ -21,7 +21,7 @@ package bench
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-import dev.tauri.choam.bench.util.{ RandomState, KCASImplState }
+import dev.tauri.choam.bench.util.KCASImplState
 
 /**
  * Benchmark for reading with different k-CAS implementations.
@@ -73,7 +73,7 @@ object ReadKCAS {
   }
 
   @State(Scope.Thread)
-  class ThSt extends RandomState with KCASImplState {
+  class ThSt extends KCASImplState {
     var last1 = "1"
     var last2 = "2"
   }

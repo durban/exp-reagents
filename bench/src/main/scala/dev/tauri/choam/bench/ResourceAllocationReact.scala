@@ -20,7 +20,7 @@ package bench
 import org.openjdk.jmh.annotations._
 import org.openjdk.jmh.infra.Blackhole
 
-import util.{ CommonThreadState, RandomState, KCASImplState }
+import util.KCASImplState
 import kcas.{ Ref, KCAS }
 
 /**
@@ -99,10 +99,9 @@ object ResourceAllocationReact {
   }
 
   @State(Scope.Thread)
-  class ThreadSt extends RandomState with KCASImplState {
+  class ThreadSt extends KCASImplState {
 
-    val tokens: Long =
-      CommonThreadState.BaseTokens << CommonThreadState.LowContention
+    final val tokens = 128L
 
     private[this] var selectedRss: Array[Ref[String]] = _
 

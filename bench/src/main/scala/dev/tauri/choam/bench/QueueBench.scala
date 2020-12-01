@@ -27,37 +27,39 @@ class QueueBench {
 
   import QueueBench._
 
+  final val waitTime = 128L
+
   @Benchmark
-  def michaelScottQueue(s: MsSt, bh: Blackhole, t: KCASThreadState): Unit = {
+  def michaelScottQueue(s: MsSt, bh: Blackhole, t: KCASImplState): Unit = {
     import t.kcasImpl
     bh.consume(s.michaelScottQueue.enqueue.unsafePerform(t.nextString()))
-    Blackhole.consumeCPU(t.halfTokens)
+    Blackhole.consumeCPU(waitTime)
     if (s.michaelScottQueue.tryDeque.unsafeRun eq None) throw Errors.EmptyQueue
-    Blackhole.consumeCPU(t.halfTokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def lockedQueue(s: LockedSt, bh: Blackhole, t: CommonThreadState): Unit = {
+  def lockedQueue(s: LockedSt, bh: Blackhole, t: KCASImplState): Unit = {
     bh.consume(s.lockedQueue.enqueue(t.nextString()))
-    Blackhole.consumeCPU(t.halfTokens)
+    Blackhole.consumeCPU(waitTime)
     if (s.lockedQueue.tryDequeue() eq None) throw Errors.EmptyQueue
-    Blackhole.consumeCPU(t.halfTokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def concurrentQueue(s: JdkSt, bh: Blackhole, t: CommonThreadState): Unit = {
+  def concurrentQueue(s: JdkSt, bh: Blackhole, t: KCASImplState): Unit = {
     bh.consume(s.concurrentQueue.offer(t.nextString()))
-    Blackhole.consumeCPU(t.halfTokens)
+    Blackhole.consumeCPU(waitTime)
     if (s.concurrentQueue.poll() eq null) throw Errors.EmptyQueue
-    Blackhole.consumeCPU(t.halfTokens)
+    Blackhole.consumeCPU(waitTime)
   }
 
   @Benchmark
-  def stmQueue(s: StmSt, bh: Blackhole, t: CommonThreadState): Unit = {
+  def stmQueue(s: StmSt, bh: Blackhole, t: KCASImplState): Unit = {
     bh.consume(s.stmQueue.enqueue(t.nextString()))
-    Blackhole.consumeCPU(t.halfTokens)
+    Blackhole.consumeCPU(waitTime)
     if (s.stmQueue.tryDequeue() eq None) throw Errors.EmptyQueue
-    Blackhole.consumeCPU(t.halfTokens)
+    Blackhole.consumeCPU(waitTime)
   }
 }
 
