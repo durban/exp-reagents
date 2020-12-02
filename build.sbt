@@ -20,7 +20,7 @@ scalaOrganization in ThisBuild := "org.scala-lang"
 
 githubWorkflowPublishTargetBranches in ThisBuild := Seq()
 githubWorkflowBuild in ThisBuild := Seq(
-  WorkflowStep.Sbt(List("test:compile"))
+  WorkflowStep.Sbt(List("ci"))
 )
 githubWorkflowJavaVersions in ThisBuild := Seq(
   "adopt@1.11",
@@ -151,7 +151,11 @@ lazy val dependencies = new {
   val jol = "org.openjdk.jol" % "jol-core" % "0.8"
 }
 
-addCommandAlias("validate", ";scalastyle;test:scalastyle;test;stress/jcstress:run")
+addCommandAlias("staticAnalysis", ";test:compile;scalastyle;test:scalastyle")
+addCommandAlias("stressTest", "stress/jcstress:run")
+addCommandAlias("validate", ";staticAnalysis;test;stressTest")
+addCommandAlias("ci", ";staticAnalysis;test")
+
 addCommandAlias("measurePerformance", "bench/jmh:run -t max -foe true -rf json -rff results.json .*")
 addCommandAlias("measureFS", "bench/jmh:run -t max -foe true -rf json -rff results_fs.json .*FalseSharing")
 addCommandAlias("measureBackoff", "bench/jmh:run -t max -foe true -rf json -rff results_backoff.json .*BackoffBench")
