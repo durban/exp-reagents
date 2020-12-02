@@ -31,6 +31,15 @@ class RefSpec extends BaseSpec {
 
   import RefSpec._
 
+  private def assumeOpenJdk(): Unit = {
+    val isOpenJdk = {
+      val vmName = java.lang.System.getProperty("java.vm.name")
+      vmName.contains("HotSpot") || vmName.contains("OpenJDK")
+    }
+    assume(isOpenJdk)
+    ()
+  }
+
   // we're not really using this:
   implicit override def kcasImpl: kcas.KCAS =
     kcas.KCAS.NaiveKCAS
@@ -50,6 +59,7 @@ class RefSpec extends BaseSpec {
   }
 
   "Ref" should "be padded to avoid false sharing" in {
+    assumeOpenJdk()
     val ref = Ref.mk("foo")
     val size = getRightPaddedSize(ref, fieldName)
     size should be >= targetSize
@@ -58,6 +68,7 @@ class RefSpec extends BaseSpec {
 
 
   it should "compute `bigId` correctly" in {
+    assumeOpenJdk()
     val ref = new PaddedRefImpl[String]("foo")(
       0xffffffffffffffffL,
       0xaaaaaaaaaaaaaaaaL,
@@ -75,6 +86,7 @@ class RefSpec extends BaseSpec {
   }
 
   "Unpadded Ref" should "not be padded (sanity check)" in {
+    assumeOpenJdk()
     val ref = Ref.mkUnpadded("bar")
     val size = getRightPaddedSize(ref, fieldName)
     size should be <= 48L
