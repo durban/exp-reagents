@@ -19,9 +19,11 @@ package kcas
 
 import cats.syntax.all._
 
-// TODO: figure out a way to detect leaked (not retired) instances
+/** Subclass of `IBRManaged`; contains extra verification */
 trait DebugManaged[T <: IBR.ThreadContext[T, M], M <: IBRManaged[T, M]]
   extends IBRManaged[T, M] { this: M =>
+
+  // TODO: figure out a way to detect leaked (not retired) instances
 
   private[this] var _allocated = 0
 

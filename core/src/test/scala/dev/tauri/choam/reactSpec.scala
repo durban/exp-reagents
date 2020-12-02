@@ -16,7 +16,7 @@
 
 package dev.tauri.choam
 
-import java.util.concurrent.{ LinkedBlockingDeque, ConcurrentLinkedQueue }
+import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicBoolean
 
 import scala.jdk.CollectionConverters._
@@ -55,74 +55,7 @@ abstract class ReactSpec extends BaseSpec {
     ref.invisibleRead.unsafeRun should === ("xyz")
   }
 
-  "Combined updates" should "indeed be atomic" in {
-    val r1 = Ref.mk[List[Int]](Nil)
-    val r2 = Ref.mk[List[Int]](Nil)
-
-    def pushBoth(i: Int): Unit = {
-      def push(r: Ref[List[Int]], i: Int): React[Unit, Unit] = {
-        r.upd[Unit, Unit] { (l, _) =>
-          (i :: l, ())
-        }
-      }
-      val r = push(r1, i) * push(r2, i)
-      r.unsafeRun
-      ()
-    }
-
-    def pushAll(maxSize: Long): Unit = {
-      for (_ <- 1L to maxSize) {
-        val i = java.util.concurrent.ThreadLocalRandom.current().nextInt()
-        pushBoth(i)
-      }
-    }
-
-    val n = 80000L
-    val m = 50000L
-    val tsk = for {
-      f1a <- IO { pushAll(n) }.start
-      f1b <- IO { pushAll(n) }.start
-      f2 <- IO { pushAll(m) }.start
-      _ <- f1a.join
-      _ <- f1b.join
-      _ <- f2.join
-    } yield ()
-    tsk.unsafeRunSync()
-
-    val l1 = r1.invisibleRead.unsafeRun
-    val l2 = r2.invisibleRead.unsafeRun
-    l1.length.toLong should === (2 * n + m)
-    l2.length.toLong should === (2 * n + m)
-    for ((i1, i2) <- l1 zip l2) {
-      i1 should === (i2)
-    }
-  }
-
-  "updWith" should "perform the chained action atomically" in {
-    val N = 100000
-    val r1 = Ref.mk("foo")
-    val r2 = Ref.mk("bar")
-    val sw = React.swap(r1, r2)
-
-    sw.unsafeRun
-    r1.invisibleRead.unsafeRun should === ("bar")
-    r2.invisibleRead.unsafeRun should === ("foo")
-    sw.unsafeRun
-    r1.invisibleRead.unsafeRun should === ("foo")
-    r2.invisibleRead.unsafeRun should === ("bar")
-
-    val tsk = for {
-      f1 <- IO { for (_ <- 1 to N) sw.unsafeRun }.start
-      f2 <- IO { for (_ <- 1 to N) sw.unsafeRun }.start
-      _ <- f1.join
-      _ <- f2.join
-    } yield ()
-    tsk.unsafeRunSync()
-    r1.invisibleRead.unsafeRun should === ("foo")
-    r2.invisibleRead.unsafeRun should === ("bar")
-  }
-
-  it should "behave correctly when used through modifyWith" in {
+  "updWith" should "behave correctly when used through modifyWith" in {
     val r1 = Ref.mk("foo")
     val r2 = Ref.mk("x")
     val r = r1.modifyWith { ov =>
@@ -139,115 +72,6 @@ abstract class ReactSpec extends BaseSpec {
     r.unsafeRun
     r1.invisibleRead.unsafeRun should === ("x")
     r2.invisibleRead.unsafeRun should === ("bar")
-  }
-
-  "consistentRead" should "indeed be consistent" in {
-    val N = 100000
-    val r1 = Ref.mk("foo")
-    val r2 = Ref.mk("bar")
-    val cr = React.consistentRead(r1, r2)
-    val sw = React.swap(r1, r2)
-
-    val tsk = for {
-      f1 <- IO { for (_ <- 1 to N) sw.unsafeRun }.start
-      f2 <- IO {
-        for (_ <- 1 to N) {
-          val (v1, v2) = cr.unsafeRun
-          assert(((v1 eq "foo") && (v2 eq "bar")) || ((v1 eq "bar") && (v2 eq "foo")))
-        }
-      }.start
-      _ <- f1.join
-      _ <- f2.join
-    } yield ()
-    tsk.unsafeRunSync()
-  }
-
-  def pushAll(r: React[Int, _], count: Int): Unit = {
-    for (_ <- 1 to count) {
-      val i = java.util.concurrent.ThreadLocalRandom.current().nextInt()
-      r.unsafePerform(i)
-    }
-  }
-
-  def popAll(r: React[Unit, List[Int]], expLen: Int, count: Int, errors: LinkedBlockingDeque[String]): Unit = {
-    require(expLen > 0)
-    for (_ <- 1 to count) {
-      val lst = r.unsafeRun
-      if (lst.length =!= expLen) {
-        if (lst.length =!= 0) {
-          errors.offer(s"actual length ${lst.length} doesn't equal expected length ${expLen}")
-        } // else: OK, drained the stacks
-      } else if (!lst.forall(_ == lst.head)) {
-        errors.offer(s"not all popped items are equal: ${lst}")
-      }
-    }
-  }
-
-  "2 combined stack" should "work atomically" in {
-    // TODO: add kill switch to shut down tasks if an assertion fails
-    val s1 = new TreiberStack[Int]
-    val s2 = new TreiberStack[Int]
-    val push = s1.push * s2.push
-    val pop = s1.tryPop * s2.tryPop
-    val errors = new java.util.concurrent.LinkedBlockingDeque[String](100)
-    val n = 8000000
-    val m = 7000000
-    val tsk = for {
-      push1 <- IO { pushAll(push.rmap(_ => ()), n) }.start
-      push2 <- IO { pushAll(push, n) }.start
-      pop1 <- IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) }.start
-      pop2 <- IO { popAll(pop.rmap { case (o1, o2) => o1.toList ++ o2.toList }, expLen = 2, count = m, errors = errors) }.start
-      _ <- push1.join
-      _ <- push2.join
-      _ <- pop1.join
-      _ <- pop2.join
-    } yield ()
-    tsk.unsafeRunSync()
-
-    if (!errors.isEmpty) {
-      // TODO: This sporadically fails with MCAS,
-      // TODO: with the error "not all popped items are equal"
-      fail(s"Errors:\n${errors.asScala.mkString("\n")}")
-    }
-
-    val l1 = s1.unsafeToList
-    val l2 = s2.unsafeToList
-    if (l1 != l2) {
-      fail("Different stacks at the end")
-    }
-  }
-
-  // TODO: figure out how could we actually deadlock
-  "Deadlocks" should "not be possible (!!!)" ignore {
-    val nStacks = 10
-    val stacks = List.fill(nStacks)(new TreiberStack[Int])
-    val push = stacks.map(_.push).reduceLeft[React[Int, Unit]]{ (a, b) => (a * b).rmap(_ => ()) }
-    val pushFlipped = stacks.reverse.map(_.push).reduceLeft[React[Int, Unit]] { (a, b) => (a * b).rmap(_ => ()) }
-    val pop = stacks.map(_.tryPop.rmap(_.toList)).reduceLeft[React[Unit, List[Int]]] { (a, b) => (a * b).rmap { case (x, y) => x ++ y } }
-    val popFlipped = stacks.reverse.map(_.tryPop.rmap(_.toList)).reduceLeft[React[Unit, List[Int]]] { (a, b) => (a * b).rmap { case (x, y) => x ++ y } }
-    val errors = new java.util.concurrent.LinkedBlockingDeque[String](100)
-    val n = 8000000
-    val m = 7500000
-    val tsk = for {
-      push1 <- IO { pushAll(push, n) }.start
-      push2 <- IO { pushAll(pushFlipped, n) }.start
-      pop1 <- IO { popAll(pop, expLen = nStacks, count = m, errors) }.start
-      pop2 <- IO { popAll(popFlipped, expLen = nStacks, count = m, errors) }.start
-      _ <- push1.join
-      _ <- push2.join
-      _ <- pop1.join
-      _ <- pop2.join
-    } yield ()
-    tsk.unsafeRunSync()
-
-    if (!errors.isEmpty) {
-      fail(s"Errors:\n${errors.asScala.mkString("\n")}")
-    }
-
-    val lsts = stacks.map(_.unsafeToList)
-    if (!lsts.forall(lst => lst == lsts.head)) {
-      fail("Different stacks at the end")
-    }
   }
 
   "Choice" should "prefer the first option" in {

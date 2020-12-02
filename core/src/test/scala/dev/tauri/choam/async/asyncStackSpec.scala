@@ -93,10 +93,12 @@ abstract class AsyncStackSpec extends BaseSpec {
     res should === (("foo", "bar"))
   }
 
+  // TODO:
   // it should "serve pops in a FIFO manner" in {
   //   ???
   // }
 
+  // TODO:
   // it should "be cancellable" in {
   //   ???
   // }
