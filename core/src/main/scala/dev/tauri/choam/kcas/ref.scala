@@ -55,6 +55,8 @@ sealed trait Ref[A] {
 
   private[kcas] def unsafeTryPerformCas(ov: A, nv: A): Boolean
 
+  private[kcas] def unsafeTryPerformCmpxchg(ov: A, nv: A): A
+
   private[kcas] def unsafeLazySet(nv: A): Unit
 
   private[kcas] def unsafeSet(nv: A): Unit
@@ -188,6 +190,9 @@ private class UnpaddedRefImpl[A](initial: A)(i0: Long, i1: Long, i2: Long, i3: L
 
   private[kcas] final override def unsafeTryPerformCas(ov: A, nv: A): Boolean =
     this.compareAndSet(ov, nv)
+
+  private[kcas] final override def unsafeTryPerformCmpxchg(ov: A, nv: A): A =
+    this.compareAndExchange(ov, nv)
 
   private[kcas] override def dummy(v: Long): Long =
     42L

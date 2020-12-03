@@ -108,4 +108,7 @@ private[kcas] object NaiveKCAS extends KCAS { self =>
         }
     }
   }
+
+  private[choam] final override def isNaive: Boolean =
+    true
 }

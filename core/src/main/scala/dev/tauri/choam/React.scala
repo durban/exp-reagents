@@ -545,7 +545,7 @@ object React {
 
     protected final def tryPerform(n: Int, b: B, ops: Reaction, desc: KCAS#Desc): TentativeResult[D] = {
       desc.impl.tryReadOne(ref) match {
-        case null => Retry
+        case null => Retry // TODO: this is NaiveKCAS-specific
         case a => maybeJump(n, transform(a, b), k, ops, desc)
       }
     }

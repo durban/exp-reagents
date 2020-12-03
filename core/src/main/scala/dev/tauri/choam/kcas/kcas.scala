@@ -63,6 +63,9 @@ abstract class KCAS { self =>
         a
     }
   }
+
+  private[choam] def isNaive: Boolean =
+    false
 }
 
 /** Provides various k-CAS implementations */

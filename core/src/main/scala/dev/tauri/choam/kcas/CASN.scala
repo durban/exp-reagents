@@ -79,8 +79,8 @@ private[kcas] object CASN extends KCAS { self =>
   private[kcas] final case object AcquireFailure extends RDCSSResult
   private[kcas] final case class OtherDescriptor(cd: CASNDesc) extends RDCSSResult
 
-  private def CAS1toDesc[A](r: Ref[A], ov: A, nv: RDCSSDesc[_, A]): Boolean = {
-    r.unsafeTryPerformCas(ov, nv.as[A])
+  private def CAS1toDesc[A](r: Ref[A], ov: A, nv: RDCSSDesc[_, A]): A = {
+    r.unsafeTryPerformCmpxchg(ov, nv.as[A])
   }
 
   private def CAS1fromDesc[A](r: Ref[A], ov: RDCSSDesc[_, A], nv: A): Boolean = {
@@ -90,23 +90,20 @@ private[kcas] object CASN extends KCAS { self =>
   private[kcas] def RDCSS[A1, A2](d: RDCSSDesc[A1, A2]): RDCSSResult = {
     @tailrec
     def acquire(): RDCSSResult = {
-      if (CAS1toDesc(d.a2, d.o2, d)) {
-        // ok, we succeeded:
-        AcquireSuccess
-      } else {
-        // we failed ...
-        d.a2.unsafeTryRead() match {
-          case r @ RDCSSDesc(_, _, _, _, _) =>
-            // other op underway, let's help:
-            RDCSSComp(r)
-            // and retry ours:
-            acquire()
-          case cd @ CASNDesc(_) =>
-            OtherDescriptor(cd)
-          case _ =>
-            // probably other op completed before us:
-            AcquireFailure
-        }
+      CAS1toDesc(d.a2, d.o2, d) match {
+        case ov if equ(ov, d.o2) =>
+          // ok, we succeeded:
+          AcquireSuccess
+        case r @ RDCSSDesc(_, _, _, _, _) =>
+          // other op underway, let's help:
+          RDCSSComp(r)
+          // and retry ours:
+          acquire()
+        case cd @ CASNDesc(_) =>
+          OtherDescriptor(cd)
+        case _ =>
+          // probably other op completed before us:
+          AcquireFailure
       }
     }
 

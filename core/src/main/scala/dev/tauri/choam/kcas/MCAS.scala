@@ -124,8 +124,8 @@ private[kcas] object MCAS extends KCAS { self =>
     ()
   }
 
-  private def CAS1toEntry[A](ref: Ref[A], ov: A, nv: MCASEntry): Boolean =
-    ref.unsafeTryPerformCas(ov, nv.as[A])
+  private def CAS1toEntry[A](ref: Ref[A], ov: A, nv: MCASEntry): A =
+    ref.unsafeTryPerformCmpxchg(ov, nv.as[A])
 
   private def CAS1fromEntry[A](ref: Ref[A], ov: MCASEntry, nv: A): Boolean =
     ref.unsafeTryPerformCas(ov.as[A], nv)
@@ -472,36 +472,33 @@ private[kcas] object MCAS extends KCAS { self =>
     ): RDCSSResult = {
       @tailrec
       def acquire(): RDCSSResult = {
-        if (CAS1toEntry(entry.ref, entry.ov, entry)) {
-          // ok, we succeeded:
-          AcquireSuccess
-        } else {
-          // we failed ...
-          entry.ref.unsafeTryRead() match {
-            case e: MCASEntry =>
-              // other op underway, let's help:
-              val desc = e.desc
-              if (desc ne null) {
-                desc.incr()
-                if (equ(entry.ref.unsafeTryRead(), e.as[entry.A]) && (e.desc eq desc)) {
-                  assert(!desc.isLsbSet())
-                  try {
-                    RDCSSComp(desc.status, e, desc)
-                  } finally {
-                    desc.decr()
-                  }
-                } else {
+        CAS1toEntry(entry.ref, entry.ov, entry) match {
+          case ov if equ(ov, entry.ov) =>
+            // ok, we succeeded:
+            AcquireSuccess
+          case e: MCASEntry =>
+            // other op underway, let's help:
+            val desc = e.desc
+            if (desc ne null) {
+              desc.incr()
+              if (equ(entry.ref.unsafeTryRead(), e.as[entry.A]) && (e.desc eq desc)) {
+                assert(!desc.isLsbSet())
+                try {
+                  RDCSSComp(desc.status, e, desc)
+                } finally {
                   desc.decr()
                 }
-              } // else: was released in the meantime
-              // retry ours:
-              acquire()
-            case d: MCASDesc =>
-              d
-            case _ =>
-              // probably other op completed before us:
-              AcquireFailure
-          }
+              } else {
+                desc.decr()
+              }
+            } // else: was released in the meantime
+            // retry ours:
+            acquire()
+          case d: MCASDesc =>
+            d
+          case _ =>
+            // probably other op completed before us:
+            AcquireFailure
         }
       }
 
