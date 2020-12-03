@@ -23,6 +23,11 @@ import scala.annotation.tailrec
 
 // TODO: integrate with IBR
 
+// Differences will be (as compared to IBR in the paper):
+// - Descriptors might be `retire`d while still reachable from a ref.
+//   - However, they will be EMCAS-finalized in this case.
+// - For another difference, see the comment above ThreadContext#write/cas.
+
 /**
  * Efficient Multi-word Compare and Swap:
  * https://arxiv.org/pdf/2008.02527.pdf
