@@ -33,8 +33,8 @@ import org.openjdk.jcstress.infra.results._
   new Outcome(id = Array("true, (false|true), 1"), expect = FORBIDDEN, desc = "Was freed"),
   new Outcome(id = Array("false, false, 1"), expect = ACCEPTABLE, desc = "Was not freed"),
   new Outcome(id = Array("(false|true), false, 2"), expect = ACCEPTABLE, desc = "Too late"),
-  // Note, that this is not acceptable, it's just not fixed yet:
-  new Outcome(id = Array("true, false, -2"), expect = ACCEPTABLE_INTERESTING, desc = "Was replaced by a String")
+  // This is not acceptable, it's why extra care is needed (see IMPORTANT below):
+  new Outcome(id = Array("true, false, -2"), expect = FORBIDDEN, desc = "Was replaced by a String")
 ))
 class IBRExtensionTest {
 
@@ -78,6 +78,10 @@ class IBRExtensionTest {
       // change it to another descriptor:
       val d2 = tc.alloc()
       d2.ref = ref
+      // IMPORTANT: the next line is necessary, otherwise `d` could be
+      // freed while the other thread is still using it.
+      d2.setBirthEpochOpaque(Math.min(d.getBirthEpochOpaque(), d2.getBirthEpochOpaque()))
+      // replace it with CAS:
       assert(tc.cas(ref, d, d2))
       // finalize and retire that one too:
       assert(d2.status.compareAndSet(EMCASStatus.ACTIVE, EMCASStatus.FAILED))
