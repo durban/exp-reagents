@@ -69,7 +69,7 @@ class EMCASTest {
       (this.ref2.unsafeTryRead() : Any) match {
         case s: String if s eq "x" =>
           go() // retry
-        case d: EMCAS.WordDescriptor[_] =>
+        case d: EMCASWordDescriptor[_] =>
           val it = d.parent.words.iterator()
           val dFirst = it.next()
           val dSecond = it.next()

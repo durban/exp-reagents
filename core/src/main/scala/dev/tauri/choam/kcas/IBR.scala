@@ -249,6 +249,13 @@ private[kcas] final object IBR {
       else readAcquire(ref) // retry
     }
 
+    @tailrec
+    final def readRefVolatile[A](ref: Ref[A]): A = {
+      val a: A = ref.unsafeTryRead()
+      if (tryAdjustReservation(a)) a
+      else readRefVolatile(ref) // retry
+    }
+
     private[kcas] final def tryAdjustReservation[A](a: A): Boolean = {
       if (this.global.dynamicTest(a)) {
         val m: M = a.asInstanceOf[M]
@@ -292,6 +299,10 @@ private[kcas] final object IBR {
 
     final def cas[A](ref: AtomicReference[A], ov: A, nv: A): Boolean = {
       ref.compareAndSet(ov, nv)
+    }
+
+    final def casRef[A](ref: Ref[A], ov: A, nv: A): Boolean = {
+      ref.unsafeTryPerformCas(ov, nv)
     }
 
     /** For testing */

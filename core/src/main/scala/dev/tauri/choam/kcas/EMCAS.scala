@@ -29,11 +29,32 @@ import scala.annotation.tailrec
 //   - However, they will be EMCAS-finalized in this case.
 // - For another difference, see the comment above ThreadContext#write/cas.
 
+private[kcas] final class EMCASTC[A]
+  extends IBR.ThreadContext[EMCASTC[A], EMCASWordDescriptor[A]](EMCAS.gc.cast[A]) {
+
+  def cast[B]: EMCASTC[B] = this.asInstanceOf[EMCASTC[B]]
+}
+
 /**
  * Efficient Multi-word Compare and Swap:
  * https://arxiv.org/pdf/2008.02527.pdf
  */
 private[kcas] object EMCAS extends KCAS { self =>
+
+  // IBR stuff:
+
+  private[kcas] val gc = new GC
+
+  final class GC[A] extends IBR[EMCASTC[A], EMCASWordDescriptor[A]](zeroEpoch = Long.MinValue) {
+    override def allocateNew(): EMCASWordDescriptor[A] = new EMCASWordDescriptor
+    override def dynamicTest[X](a: X): Boolean = a.isInstanceOf[EMCASWordDescriptor[_]]
+    override def newThreadContext(): EMCASTC[A] = new EMCASTC
+    final def cast[B]: GC[B] = this.asInstanceOf[GC[B]]
+  }
+
+  // TODO: avoid calling this repeatedly
+  def currentThreadContext[A](): EMCASTC[A] =
+    gc.cast[A].threadContext()
 
   // Listing 1 in the paper:
 
@@ -49,74 +70,67 @@ private[kcas] object EMCAS extends KCAS { self =>
      * Thread safety: we only read the list after reading the descriptor from a `Ref`;
      * we only mutate the list before writing the descriptor to a `Ref`.
      */
-    val words: ArrayList[WordDescriptor[_]]
+    val words: ArrayList[EMCASWordDescriptor[_]]
   ) extends EMCASDescriptorBase with self.Desc with self.Snap {
 
-    override def withCAS[A](ref: Ref[A], ov: A, nv: A): Desc = {
-      this.words.add(new WordDescriptor[A](ref, ov, nv, this))
+    override def withCAS[A](ref: Ref[A], ov: A, nv: A): MCASDescriptor = {
+      val tc = currentThreadContext()
+      val wd: EMCASWordDescriptor[A] = tc.alloc().cast[A]
+      wd.initializePlain(ref, ov, nv, this)
+      this.words.add(wd)
       this
     }
 
-    override def snapshot(): Snap = {
+    override def snapshot(): MCASDescriptor = {
+      val tc = currentThreadContext()
       @tailrec
       def copy(
-        from: ArrayList[WordDescriptor[_]],
-        to: ArrayList[WordDescriptor[_]],
+        from: ArrayList[EMCASWordDescriptor[_]],
+        to: ArrayList[EMCASWordDescriptor[_]],
         newParent: MCASDescriptor,
         idx: Int,
         len: Int
       ): Unit = {
         if (idx < len) {
-          to.add(from.get(idx).withParent(newParent))
+          to.add(from.get(idx).withParent(tc.cast, newParent))
           copy(from, to, newParent, idx + 1, len)
         }
       }
       val newArrCapacity = Math.max(this.words.size(), MCASDescriptor.minArraySize)
-      val newArr = new ArrayList[WordDescriptor[_]](newArrCapacity)
+      val newArr = new ArrayList[EMCASWordDescriptor[_]](newArrCapacity)
       val r = new MCASDescriptor(newArr)
       copy(this.words, newArr, r, 0, this.words.size())
       r
     }
 
     def sort(): Unit = {
-      this.words.sort(WordDescriptor.comparator)
+      this.words.sort(wordDescriptorComparator)
     }
 
     override def tryPerform(): Boolean = {
-      MCAS(this, helping = false)
+      MCAS(currentThreadContext(), this, helping = false)
     }
 
     override def cancel(): Unit =
       ()
 
-    override def load(): Desc =
+    override def load(): MCASDescriptor =
       this
 
     override def discard(): Unit =
       ()
   }
 
-  final class WordDescriptor[A](
-    val address: Ref[A],
-    val ov: A,
-    val nv: A,
-    val parent: MCASDescriptor
-  ) {
-    def withParent(newParent: MCASDescriptor): WordDescriptor[A] =
-      new WordDescriptor[A](this.address, this.ov, this.nv, newParent)
-  }
-
-  final object WordDescriptor {
-    val comparator: Comparator[WordDescriptor[_]] = new Comparator[WordDescriptor[_]] {
-      final override def compare(x: WordDescriptor[_], y: WordDescriptor[_]): Int = {
-        // NB: `x ne y` is always true, because we create fresh descriptors in `withCAS`
-        val res = Ref.globalCompare(x.address, y.address)
-        if (res == 0) {
-          assert(x.address eq y.address)
-          KCAS.impossibleKCAS(x.address, x.ov, x.nv, y.ov, y.nv)
-        } else {
-          res
-        }
+  val wordDescriptorComparator: Comparator[EMCASWordDescriptor[_]] = new Comparator[EMCASWordDescriptor[_]] {
+    final override def compare(x: EMCASWordDescriptor[_], y: EMCASWordDescriptor[_]): Int = {
+      // TODO: this might not be true any more:
+      // NB: `x ne y` is always true, because we create fresh descriptors in `withCAS`
+      val res = Ref.globalCompare(x.address, y.address)
+      if (res == 0) {
+        assert(x.address eq y.address)
+        KCAS.impossibleKCAS(x.address, x.ov, x.nv, y.ov, y.nv)
+      } else {
+        res
       }
     }
   }
@@ -135,14 +149,14 @@ private[kcas] object EMCAS extends KCAS { self =>
    * see the do-while loop.)
    */
   @tailrec
-  private def readValue[A](ref: Ref[A]): A = {
-    val o = ref.unsafeTryRead()
-    if (o.isInstanceOf[WordDescriptor[_]]) {
-      val wd: WordDescriptor[A] = o.asInstanceOf[WordDescriptor[A]]
+  private def readValue[A](tc: EMCASTC[A], ref: Ref[A]): A = {
+    val o = tc.readRefVolatile(ref) // TODO: maybe relax to 'acquire'?
+    if (o.isInstanceOf[EMCASWordDescriptor[_]]) {
+      val wd: EMCASWordDescriptor[A] = o.asInstanceOf[EMCASWordDescriptor[A]]
       val parentStatus = wd.parent.getStatus()
       if (parentStatus eq EMCASStatus.ACTIVE) {
-        MCAS(wd.parent, helping = true) // help the other op
-        readValue(ref) // retry
+        MCAS(tc, wd.parent, helping = true) // help the other op
+        readValue(tc, ref) // retry
       } else if (parentStatus eq EMCASStatus.SUCCESSFUL) {
         wd.nv
       } else { // FAILED
@@ -156,7 +170,7 @@ private[kcas] object EMCAS extends KCAS { self =>
   // Listing 3 in the paper:
 
   private[choam] override def tryReadOne[A](ref: Ref[A]): A =
-    readValue(ref)
+    readValue(currentThreadContext(), ref)
 
   /**
    * Performs an MCAS operation.
@@ -165,9 +179,9 @@ private[kcas] object EMCAS extends KCAS { self =>
    * @param helping: Pass `true` when helping `desc` found in a `Ref`;
    *                 `false` when `desc` is a new descriptor.
    */
-  def MCAS(desc: MCASDescriptor, helping: Boolean): Boolean = {
+  def MCAS(tc: EMCASTC[_], desc: MCASDescriptor, helping: Boolean): Boolean = {
     @tailrec
-    def tryWord[A](wordDesc: WordDescriptor[A]): Boolean = {
+    def tryWord[A](wordDesc: EMCASWordDescriptor[A]): Boolean = {
       var content: A = nullOf[A]
       var value: A = nullOf[A]
       var go = true
@@ -180,7 +194,7 @@ private[kcas] object EMCAS extends KCAS { self =>
       // them would require allocating a tuple (like in
       // the paper).
       do {
-        content = wordDesc.address.unsafeTryRead()
+        content = tc.readRefVolatile(wordDesc.address)
         if (equ[Any](content, wordDesc)) {
           // already points to the right place, early return:
           return true // scalastyle:ignore return
@@ -190,11 +204,11 @@ private[kcas] object EMCAS extends KCAS { self =>
           // because otherwise it would've been equal to `wordDesc`
           // (we're assuming that any WordDescriptor only appears at
           // most once in an MCASDescriptor).
-          if (content.isInstanceOf[WordDescriptor[_]]) {
-            val wd: WordDescriptor[A] = content.asInstanceOf[WordDescriptor[A]]
+          if (content.isInstanceOf[EMCASWordDescriptor[_]]) {
+            val wd: EMCASWordDescriptor[A] = content.asInstanceOf[EMCASWordDescriptor[A]]
             val parentStatus = wd.parent.getStatus()
             if (parentStatus eq EMCASStatus.ACTIVE) {
-              MCAS(wd.parent, helping = true) // help the other op
+              MCAS(tc, wd.parent, helping = true) // help the other op
               // Note: we're not "helping" ourselves for sure, see the comment above.
               // Here, we still don't have the value, so the loop must retry.
             } else if (parentStatus eq EMCASStatus.SUCCESSFUL) {
@@ -219,16 +233,15 @@ private[kcas] object EMCAS extends KCAS { self =>
         true // TODO: we should break from `go`
         // TODO: `true` is not necessarily correct, the helping thread could've finalized us to failed too
       } else {
-        if (!wordDesc.address.unsafeTryPerformCas(content, wordDesc.asInstanceOf[A])) {
-          tryWord(wordDesc) // retry this word
-        } else {
-          true
-        }
+        // TODO: adjust interval!!!
+        val ok = tc.casRef(wordDesc.address, content, wordDesc.asInstanceOf[A])
+        if (ok) true
+        else tryWord(wordDesc) // retry this word
       }
     }
 
     @tailrec
-    def go(words: java.util.Iterator[WordDescriptor[_]]): Boolean = {
+    def go(words: java.util.Iterator[EMCASWordDescriptor[_]]): Boolean = {
       if (words.hasNext) {
         if (tryWord(words.next())) go(words)
         else false
@@ -254,7 +267,7 @@ private[kcas] object EMCAS extends KCAS { self =>
     }
   }
 
-  private[choam] override def start(): Desc = {
+  private[choam] override def start(): MCASDescriptor = {
     new MCASDescriptor(new ArrayList(MCASDescriptor.minArraySize))
   }
 }
