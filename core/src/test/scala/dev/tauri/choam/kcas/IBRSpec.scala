@@ -286,7 +286,7 @@ final class IBRSpec
 final object IBRSpec {
 
   final case class Descriptor(dummy: String)
-    extends DebugManaged[TC, Descriptor] {
+    extends IBRDebugManaged[TC, Descriptor] {
 
     final def foobar(): Unit =
       this.checkAccess()

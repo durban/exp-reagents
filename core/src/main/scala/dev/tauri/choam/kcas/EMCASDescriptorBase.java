@@ -33,11 +33,16 @@ abstract class EMCASDescriptorBase {
     }
   }
 
+  @SuppressWarnings("unused")
   private volatile EMCASStatus _status =
     EMCASStatus.ACTIVE;
 
-  EMCASStatus getStatus() {
-    return this._status; // volatile
+  EMCASStatus getStatusVolatile() {
+    return (EMCASStatus) STATUS.getVolatile(this);
+  }
+
+  EMCASStatus getStatusPlain() {
+    return (EMCASStatus) STATUS.get(this);
   }
 
   boolean casStatus(EMCASStatus ov, EMCASStatus nv) {

@@ -23,7 +23,7 @@ import java.lang.invoke.VarHandle
 import java.util.concurrent.atomic.AtomicReference
 import java.util.concurrent.ConcurrentSkipListMap
 
-import scala.annotation.tailrec
+import scala.annotation.{ tailrec, switch, unused }
 
 /**
  * Interval-based memory reclamation (TagIBR-TPA), based on
@@ -137,7 +137,7 @@ private[kcas] final object IBR {
      *
      * Overflow doesn't really matter, we only use it modulo `epochFreq` or `emptyFreq`.
      */
-    private[this] var counter: Int =
+    protected var counter: Int =
       startCounter
 
     /**
@@ -220,10 +220,10 @@ private[kcas] final object IBR {
       this.retiredCount += 1L
       a.setNext(this.retired)
       this.retired = a
-      a.setRetireEpochOpaque(this.global.getEpoch()) // opaque: was read with acquire
+      a.setRetireEpochRelease(this.global.getEpoch()) // opaque: was read with acquire
       a.retire(this)
       if ((this.counter % emptyFreq) == 0) {
-        this.empty()
+        this.emptyInternal()
       }
     }
 
@@ -261,13 +261,20 @@ private[kcas] final object IBR {
         val m: M = a.asInstanceOf[M]
         val res: IBRReservation = this.reservation
         val currUpper = res.getUpper()
+        val currLower = res.getLower()
         // we read `m` (that is, `a`) with acquire, so we can read birthEpoch with opaque:
-        val mbe = m.getBirthEpochOpaque()
+        val mbe = m.getBirthEpochAcquire()//Opaque()
         if (mbe > currUpper) {
           res.setUpper(mbe)
+          if (mbe < currLower) {
+            res.setLower(mbe)
+          }
           // `m` might've been retired (and reused) before we adjusted
           // our reservation, so we have to recheck the birth epoch
           // (and opaque is not enough here), so we'll re-acquire from the ref:
+          false
+        } else if (mbe < currLower) {
+          res.setLower(mbe)
           false
         } else {
           // no need to adjust our reservation
@@ -318,7 +325,7 @@ private[kcas] final object IBR {
     }
 
     /** For testing */
-    private[kcas] final def forceGc(): Unit = {
+    private[kcas] def forceGc(): Unit = {
       assert(this.isDuringOp())
       this.empty()
     }
@@ -358,7 +365,26 @@ private[kcas] final object IBR {
       this.reservation.setUpper(epoch)
     }
 
-    private final def empty(): Unit = {
+    protected def empty(): Unit = {
+      this.empty(this.retired, token = 0)
+    }
+
+    private final def emptyInternal(): Unit = {
+      this.empty(this.retired, token = 0)
+    }
+
+    // TODO: ugh...
+    protected def replaceHead(token: Int, next: M): Unit = (token : @switch) match {
+      case 0 => this.retired = next
+      case _ => throw new IllegalArgumentException(token.toString)
+    }
+
+    protected def decrementCount(token: Int): Unit = (token : @switch) match {
+      case 0 => this.retiredCount -= 1L
+      case _ => throw new IllegalArgumentException(token.toString)
+    }
+
+    protected final def empty(head: M, token: Int): Unit = {
       val reservations = this.global.reservations.values()
       @tailrec
       def go(curr: M, prev: M): Unit = {
@@ -367,15 +393,15 @@ private[kcas] final object IBR {
           var newPrev = curr // `prev` for the next iteration
           if (!isConflict(curr, reservations.iterator())) {
             // remove `curr` from the `retired` list:
-            this.retiredCount -= 1L
+            this.decrementCount(token = token)
             if (prev ne null) {
               // delete an internal item:
               prev.setNext(curr.getNext())
             } else {
               // delete the head:
-              this.retired = curr.getNext()
+              this.replaceHead(token, curr.getNext())
             }
-            free(curr) // actually free `curr`
+            free(curr, token = token) // actually free `curr`
             newPrev = prev // since we removed `curr` form the list
           }
           go(currNext, newPrev)
@@ -403,7 +429,7 @@ private[kcas] final object IBR {
         }
       }
 
-      go(this.retired, prev = nullOf[M])
+      go(head, prev = nullOf[M])
     }
 
     /** For testing and debugging */
@@ -425,7 +451,7 @@ private[kcas] final object IBR {
               // delete the head:
               this.retired = curr.getNext()
             }
-            free(curr) // actually free `curr`
+            free(curr, token = -1) // actually free `curr`
             newPrev = prev // since we removed `curr` form the list
             goDebug(currNext, newPrev, conflicts)
           } else {
@@ -469,7 +495,7 @@ private[kcas] final object IBR {
       goDebug(this.retired, prev = nullOf[M], conflicts = Nil)
     }
 
-    private final def free(block: M): Unit = {
+    protected def free(block: M, @unused token: Int): Unit = {
       block.free(this)
       block.setBirthEpochOpaque(Long.MinValue) // TODO: not strictly necessary
       block.setRetireEpochOpaque(Long.MaxValue) // TODO: not strictly necessary

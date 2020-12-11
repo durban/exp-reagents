@@ -32,7 +32,7 @@ final class IBRStackDebug[A] private (val debugGc: IBRStackDebug.GC[A])
   extends IBRStackFast[A](debugGc) {
 
   final override def checkReuse(tc: TC[A], c: IBRStackFast.Cons[A]): Unit = {
-    if (c.asInstanceOf[DebugManaged[TC[A], Node[A]]].freed > 0) {
+    if (c.asInstanceOf[IBRDebugManaged[TC[A], Node[A]]].freed > 0) {
       tc.globalContext.asInstanceOf[IBRStackDebug.GC[A]].reuseCount.getAndIncrement()
       ()
     }
@@ -63,7 +63,7 @@ final object IBRStackDebug {
     }
   }
 
-  final class DebugCons[A] extends Cons[A] with DebugManaged[TC[A], Node[A]] {
+  final class DebugCons[A] extends Cons[A] with IBRDebugManaged[TC[A], Node[A]] {
     override def allocate(tc: TC[A]): Unit = {
       super.allocate(tc)
       val hd = this.getHeadVh().get(this)
@@ -71,11 +71,11 @@ final object IBRStackDebug {
       assert(equ(tc.readVhAcquire[Node[A]](this.getTailVh(), this), null))
     }
     override def retire(tc: TC[A]): Unit = {
-      super[DebugManaged].retire(tc)
+      super[IBRDebugManaged].retire(tc)
       super[Cons].retire(tc)
     }
     override def free(tc: TC[A]): Unit = {
-      super[DebugManaged].free(tc)
+      super[IBRDebugManaged].free(tc)
       super[Cons].free(tc)
     }
     override def getHeadVh() = {

@@ -21,7 +21,7 @@ package kcas
 import cats.syntax.all._
 
 /** Subclass of `IBRManaged`; contains extra verification */
-trait DebugManaged[T <: IBR.ThreadContext[T, M], M <: IBRManaged[T, M]]
+trait IBRDebugManaged[T <: IBR.ThreadContext[T, M], M <: IBRManaged[T, M]]
   extends IBRManaged[T, M] { this: M =>
 
   // TODO: figure out a way to detect leaked (not retired) instances
@@ -55,10 +55,11 @@ trait DebugManaged[T <: IBR.ThreadContext[T, M], M <: IBRManaged[T, M]]
     assert(this._retired === this._freed)
   }
 
-  protected def checkAccess(): Unit = {
-    if (this._allocated === this._freed) {
+  def checkAccess(): Unit = {
+    val a = this._allocated
+    if (a === this._freed) {
       // currently "free" object, nobody should access it
-      throw new AssertionError
+      throw new AssertionError(s"was allocated and freed ${a} times")
     }
   }
 

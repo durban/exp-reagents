@@ -73,7 +73,7 @@ class EMCASTest {
           val it = d.parent.words.iterator()
           val dFirst = it.next()
           val dSecond = it.next()
-          r.r4 = d.parent.getStatus()
+          r.r4 = d.parent.getStatusVolatile()
           r.r2 = dFirst.address.id3
           r.r3 = dSecond.address.id3
           if (it.hasNext) {

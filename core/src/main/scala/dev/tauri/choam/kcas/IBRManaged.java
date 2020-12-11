@@ -68,8 +68,20 @@ public abstract class IBRManaged<T, M extends IBRManaged<T, M>> {
     return (long) BIRTH_EPOCH.getOpaque(this);
   }
 
+  final long getBirthEpochAcquire() {
+    return (long) BIRTH_EPOCH.getAcquire(this);
+  }
+
   final void setBirthEpochOpaque(long e) {
     BIRTH_EPOCH.setOpaque(this, e);
+  }
+
+  final void setBirthEpochRelease(long e) {
+    BIRTH_EPOCH.setRelease(this, e);
+  }
+
+  final boolean casBirthEpoch(long ov, long nv) {
+    return BIRTH_EPOCH.compareAndSet(this, ov, nv);
   }
 
   final long getRetireEpochOpaque() {
@@ -78,6 +90,10 @@ public abstract class IBRManaged<T, M extends IBRManaged<T, M>> {
 
   final void setRetireEpochOpaque(long e) {
     RETIRE_EPOCH.setOpaque(this, e);
+  }
+
+  final void setRetireEpochRelease(long e) {
+    RETIRE_EPOCH.setRelease(this, e);
   }
 
   /** Hook for subclasses for performing initialization */

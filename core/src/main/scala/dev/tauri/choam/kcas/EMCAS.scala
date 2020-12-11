@@ -20,7 +20,7 @@ package kcas
 
 import java.util.{ ArrayList, Comparator }
 
-import scala.annotation.tailrec
+import scala.annotation.{ tailrec, switch }
 
 // TODO: integrate with IBR
 
@@ -32,7 +32,79 @@ import scala.annotation.tailrec
 private[kcas] final class EMCASTC[A]
   extends IBR.ThreadContext[EMCASTC[A], EMCASWordDescriptor[A]](EMCAS.gc.cast[A]) {
 
+  /**
+   * Intrusive linked list of finalized (but not retired/detached) objects
+   *
+   * It contains `finalizedCount` items.
+   */
+  private[this] var finalizedDescList: EMCASWordDescriptor[A] =
+    _
+
+  /** Current size of the `finalizedDescList` */
+  private[this] var finalizedCount: Long =
+    0L
+
   def cast[B]: EMCASTC[B] = this.asInstanceOf[EMCASTC[B]]
+
+  def finalized(d: EMCASWordDescriptor[A]): Unit = {
+    d.setRetireEpochRelease(this.globalContext.getEpoch())
+    //
+    this.finalizedCount += 1L
+    d.setNext(this.finalizedDescList)
+    this.finalizedDescList = d
+    if (this.finalizedCount > EMCAS.maxFinalizedCount) {
+      if ((this.counter % IBR.emptyFreq) == 0) {
+        empty()
+      }
+    }
+  }
+
+  protected final override def empty(): Unit = {
+    super.empty()
+    this.empty(this.finalizedDescList, token = 1)
+  }
+
+  protected final override def replaceHead(token: Int, next: EMCASWordDescriptor[A]): Unit = {
+    (token : @switch) match {
+      case 1 => this.finalizedDescList = next
+      case _ => super.replaceHead(token, next)
+    }
+  }
+
+  protected final override def decrementCount(token: Int): Unit = {
+    (token : @switch) match {
+      case 1 => this.finalizedCount -= 1L
+      case _ => super.decrementCount(token)
+    }
+  }
+
+  protected final override def free(block: EMCASWordDescriptor[A], token: Int): Unit = {
+    (token : @switch) match {
+      case 1 => this.detach(block)
+      case _ => super.free(block, token)
+    }
+  }
+
+  private[kcas] final override def forceGc(): Unit = {
+    assert(this.isDuringOp())
+    this.empty(this.finalizedDescList, token = 1)
+    this.endOp()
+    this.forceNextEpoch()
+    this.startOp()
+    super.forceGc()
+  }
+
+  @tailrec
+  def finalizedAll(it: java.util.Iterator[EMCASWordDescriptor[_]]): Unit = {
+    if (it.hasNext) {
+      this.cast.finalized(it.next())
+      finalizedAll(it)
+    }
+  }
+
+  def detach(d: EMCASWordDescriptor[A]): Unit = {
+    this.retire(d)
+  }
 }
 
 /**
@@ -40,6 +112,8 @@ private[kcas] final class EMCASTC[A]
  * https://arxiv.org/pdf/2008.02527.pdf
  */
 private[kcas] object EMCAS extends KCAS { self =>
+
+  final val maxFinalizedCount = 1024L // TODO
 
   // IBR stuff:
 
@@ -76,7 +150,7 @@ private[kcas] object EMCAS extends KCAS { self =>
     override def withCAS[A](ref: Ref[A], ov: A, nv: A): MCASDescriptor = {
       val tc = currentThreadContext()
       val wd: EMCASWordDescriptor[A] = tc.alloc().cast[A]
-      wd.initializePlain(ref, ov, nv, this)
+      wd.initialize(ref, ov, nv, this)
       this.words.add(wd)
       this
     }
@@ -108,14 +182,22 @@ private[kcas] object EMCAS extends KCAS { self =>
     }
 
     override def tryPerform(): Boolean = {
-      MCAS(currentThreadContext(), this, helping = false)
+      val tc = currentThreadContext()
+      assert(tc.isDuringOp())
+      try MCAS(tc, this, helping = false)
+      finally tc.endOp()
     }
 
-    override def cancel(): Unit =
-      ()
+    override def cancel(): Unit = {
+      val tc = currentThreadContext()
+      assert(tc.isDuringOp())
+      tc.endOp()
+    }
 
-    override def load(): MCASDescriptor =
+    override def load(): MCASDescriptor = {
+      currentThreadContext().startOp()
       this
+    }
 
     override def discard(): Unit =
       ()
@@ -153,7 +235,8 @@ private[kcas] object EMCAS extends KCAS { self =>
     val o = tc.readRefVolatile(ref) // TODO: maybe relax to 'acquire'?
     if (o.isInstanceOf[EMCASWordDescriptor[_]]) {
       val wd: EMCASWordDescriptor[A] = o.asInstanceOf[EMCASWordDescriptor[A]]
-      val parentStatus = wd.parent.getStatus()
+      wd.checkAccess()
+      val parentStatus = wd.parent.getStatusVolatile()
       if (parentStatus eq EMCASStatus.ACTIVE) {
         MCAS(tc, wd.parent, helping = true) // help the other op
         readValue(tc, ref) // retry
@@ -169,8 +252,16 @@ private[kcas] object EMCAS extends KCAS { self =>
 
   // Listing 3 in the paper:
 
-  private[choam] override def tryReadOne[A](ref: Ref[A]): A =
-    readValue(currentThreadContext(), ref)
+  private[choam] override def tryReadOne[A](ref: Ref[A]): A = {
+    val tc = currentThreadContext[A]()
+    if (tc.isDuringOp()) {
+      readValue(tc, ref)
+    } else {
+      tc.startOp()
+      try readValue(tc, ref)
+      finally tc.endOp()
+    }
+  }
 
   /**
    * Performs an MCAS operation.
@@ -206,7 +297,7 @@ private[kcas] object EMCAS extends KCAS { self =>
           // most once in an MCASDescriptor).
           if (content.isInstanceOf[EMCASWordDescriptor[_]]) {
             val wd: EMCASWordDescriptor[A] = content.asInstanceOf[EMCASWordDescriptor[A]]
-            val parentStatus = wd.parent.getStatus()
+            val parentStatus = wd.parent.getStatusVolatile()
             if (parentStatus eq EMCASStatus.ACTIVE) {
               MCAS(tc, wd.parent, helping = true) // help the other op
               // Note: we're not "helping" ourselves for sure, see the comment above.
@@ -228,12 +319,32 @@ private[kcas] object EMCAS extends KCAS { self =>
       if (!equ(value, wordDesc.ov)) {
         // expected value is different
         false
-      } else if (desc.getStatus() ne EMCASStatus.ACTIVE) {
+      } else if (desc.getStatusVolatile() ne EMCASStatus.ACTIVE) {
         // we have been finalized (by a helping thread), no reason to continue
         true // TODO: we should break from `go`
         // TODO: `true` is not necessarily correct, the helping thread could've finalized us to failed too
       } else {
-        // TODO: adjust interval!!!
+        if (content.isInstanceOf[EMCASWordDescriptor[_]]) {
+          // we're replacing a descriptor, might need to adjust interval:
+          val d = content.asInstanceOf[EMCASWordDescriptor[_]]
+          // TODO: opaque might not be enough here!
+          // TODO: clean this up (move to ThreadContext.cas?)
+          var go = true
+          while (go) {
+            val dbe = d.getBirthEpochAcquire()
+            val wbe = wordDesc.getBirthEpochOpaque()
+            if (dbe < wbe) {
+              if (wordDesc.casBirthEpoch(wbe, dbe)) {
+                // re-read birth epoch in case it changed: // FIXME: do we need this?
+                if (d.getBirthEpochAcquire() == dbe) {
+                  go = false
+                }
+              }
+            } else {
+              go = false
+            }
+          }
+        }
         val ok = tc.casRef(wordDesc.address, content, wordDesc.asInstanceOf[A])
         if (ok) true
         else tryWord(wordDesc) // retry this word
@@ -253,21 +364,22 @@ private[kcas] object EMCAS extends KCAS { self =>
       // we're not helping, so `desc` is not yet visible to other threads
       desc.sort()
     } // else: the thread which published `desc` already sorted it
-    val success = go(desc.words.iterator)
+    val success = go(desc.words.iterator())
     if (desc.casStatus(
       EMCASStatus.ACTIVE,
       if (success) EMCASStatus.SUCCESSFUL else EMCASStatus.FAILED
     )) {
-      // TODO: We finalized the descriptor, mark it for reclamation:
-      // TODO: retireForCleanup(desc)
+      // We finalized the descriptor, mark all word descriptors for reclamation:
+      tc.finalizedAll(desc.words.iterator())
       success
     } else {
       // someone else finalized the descriptor, must read its status:
-      desc.getStatus() eq EMCASStatus.SUCCESSFUL
+      desc.getStatusVolatile() eq EMCASStatus.SUCCESSFUL
     }
   }
 
   private[choam] override def start(): MCASDescriptor = {
+    currentThreadContext().startOp()
     new MCASDescriptor(new ArrayList(MCASDescriptor.minArraySize))
   }
 }

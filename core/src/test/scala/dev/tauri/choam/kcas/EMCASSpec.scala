@@ -56,6 +56,37 @@ class EMCASSpec
     assert(EMCAS.tryReadOne(r2) eq null)
   }
 
+  it should "clean up finalized descriptors with IBR" in {
+    val r1 = Ref.mk[String]("x")
+    val r2 = Ref.mk[String]("y")
+    val desc = EMCAS
+      .start()
+      .withCAS(r1, "x", "a")
+    val tc = EMCAS.gc.threadContext()
+    assert(tc.isDuringOp())
+    val snap = desc.snapshot()
+    assert(tc.isDuringOp())
+    assert(desc.withCAS(r2, "y", "b").tryPerform())
+    assert(!tc.isDuringOp())
+    assert(EMCAS.tryReadOne(r1) eq "a")
+    assert(EMCAS.tryReadOne(r2) eq "b")
+    assert(!tc.isDuringOp())
+    tc.fullGc()
+    assert(r1.unsafeTryRead() eq "a")
+    assert(r2.unsafeTryRead() eq "b")
+    assert(r1.unsafeTryPerformCas("a", "x")) // reset
+    val desc2 = snap.load()
+    assert(tc.isDuringOp())
+    assert(!desc2.withCAS(r2, "y", "b").tryPerform()) // this will fail
+    assert(!tc.isDuringOp())
+    assert(EMCAS.tryReadOne(r1) eq "x")
+    assert(EMCAS.tryReadOne(r2) eq "b")
+    assert(!tc.isDuringOp())
+    tc.fullGc()
+    assert(r1.unsafeTryRead() eq "x")
+    assert(r2.unsafeTryRead() eq "b")
+  }
+
   "EMCAS Read" should "help the other operation" in {
     val r1 = Ref.mkWithId("r1")(0L, 0L, 0L, 0L)
     val r2 = Ref.mkWithId("r2")(0L, 0L, 0L, 42L)
@@ -72,7 +103,7 @@ class EMCASSpec
     res should === ("x")
     EMCAS.tryReadOne(r1) should === ("x")
     EMCAS.tryReadOne(r2) should === ("y")
-    assert(other.getStatus() eq EMCASStatus.SUCCESSFUL)
+    assert(other.getStatusVolatile() eq EMCASStatus.SUCCESSFUL)
   }
 
   it should "roll back the other op if necessary" in {
