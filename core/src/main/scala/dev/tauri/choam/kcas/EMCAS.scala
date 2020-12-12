@@ -35,6 +35,22 @@ import scala.annotation.tailrec
  */
 private[kcas] object EMCAS extends KCAS { self =>
 
+  final class WeakData[A](d: WordDescriptor[A])
+    extends java.lang.ref.WeakReference[WordDescriptor[A]](d) {
+
+    @volatile // TODO: rel/acq
+    var value: A =
+      _
+
+    def cast[B]: WeakData[B] =
+      this.asInstanceOf[WeakData[B]]
+
+    def contents(): A = this.get() match {
+      case null => this.value
+      case wd => wd.asInstanceOf[A]
+    }
+  }
+
   // Listing 1 in the paper:
 
   final object MCASDescriptor {
@@ -136,20 +152,28 @@ private[kcas] object EMCAS extends KCAS { self =>
    */
   @tailrec
   private def readValue[A](ref: Ref[A]): A = {
-    val o = ref.unsafeTryRead()
-    if (o.isInstanceOf[WordDescriptor[_]]) {
-      val wd: WordDescriptor[A] = o.asInstanceOf[WordDescriptor[A]]
-      val parentStatus = wd.parent.getStatus()
-      if (parentStatus eq EMCASStatus.ACTIVE) {
-        MCAS(wd.parent, helping = true) // help the other op
-        readValue(ref) // retry
-      } else if (parentStatus eq EMCASStatus.SUCCESSFUL) {
-        wd.nv
-      } else { // FAILED
-        wd.ov
-      }
-    } else {
-      o
+    ref.unsafeTryRead() match {
+      case w: WeakData[_] =>
+        w.cast[A].get() match {
+          case null =>
+            val a = w.cast[A].value
+            // Replace the descriptor with the final value:
+            // TODO: only do this occasionally
+            ref.unsafeTryPerformCas(w.asInstanceOf[A], a)
+            a
+          case wd =>
+            val parentStatus = wd.parent.getStatus()
+            if (parentStatus eq EMCASStatus.ACTIVE) {
+              MCAS(wd.parent, helping = true) // help the other op
+              readValue(ref) // retry
+            } else if (parentStatus eq EMCASStatus.SUCCESSFUL) {
+              wd.nv
+            } else { // FAILED
+              wd.ov
+            }
+        }
+      case a =>
+        a
     }
   }
 
@@ -181,33 +205,38 @@ private[kcas] object EMCAS extends KCAS { self =>
       // the paper).
       do {
         content = wordDesc.address.unsafeTryRead()
-        if (equ[Any](content, wordDesc)) {
-          // already points to the right place, early return:
-          return true // scalastyle:ignore return
-        } else {
-          // At this point, we're sure that if `content` is a
-          // descriptor, then it belongs to another op (not `desc`);
-          // because otherwise it would've been equal to `wordDesc`
-          // (we're assuming that any WordDescriptor only appears at
-          // most once in an MCASDescriptor).
-          if (content.isInstanceOf[WordDescriptor[_]]) {
-            val wd: WordDescriptor[A] = content.asInstanceOf[WordDescriptor[A]]
-            val parentStatus = wd.parent.getStatus()
-            if (parentStatus eq EMCASStatus.ACTIVE) {
-              MCAS(wd.parent, helping = true) // help the other op
-              // Note: we're not "helping" ourselves for sure, see the comment above.
-              // Here, we still don't have the value, so the loop must retry.
-            } else if (parentStatus eq EMCASStatus.SUCCESSFUL) {
-              value = wd.nv
-              go = false
-            } else {
-              value = wd.ov
-              go = false
+        content match {
+          case w: WeakData[_] =>
+            w.cast[A].get() match {
+              case null =>
+                value = w.cast[A].value
+                go = false
+              case wd =>
+                if (wd eq wordDesc) {
+                  // already points to the right place, early return:
+                  return true // scalastyle:ignore return
+                } else {
+                  // At this point, we're sure that `wd` belongs to another op
+                  // (not `desc`), because otherwise it would've been equal to
+                  // `wordDesc` (we're assuming that any WordDescriptor only
+                  // appears at most once in an MCASDescriptor).
+                  val parentStatus = wd.parent.getStatus()
+                  if (parentStatus eq EMCASStatus.ACTIVE) {
+                    MCAS(wd.parent, helping = true) // help the other op
+                    // Note: we're not "helping" ourselves for sure, see the comment above.
+                    // Here, we still don't have the value, so the loop must retry.
+                  } else if (parentStatus eq EMCASStatus.SUCCESSFUL) {
+                    value = wd.nv
+                    go = false
+                  } else {
+                    value = wd.ov
+                    go = false
+                  }
+                }
             }
-          } else {
-            value = content
+          case a =>
+            value = a
             go = false
-          }
         }
       } while (go)
 
@@ -219,7 +248,8 @@ private[kcas] object EMCAS extends KCAS { self =>
         true // TODO: we should break from `go`
         // TODO: `true` is not necessarily correct, the helping thread could've finalized us to failed too
       } else {
-        if (!wordDesc.address.unsafeTryPerformCas(content, wordDesc.asInstanceOf[A])) {
+        val weakData = new WeakData[A](wordDesc)
+        if (!wordDesc.address.unsafeTryPerformCas(content, weakData.asInstanceOf[A])) {
           tryWord(wordDesc) // retry this word
         } else {
           true
@@ -236,6 +266,7 @@ private[kcas] object EMCAS extends KCAS { self =>
         true
       }
     }
+
     if (!helping) {
       // we're not helping, so `desc` is not yet visible to other threads
       desc.sort()
@@ -245,11 +276,25 @@ private[kcas] object EMCAS extends KCAS { self =>
       EMCASStatus.ACTIVE,
       if (success) EMCASStatus.SUCCESSFUL else EMCASStatus.FAILED
     )) {
-      // TODO: We finalized the descriptor, mark it for reclamation:
-      // TODO: retireForCleanup(desc)
+      // we finalized the descriptor, so we record final values:
+      val it = desc.words.iterator()
+      while (it.hasNext) {
+        it.next() match { case wordDesc: WordDescriptor[a] =>
+          wordDesc.address.unsafeTryRead() match {
+            case wd: WeakData[_] =>
+              if (wd.get() eq wordDesc) {
+                wd.cast[a].value = if (success) wordDesc.nv else wordDesc.ov
+              }
+            case _ =>
+              ()
+          }
+        }
+      }
+      // make sure GC doesn't clear weakrefs before we could set the final values:
+      java.lang.ref.Reference.reachabilityFence(desc)
       success
     } else {
-      // someone else finalized the descriptor, must read its status:
+      // someone else finalized the descriptor, we must read its status:
       desc.getStatus() eq EMCASStatus.SUCCESSFUL
     }
   }

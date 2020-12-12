@@ -56,6 +56,36 @@ class EMCASSpec
     assert(EMCAS.tryReadOne(r2) eq null)
   }
 
+  it should "clean up finalized descriptors" in {
+    val r1 = Ref.mk[String]("x")
+    val r2 = Ref.mk[String]("y")
+    var desc = EMCAS
+      .start()
+      .withCAS(r1, "x", "a")
+    var snap = desc.snapshot()
+    assert(desc.withCAS(r2, "y", "b").tryPerform())
+    assert(EMCAS.tryReadOne(r1) eq "a")
+    assert(EMCAS.tryReadOne(r2) eq "b")
+    desc = null
+    System.gc() // TODO: this makes the test non-deterministic
+    EMCAS.tryReadOne(r1) // this read should replace the desc with the final value
+    EMCAS.tryReadOne(r2) // this read should replace the desc with the final value
+    assert(r1.unsafeTryRead() eq "a")
+    assert(r2.unsafeTryRead() eq "b")
+    assert(r1.unsafeTryPerformCas("a", "x")) // reset
+    var desc2 = snap.load()
+    assert(!desc2.withCAS(r2, "y", "b").tryPerform()) // this will fail
+    assert(EMCAS.tryReadOne(r1) eq "x")
+    assert(EMCAS.tryReadOne(r2) eq "b")
+    snap = null
+    desc2 = null
+    System.gc() // TODO: this makes the test non-deterministic
+    EMCAS.tryReadOne(r1) // this read should replace the desc with the final value
+    EMCAS.tryReadOne(r2) // this read should replace the desc with the final value
+    assert(r1.unsafeTryRead() eq "x")
+    assert(r2.unsafeTryRead() eq "b")
+  }
+
   "EMCAS Read" should "help the other operation" in {
     val r1 = Ref.mkWithId("r1")(0L, 0L, 0L, 0L)
     val r2 = Ref.mkWithId("r2")(0L, 0L, 0L, 42L)
@@ -67,7 +97,7 @@ class EMCASSpec
     other.sort()
     val d0 = other.words.get(0)
     assert(d0.address eq r1)
-    r1.unsafeSet(polluteTheHeap[String](d0))
+    r1.unsafeSet(polluteTheHeap[String](new EMCAS.WeakData(d0)))
     val res = EMCAS.tryReadOne(r1)
     res should === ("x")
     EMCAS.tryReadOne(r1) should === ("x")
@@ -86,7 +116,7 @@ class EMCASSpec
     other.sort()
     val d0 = other.words.get(0)
     assert(d0.address eq r1)
-    r1.unsafeSet(polluteTheHeap[String](d0))
+    r1.unsafeSet(polluteTheHeap[String](new EMCAS.WeakData(d0)))
     val res = EMCAS.tryReadOne(r1)
     res should === ("r1")
     EMCAS.tryReadOne(r1) should === ("r1")

@@ -32,7 +32,8 @@ import org.openjdk.jcstress.infra.results.LLLLL_Result
   new Outcome(id = Array("true, 21, 42, ACTIVE, null"), expect = ACCEPTABLE, desc = "observed descriptors in correct  order (active)"),
   new Outcome(id = Array("true, 21, 42, SUCCESSFUL, null"), expect = ACCEPTABLE, desc = "observed descriptors in correct  order (finalized)"),
   new Outcome(id = Array("true, 21, 42, FAILED, null"), expect = FORBIDDEN, desc = "observed descriptors in correct  order, but failed status"),
-  new Outcome(id = Array("true, 42, 21, ACTIVE, null", "true, 42, 21, SUCCESSFUL, null"), expect = FORBIDDEN, desc = "observed descriptors in incorrect (unsorted) order")
+  new Outcome(id = Array("true, 42, 21, ACTIVE, null", "true, 42, 21, SUCCESSFUL, null"), expect = FORBIDDEN, desc = "observed descriptors in incorrect (unsorted) order"),
+  new Outcome(id = Array("true, -1, -1, y, null"), expect = ACCEPTABLE_INTERESTING, desc = "descriptor was already cleaned up"),
 ))
 class EMCASTest {
 
@@ -48,7 +49,7 @@ class EMCASTest {
   // r1: k-CAS result (Boolean)
   // r2: `id3` of first observed descriptor (Long)
   // r3: `id3` of second observed descriptor (Long)
-  // r4: `status` of observed parent (StatusType)
+  // r4: `status` of observed parent (StatusType) OR final object
   // r5: any unexpected object (for debugging)
 
   @Actor
@@ -69,16 +70,24 @@ class EMCASTest {
       (this.ref2.unsafeTryRead() : Any) match {
         case s: String if s eq "x" =>
           go() // retry
-        case d: EMCAS.WordDescriptor[_] =>
-          val it = d.parent.words.iterator()
-          val dFirst = it.next()
-          val dSecond = it.next()
-          r.r4 = d.parent.getStatus()
-          r.r2 = dFirst.address.id3
-          r.r3 = dSecond.address.id3
-          if (it.hasNext) {
-            // mustn't happen
-            r.r5 = s"unexpected 3rd descriptor: ${it.next().toString}"
+        case wd: EMCAS.WeakData[_] =>
+          wd.contents() match {
+            case d: EMCAS.WordDescriptor[_] =>
+              val it = d.parent.words.iterator()
+              val dFirst = it.next()
+              val dSecond = it.next()
+              r.r4 = d.parent.getStatus()
+              r.r2 = dFirst.address.id3
+              r.r3 = dSecond.address.id3
+              if (it.hasNext) {
+                // mustn't happen
+                r.r5 = s"unexpected 3rd descriptor: ${it.next().toString}"
+              }
+            case x =>
+              // descriptor was already cleaned up
+              r.r4 = x
+              r.r2 = -1L
+              r.r3 = -1L
           }
         case s =>
           // mustn't happen
