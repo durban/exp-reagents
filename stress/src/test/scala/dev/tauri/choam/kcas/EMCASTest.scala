@@ -33,7 +33,7 @@ import org.openjdk.jcstress.infra.results.LLLLL_Result
   new Outcome(id = Array("true, 21, 42, SUCCESSFUL, null"), expect = ACCEPTABLE, desc = "observed descriptors in correct  order (finalized)"),
   new Outcome(id = Array("true, 21, 42, FAILED, null"), expect = FORBIDDEN, desc = "observed descriptors in correct  order, but failed status"),
   new Outcome(id = Array("true, 42, 21, ACTIVE, null", "true, 42, 21, SUCCESSFUL, null"), expect = FORBIDDEN, desc = "observed descriptors in incorrect (unsorted) order"),
-  new Outcome(id = Array("true, -1, -1, y, null"), expect = ACCEPTABLE_INTERESTING, desc = "descriptor was already cleaned up"),
+  new Outcome(id = Array("true, -1, -1, y, null"), expect = ACCEPTABLE_INTERESTING, desc = "descriptor was already cleaned up")
 ))
 class EMCASTest {
 
