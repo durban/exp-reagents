@@ -302,4 +302,34 @@ private[kcas] object EMCAS extends KCAS { self =>
   private[choam] override def start(): Desc = {
     new MCASDescriptor(new ArrayList(MCASDescriptor.minArraySize))
   }
+
+  /** For testing */
+  private[kcas] def spinUntilCleanup[A](ref: Ref[A]): A = {
+    var desc: WordDescriptor[_] = null
+    while (true) {
+      Thread.onSpinWait()
+      ref.unsafeTryRead() match {
+        case wd: WeakData[_] =>
+          desc = wd.get()
+          if (desc ne null) {
+            if (desc.parent.getStatus() eq EMCASStatus.ACTIVE) {
+              // CAS in progress, retry
+              desc = null
+            } else {
+              // CAS finalized, but no cleanup yet, retry
+              desc = null
+              System.gc()
+            }
+          } else {
+            // descriptor have been collected, but not replaced yet:
+            EMCAS.tryReadOne(ref) // this should replace it
+          }
+        case a =>
+          // descriptor have been cleaned up:
+          return a // scalastyle:ignore return
+      }
+    }
+    // unreachable code:
+    return nullOf[A] // scalastyle:ignore return
+  }
 }
