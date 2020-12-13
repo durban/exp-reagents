@@ -118,8 +118,12 @@ private[kcas] object EMCAS extends KCAS { self =>
     val nv: A,
     val parent: MCASDescriptor
   ) {
-    def withParent(newParent: MCASDescriptor): WordDescriptor[A] =
+
+    final def withParent(newParent: MCASDescriptor): WordDescriptor[A] =
       new WordDescriptor[A](this.address, this.ov, this.nv, newParent)
+
+    final override def toString: String =
+      s"WordDescriptor(${this.address}, ${this.ov}, ${this.nv})"
   }
 
   final object WordDescriptor {
