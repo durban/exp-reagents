@@ -124,13 +124,14 @@ class EMCASSpec
             }
           case s: String if s == exp =>
             // descriptor have been cleaned up:
-            return true
+            return true // scalastyle:ignore return
           case _ =>
             // mustn't happen:
-            return false
+            return false // scalastyle:ignore return
         }
       }
-      return false
+      // unreachable code:
+      return false // scalastyle:ignore return
     }
 
     var ok1 = false
