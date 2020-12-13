@@ -86,6 +86,70 @@ class EMCASSpec
     assert(r2.unsafeTryRead() eq "b")
   }
 
+  it should "clean up finalized descriptors if the original thread releases them" in {
+    val r1 = Ref.mk[String]("x")
+    val r2 = Ref.mk[String]("y")
+
+    var ok = false
+    val t = new Thread(() => {
+      ok = EMCAS
+        .start()
+        .withCAS(r1, "x", "a")
+        .withCAS(r2, "y", "b")
+        .tryPerform()
+    })
+
+    def checkCleanup(ref: Ref[String], old: String, exp: String): Boolean = {
+      var desc: EMCAS.WordDescriptor[_] = null
+      while (true) {
+        Thread.onSpinWait()
+        (ref.unsafeTryRead() : Any) match {
+          case s: String if s == old =>
+            // CAS not started yet, retry
+          case wd: EMCAS.WeakData[_] =>
+            desc = wd.get()
+            java.lang.invoke.VarHandle.fullFence()
+            if (desc ne null) {
+              if (desc.parent.getStatus() eq EMCASStatus.ACTIVE) {
+                // CAS in progress, retry
+                desc = null
+              } else {
+                // CAS finalized, but no cleanup yet, retry
+                desc = null
+                System.gc()
+              }
+            } else {
+              // descriptor have been collected, but not replaced yet:
+              EMCAS.tryReadOne(ref) // this should replace it
+            }
+          case s: String if s == exp =>
+            // descriptor have been cleaned up:
+            return true
+          case _ =>
+            // mustn't happen:
+            return false
+        }
+      }
+      return false
+    }
+
+    var ok1 = false
+    val c1 = new Thread(() => { ok1 = checkCleanup(r1, "x", "a") })
+    var ok2 = false
+    val c2 = new Thread(() => { ok2 = checkCleanup(r2, "y", "b") })
+
+    t.start()
+    c1.start()
+    c2.start()
+    t.join()
+    c1.join()
+    c2.join()
+
+    assert(ok)
+    assert(ok1)
+    assert(ok2)
+  }
+
   "EMCAS Read" should "help the other operation" in {
     val r1 = Ref.mkWithId("r1")(0L, 0L, 0L, 0L)
     val r2 = Ref.mkWithId("r2")(0L, 0L, 0L, 42L)
